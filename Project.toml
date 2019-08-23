@@ -1,0 +1,8 @@
+name = "ActionRNN"
+uuid = "8317d1c6-c5c3-11e9-1282-0f8c4be94ea0"
+authors = ["Matthew Schlegel <mkschleg@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+JuliaRL = "10ec99bc-e54b-11e8-04da-8598ad081a85"
+Reproduce = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
