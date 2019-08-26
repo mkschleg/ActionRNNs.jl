@@ -6,9 +6,11 @@ import Flux
 import Flux.Tracker
 import JLD2
 import LinearAlgebra.Diagonal
+import JuliaRL
+import ActionRNN
 
 using DataStructures: CircularBuffer
-using ActionRNN: RingWorld, step!, start!
+using ActionRNN: RingWorld, step!, start!, glorot_uniform
 
 # using ActionRNN
 using Statistics
@@ -18,7 +20,7 @@ using Reproduce
 using Random
 
 
-import JuliaRL
+
 
 RWU = ActionRNN.RingWorldUtils
 FLU = ActionRNN.FluxUtils
@@ -72,7 +74,7 @@ function main_experiment(args::Vector{String})
     out_horde = RWU.onestep()
     fc = RWU.StandardFeatureCreator()
     fs = JuliaRL.FeatureCreators.feature_size(fc)
-    ap = ActionRNN.RandomActingPolicy([0.75, 0.25])
+    ap = ActionRNN.RandomActingPolicy([0.5, 0.5])
     
     agent = ActionRNN.RNNActionAgent(out_horde,
                                      fc, fs, 2, ap, parsed;
@@ -101,7 +103,7 @@ function main_experiment(args::Vector{String})
         end
     end
 
-    results = Dict(["out_pred"=>out_pred_strg, "out_err_strg"=>out_err_strg])
+    results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg])
 
     if !parsed["working"]
         JLD2.@save savefile results
