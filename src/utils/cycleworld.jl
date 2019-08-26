@@ -1,7 +1,7 @@
 
 module CycleWorldUtils
 
-using ..GVFN, Reproduce
+using ..ActionRNN, Reproduce
 
 # export settings!, onestep, chain, gamma_chain, get_horde, oracle
 

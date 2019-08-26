@@ -1,9 +1,11 @@
 
 module RingWorldUtils
 
-using ..GVFN, Reproduce
+using ..ActionRNN, Reproduce
+using ..JuliaRL
 
-const RWC = GVFN.RingWorldConst
+const RWC = ActionRNN.RingWorldConst
+
 
 # export settings!, onestep, chain, gamma_chain, get_horde, oracle
 

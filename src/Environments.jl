@@ -1,5 +1,6 @@
 
-
+import JuliaRL
+using JuliaRL: AbstractEnvironment, step!, start!
 
 export CompassWorld, get_num_features
 include("env/CompassWorld.jl")

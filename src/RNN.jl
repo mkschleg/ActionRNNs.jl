@@ -1,8 +1,21 @@
 
 # Sepcifying a action-conditional RNN Cell
+using Flux
 
+function reset!(m, h_init)
+    Flux.reset!(m)
+    # println("Hidden state: ", m.state, " ", h_init)
+    m.state.data .= Flux.data(h_init)
+end
 
-mutable struct RNNActionCELL{F, A, V, H}
+function reset!(m::Flux.Recur{T}, h_init) where {T<:Flux.LSTMCell}
+    Flux.reset!(m)
+    # println(h_init)
+    m.state[1].data .= Flux.data(h_init[1])
+    m.state[2].data .= Flux.data(h_init[2])
+end
+
+mutable struct RNNActionCell{F, A, V, H}
     σ::F
     Wx::A
     Wh::A
@@ -10,8 +23,8 @@ mutable struct RNNActionCELL{F, A, V, H}
     h::H
 end
 
-RNNActionCELL(num_hidden, num_actions, num_ext_features; init=Flux.glorot_uniform, σ_int=tanh) =
-    RNNActionCELL(
+RNNActionCell(num_hidden, num_actions, num_ext_features; init=Flux.glorot_uniform, σ_int=tanh) =
+    RNNActionCell(
         σ_int,
         param(init(num_actions, num_hidden, num_ext_features)),
         param(init(num_actions, num_hidden, num_hidden)),
@@ -20,15 +33,14 @@ RNNActionCELL(num_hidden, num_actions, num_ext_features; init=Flux.glorot_unifor
         # discounts,
         param(Flux.zeros(num_hidden)))
 
-function (m::RNNActionCELL)(h, x::Tuple{Int64, Array{<:AbstractFloat, 1}})
+function (m::RNNActionCell)(h, x::Tuple{Int64, Array{<:AbstractFloat, 1}})
     new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
     return new_h, new_h
 end
 
-Flux.hidden(m::RNNActionCELL) = m.h
-Flux.@treelike RNNActionCELL
-RNNActionLayer(args...; kwargs...) = Flux.Recur(RNNActionCELL(args...; kwargs...))
-
+Flux.hidden(m::RNNActionCell) = m.h
+Flux.@treelike RNNActionCell
+RNNActionLayer(args...; kwargs...) = Flux.Recur(RNNActionCell(args...; kwargs...))
 
 mutable struct RNNInvCell{F, A, V}
     σ::F

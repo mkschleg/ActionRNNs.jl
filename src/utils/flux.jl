@@ -2,8 +2,8 @@ module FluxUtils
 
 using ..Flux
 using Reproduce
-import ..GVFN.RNNActionLayer
-import ..GVFN.RNNInv
+import ..ActionRNN.RNNActionLayer
+import ..ActionRNN.RNNInv
 
 
 function rnn_settings!(as::ArgParseSettings)

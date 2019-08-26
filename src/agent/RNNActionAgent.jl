@@ -40,7 +40,7 @@ function RNNActionAgent(out_horde,
 
     # state_list =  DataStructures.CircularBuffer{Array{Float32, 1}}(τ+1)
     state_list = DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 1}}}(τ+1)
-    hidden_state_init = GVFN.get_initial_hidden_state(rnn)
+    hidden_state_init = FluxUtils.get_initial_hidden_state(rnn)
 
     RNNActionAgent(TD(), opt,
                    rnn, out_model,
