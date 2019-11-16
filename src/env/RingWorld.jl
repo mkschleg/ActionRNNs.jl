@@ -1,8 +1,8 @@
 
 using Random
-# using JuliaRL
+# using RLCore
 
-# import JuliaRL.reset!, JuliaRL.environment_step!, JuliaRL.get_reward
+# import RLCore.reset!, RLCore.environment_step!, RLCore.get_reward
 
 """
  RingWorld
@@ -38,13 +38,24 @@ RingWorld(ring_size::Int64; partially_observable=true) =
               RingWorldConst.ACTIONS,
               partially_observable)
 
+function env_settings!(as::Reproduce.ArgParseSettings,
+                       env_type::Type{RingWorld})
+    Reproduce.@add_arg_table as begin
+        "--size"
+        help="The length of the ring world chain"
+        arg_type=Int64
+        default=6
+    end
+end
+
+
 Base.size(env::RingWorld) = env.ring_size
 
-function JuliaRL.reset!(env::RingWorld; rng = Random.GLOBAL_RNG, kwargs...)
+function RLCore.reset!(env::RingWorld, rng::AbstractRNG; kwargs...)
     env.agent_state = rand(rng, 1:size(env))
 end
 
-JuliaRL.get_actions(env::RingWorld) = env.actions
+RLCore.get_actions(env::RingWorld) = env.actions
 
 @inline take_forward_step(env::RingWorld, action::Int64) =
     env.agent_state == size(env) ? 1 : env.agent_state + 1
@@ -52,7 +63,7 @@ JuliaRL.get_actions(env::RingWorld) = env.actions
 @inline take_backward_step(env::RingWorld, action::Int64) =
     env.agent_state == 1 ? size(env) : env.agent_state - 1
 
-function JuliaRL.environment_step!(env::RingWorld, action::Int64; rng = Random.GLOBAL_RNG, kwargs...)
+function RLCore.environment_step!(env::RingWorld, action::Int64, rng; kwargs...)
 
     rwc = RingWorldConst
     
@@ -66,11 +77,11 @@ function JuliaRL.environment_step!(env::RingWorld, action::Int64; rng = Random.G
 
 end
 
-function JuliaRL.get_reward(env::RingWorld) # -> get the reward of the environment
+function RLCore.get_reward(env::RingWorld) # -> get the reward of the environment
     return 0
 end
 
-function JuliaRL.get_state(env::RingWorld) # -> get state of agent
+function RLCore.get_state(env::RingWorld) # -> get state of agent
     if env.partially_observable
         return partially_observable_state(env)
     else
@@ -90,7 +101,7 @@ function partially_observable_state(env::RingWorld)
     return state
 end
 
-function JuliaRL.is_terminal(env::RingWorld) # -> determines if the agent_state is terminal
+function RLCore.is_terminal(env::RingWorld) # -> determines if the agent_state is terminal
     return false
 end
 

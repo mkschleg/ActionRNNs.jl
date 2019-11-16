@@ -1,6 +1,5 @@
-__precompile__(true)
 
-module RingWorldRNNExperiment
+module RingWorldFluxExperiment
 
 import Flux
 import Flux.Tracker
@@ -19,7 +18,6 @@ using ProgressMeter
 using Reproduce
 using Random
 
-
 const RWU = ActionRNN.RingWorldUtils
 const FLU = ActionRNN.FluxUtils
 
@@ -27,25 +25,39 @@ function arg_parse(as::ArgParseSettings = ArgParseSettings(exc_handler=Reproduce
 
     ActionRNN.exp_settings!(as)
     ActionRNN.env_settings!(as, RingWorld)
-    ActionRNN.agent_settings!(as, ActionRNN.RNNActionAgent)
+    ActionRNN.agent_settings!(as, ActionRNN.FluxAgent)
     
     return as
 end
 
 function construct_agent(parsed, rng)
     out_horde = RWU.onestep()
-    fc = RWU.StandardFeatureCreator()
+    fc = RWU.OneHotFeatureCreator()
     fs = RLCore.feature_size(fc)
     ap = ActionRNN.RandomActingPolicy([0.5, 0.5])
+
+
+    init_func = (dims...)->glorot_uniform(rng, dims...)
+
+    chain = begin
+        if parsed["cell"] == "ARNN"
+            Flux.Chain(ActionRNN.ARNN(fs, 2, parsed["numhidden"]; init=init_func),
+                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
+        else
+            Flux.Chain(Flux.RNN(fs, parsed["numhidden"]; init=init_func),
+                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
+        end
+    end
     
-    ActionRNN.RNNActionAgent(out_horde,
-                             fc,
-                             fs,
-                             2,
-                             ap,
-                             parsed;
-                             rng=rng,
-                             init_func=(dims...)->glorot_uniform(rng, dims...))
+    ActionRNN.FluxAgent(out_horde,
+                        chain,
+                        fc,
+                        fs,
+                        # 2,
+                        ap,
+                        parsed;
+                        rng=rng,
+                        init_func=(dims...)->glorot_uniform(rng, dims...))
 end
 
 function main_experiment(args::Vector{String})
@@ -63,7 +75,6 @@ function main_experiment(args::Vector{String})
     seed = parsed["seed"]
     rng = Random.MersenneTwister(seed)
 
-    # env = RingWorld(parsed["size"])
     env = RingWorld(parsed)
 
     out_pred_strg = zeros(num_steps, 2)
@@ -72,6 +83,7 @@ function main_experiment(args::Vector{String})
     err_func! = (env, out_preds, step) -> begin;
         out_pred_strg[step, :] .= Flux.data(out_preds);
         out_err_strg[step, :] = out_pred_strg[step, :] .- RWU.oracle(env, "onestep");
+
     end;
 
     agent = construct_agent(parsed, rng)

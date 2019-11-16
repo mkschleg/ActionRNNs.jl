@@ -2,7 +2,7 @@ module CompassWorldUtils
 
 using ..ActionRNN, Reproduce
 
-using ..JuliaRL
+using ..RLCore
 using Random
 
 cwc = ActionRNN.CompassWorldConst
@@ -254,19 +254,19 @@ function build_features_action(state, action)
     return [action==1 ? ϕ : zero(ϕ); action==2 ? ϕ : zero(ϕ); action==3 ? ϕ : zero(ϕ);]
 end
 
-mutable struct StandardFeatureCreator end
+mutable struct StandardFeatureConstructor <: AbstractFeatureConstructor end
 
-(fc::StandardFeatureCreator)(s, a) = create_features(fc, s, a)
-JuliaRL.FeatureCreators.create_features(fc::StandardFeatureCreator, state, action) = [[1.0]; state; 1.0.-state; onehot(3, action); 1.0.-onehot(3,action)]
-JuliaRL.FeatureCreators.feature_size(fc::StandardFeatureCreator) = 19
+(fc::StandardFeatureConstructor)(s, a) = create_features(fc, s, a)
+RLCore.create_features(fc::StandardFeatureConstructor, state, action) = [[1.0]; state; 1.0.-state; onehot(3, action); 1.0.-onehot(3,action)]
+RLCore.feature_size(fc::StandardFeatureConstructor) = 19
 
-mutable struct ActionTileFeatureCreator end
+mutable struct ActionTileFeatureConstructor <: AbstractFeatureConstructor end
 
-(fc::ActionTileFeatureCreator)(s, a) = create_features(fc, s, a)
-function JuliaRL.FeatureCreators.create_features(fc::ActionTileFeatureCreator, state, action)
+(fc::ActionTileFeatureConstructor)(s, a) = create_features(fc, s, a)
+function RLCore.create_features(fc::ActionTileFeatureConstructor, state, action)
     ϕ = [[1.0]; state; 1.0.-state]
     return [action==1 ? ϕ : zero(ϕ); action==2 ? ϕ : zero(ϕ); action==3 ? ϕ : zero(ϕ);]
 end
-JuliaRL.FeatureCreators.feature_size(fc::ActionTileFeatureCreator) = 39
+RLCore.feature_size(fc::ActionTileFeatureConstructor) = 39
 
 end

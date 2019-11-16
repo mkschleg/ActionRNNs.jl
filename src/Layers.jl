@@ -22,24 +22,3 @@ sigmoid′(x) = sigmoid(x)*(1.0-sigmoid(x))
 # sigmoid′(x) = begin; tmp = sigmoid(x); tmp*(1.0-tmp); end;
 
 
-
-# Linear(in::Integer, out::Integer; init=(dims...)->zeros(Float32, dims...)) =
-#     Linear(init(out, in), init(out))
-
-# (layer::Linear)(x) = layer.W*x .+ layer.b
-# # prime()
-
-# mutable struct Linear{A, V}
-#     W::A
-#     b::V
-# end
-
-# Linear(in::Integer, out::Integer; init=(dims...)->zeros(Float32, dims...)) =
-#     Linear(init(out, in), init(out))
-
-# (layer::Linear)(x) = layer.W*x .+ layer.b
-
-
-
-
-

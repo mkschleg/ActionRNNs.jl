@@ -33,15 +33,6 @@ function jacobian!(J::IdDict, δ::TrackedArray, pms::Params)
     end
 end
 
-mutable struct StopGradient{T}
-    cell::T
-    # StopGradient{T}(layer::T) where {T} = new{T}(layer)
-end
-
-(layer::StopGradient)(x) = Flux.data(layer.cell(x))
-
-reset!(layer::StopGradient, hidden_state_init) = reset!(layer.cell, hidden_state_init)
-
 function exp_settings!(as::ArgParseSettings)
     @add_arg_table as begin
         "--exp_loc"
@@ -73,5 +64,5 @@ include("utils/compassworld.jl")
 include("utils/cycleworld.jl")
 include("utils/ringworld.jl")
 include("utils/flux.jl")
-include("utils/arg_tables.jl")
+include("utils/experiment.jl")
 

@@ -1,6 +1,6 @@
 
-import JuliaRL
-using JuliaRL: AbstractEnvironment, step!, start!
+import RLCore
+using RLCore: AbstractEnvironment, step!, start!
 
 export CompassWorld, get_num_features
 include("env/CompassWorld.jl")
@@ -11,5 +11,5 @@ include("env/CycleWorld.jl")
 export RingWorld
 include("env/RingWorld.jl")
 
-export ContFourRooms
-include("env/ContFourRooms.jl")
+# export ContFourRooms
+# include("env/ContFourRooms.jl")

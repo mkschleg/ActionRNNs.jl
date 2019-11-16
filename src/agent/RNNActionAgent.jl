@@ -3,7 +3,7 @@ import Flux
 import Random
 import DataStructures
 
-mutable struct RNNActionAgent{O, T, F, H, Φ, Π, M, G} <: JuliaRL.AbstractAgent
+mutable struct RNNActionAgent{O, T, F, H, Φ, Π, M, G} <: RLCore.AbstractAgent
     lu::LearningUpdate
     opt::O
     rnn::Flux.Recur{T}
@@ -18,9 +18,6 @@ mutable struct RNNActionAgent{O, T, F, H, Φ, Π, M, G} <: JuliaRL.AbstractAgent
     horde::Horde{G}
 end
 
-
-
-
 function RNNActionAgent(out_horde,
                         feature_creator,
                         feature_size,
@@ -34,13 +31,13 @@ function RNNActionAgent(out_horde,
 
     τ=parsed["truncation"]
     opt = FluxUtils.get_optimizer(parsed)
-    # rnn = FluxUtils.construct_action_rnn(feature_size, num_actions, parsed["numhidden"]; init=init_func)
-    rnn = RNNActionLayer(parsed["numhidden"], num_actions, feature_size,; init=init_func)
+    rnn = FluxUtils.construct_action_rnn(feature_size, num_actions, parsed["numhidden"]; init=init_func)
     out_model = Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func)
 
-    # state_list =  DataStructures.CircularBuffer{Array{Float32, 1}}(τ+1)
+
     state_list = DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 1}}}(τ+1)
     hidden_state_init = FluxUtils.get_initial_hidden_state(rnn)
+
 
     RNNActionAgent(TD(), opt,
                    rnn, out_model,
@@ -53,7 +50,13 @@ function RNNActionAgent(out_horde,
 
 end
 
-function JuliaRL.start!(agent::RNNActionAgent, env_s_tp1; rng=Random.GLOBAL_RNG, kwargs...)
+function agent_settings!(as::Reproduce.ArgParseSettings,
+                         env_type::Type{RNNActionAgent})
+    FluxUtils.opt_settings!(as)
+    FluxUtils.rnn_settings!(as)
+end
+
+function RLCore.start!(agent::RNNActionAgent, env_s_tp1, rng; kwargs...)
 
     # agent.action = sample(rng, agent.π, env_s_tp1)
     # agent.action_prob = get(agent.π, env_s_tp1, agent.action)
@@ -68,13 +71,12 @@ function JuliaRL.start!(agent::RNNActionAgent, env_s_tp1; rng=Random.GLOBAL_RNG,
 end
 
 
-function JuliaRL.step!(agent::RNNActionAgent, env_s_tp1, r, terminal; rng=Random.GLOBAL_RNG, kwargs...)
+function RLCore.step!(agent::RNNActionAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
 
     # new_action = sample(rng, agent.π, env_s_tp1)
     new_action, new_prob = agent.π(env_s_tp1, rng)
-
-    push!(agent.state_list, (agent.action, agent.build_features(env_s_tp1, new_action)))
+    push!(agent.state_list, (agent.action, agent.build_features(env_s_tp1, nothing)))
     
     # RNN update function
     update!(agent.out_model, agent.rnn,
@@ -101,4 +103,4 @@ function JuliaRL.step!(agent::RNNActionAgent, env_s_tp1, r, terminal; rng=Random
     return Flux.data.(out_preds), agent.action
 end
 
-JuliaRL.get_action(agent::RNNActionAgent, state) = agent.action
+RLCore.get_action(agent::RNNActionAgent, state) = agent.action

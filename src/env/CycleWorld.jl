@@ -1,8 +1,8 @@
 
 using Random
-# using JuliaRL
+# using RLCore
 
-# import JuliaRL.reset!, JuliaRL.environment_step!, JuliaRL.get_reward
+# import RLCore.reset!, RLCore.environment_step!, RLCore.get_reward
 
 """
  CycleWorld
@@ -27,19 +27,19 @@ mutable struct CycleWorld <: AbstractEnvironment
             partially_observable)
 end
 
-function JuliaRL.reset!(env::CycleWorld; rng = Random.GLOBAL_RNG, kwargs...)
+function RLCore.reset!(env::CycleWorld, rng::AbstractRNG; kwargs...)
     env.agent_state = 0
 end
 
-JuliaRL.get_actions(env::CycleWorld) = env.actions
+RLCore.get_actions(env::CycleWorld) = env.actions
 
-JuliaRL.environment_step!(env::CycleWorld, action::Int64; rng = Random.GLOBAL_RNG, kwargs...) = 
+RLCore.environment_step!(env::CycleWorld, action::Int64, rng; kwargs...) = 
     env.agent_state = (env.agent_state + 1) % env.chain_length
 
 
-JuliaRL.get_reward(env::CycleWorld) = 0 # -> get the reward of the environment
+RLCore.get_reward(env::CycleWorld) = 0 # -> get the reward of the environment
 
-function JuliaRL.get_state(env::CycleWorld) # -> get state of agent
+function RLCore.get_state(env::CycleWorld) # -> get state of agent
     if env.partially_observable
         return partially_observable_state(env)
     else
@@ -57,7 +57,7 @@ function partially_observable_state(env::CycleWorld)
     return state
 end
 
-function JuliaRL.is_terminal(env::CycleWorld) # -> determines if the agent_state is terminal
+function RLCore.is_terminal(env::CycleWorld) # -> determines if the agent_state is terminal
     return false
 end
 

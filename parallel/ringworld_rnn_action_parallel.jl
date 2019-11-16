@@ -11,21 +11,32 @@ Pkg.activate(".")
 
 using Reproduce
 
-const save_loc = "ringworld_rnn_action_sweep_sgd"
-const exp_file = "experiment/ringworld_action_rnn.jl"
-const exp_module_name = :RingWorldRNNExperiment
+const save_loc = "ringworld_rnn_sweep_sgd"
+const exp_file = "experiment/ringworld_flux_agent.jl"
+const exp_module_name = :RingWorldFluxExperiment
 const exp_func_name = :main_experiment
 const optimizer = "Descent"
-const alphas = clamp.(0.1*1.5.^(-6:6), 0.0, 1.0)
-const truncations = [1, 2, 4, 8, 12, 16]
+# const alphas = clamp.(0.1*1.5.^(-6:6), 0.0, 1.0)
+const alphas = [0.01, 0.1]
+const truncations = [2, 4]
+
+const ringworld_sizes = [6, 10, 15, 20]
 
 function make_arguments(args::Dict)
     alpha = args["alpha"]
     cell = args["cell"]
     truncation = args["truncation"]
     seed = args["seed"]
+    rw_size = args["size"]
+    hs = begin
+        if cell=="RNN"
+            string(parse(Int64, rw_size)*2)
+        else
+            rw_size
+        end
+    end
     # save_file = "$(save_loc)/$(horde)/$(cell)/$(optimizer)_alpha_$(alpha)_truncation_$(truncation)/run_$(seed).jld2"
-    new_args=["--truncation", truncation, "--opt", optimizer, "--optparams", alpha, "--cell", cell, "--seed", seed]
+    new_args=["--truncation", truncation, "--opt", optimizer, "--optparams", alpha, "--cell", cell, "--seed", seed, "--size", rw_size, "--numhidden", hs]
     return new_args
 end
 
@@ -43,7 +54,10 @@ function main()
         action=:store_true
         "--numsteps"
         arg_type=Int64
-        default=750000
+        default=30
+        "--numruns"
+        arg_type=Int64
+        default=10
     end
     parsed = parse_args(as)
     num_workers = parsed["numworkers"]
@@ -51,12 +65,13 @@ function main()
     arg_dict = Dict([
         "alpha"=>alphas,
         "truncation"=>truncations,
-        "cell"=>["RNN"],
-        "seed"=>collect(1:5)
+        "cell"=>["RNN", "ARNN"],
+        "size"=>ringworld_sizes,
+        "seed"=>collect(1:parsed["numruns"])
     ])
-    arg_list = ["cell", "alpha", "truncation", "seed"]
+    arg_list = ["size", "cell", "alpha", "truncation", "seed"]
 
-    static_args = ["--steps", string(parsed["numsteps"]), "--numhidden", "7", "--exp_loc", save_loc]
+    static_args = ["--steps", string(parsed["numsteps"]), "--exp_loc", save_loc]
     args_iterator = ArgIterator(arg_dict, static_args; arg_list=arg_list, make_args=make_arguments)
 
     if parsed["numjobs"]

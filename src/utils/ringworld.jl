@@ -2,7 +2,11 @@
 module RingWorldUtils
 
 using ..ActionRNN, Reproduce
-using ..JuliaRL
+using ..RLCore
+# using ..RLCore.GVFParamFuncs
+
+const GVF = ActionRNN.GVF
+const Horde = ActionRNN.Horde
 
 const RWC = ActionRNN.RingWorldConst
 
@@ -17,6 +21,8 @@ function env_settings!(as::ArgParseSettings)
         default=6
     end
 end
+
+ActionRNN.RingWorld(parsed::Dict) = ActionRNN.RingWorld(parsed["size"])
 
 function horde_settings!(as::ArgParseSettings, prefix::AbstractString="")
     add_arg_table(as,
@@ -142,7 +148,7 @@ end
 get_horde(parsed::Dict, prefix="", pred_offset::Integer=0) =
     get_horde(parsed["$(prefix)horde"], parsed["size"], parsed["$(prefix)gamma"], pred_offset)
 
-function oracle(env::RingWorld, horde_str, γ=0.9)
+function oracle(env::ActionRNN.RingWorld, horde_str, γ=0.9)
     chain_length = env.ring_size
     state = env.agent_state
     ret = Array{Float64,1}()
@@ -170,20 +176,33 @@ function oracle(env::RingWorld, horde_str, γ=0.9)
     return ret
 end
 
-mutable struct StandardFeatureCreator end
+mutable struct StandardFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::StandardFeatureCreator)(s, a) = JuliaRL.FeatureCreators.create_features(fc, s, a)
-JuliaRL.FeatureCreators.create_features(fc::StandardFeatureCreator, s, a) =
-    Float32[1.0, s[1], 1-s[1]]
-JuliaRL.FeatureCreators.feature_size(fc::StandardFeatureCreator) = 3
+(fc::StandardFeatureCreator)(s, a) = RLCore.create_features(fc, s, a)
+RLCore.create_features(fc::StandardFeatureCreator, s, a) =
+    Float32[1.0, s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
+RLCore.create_features(fc::StandardFeatureCreator, s, a::Nothing) =
+    Float32[1.0, s[1], 1-s[1], 0, 0, 0, 0]
+RLCore.feature_size(fc::StandardFeatureCreator) = 7
 
 
-mutable struct SansBiasFeatureCreator end
+mutable struct SansBiasFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::SansBiasFeatureCreator)(s, a) = JuliaRL.FeatureCreators.create_features(fc, s, a)
-JuliaRL.FeatureCreators.create_features(fc::SansBiasFeatureCreator, s, a) =
+(fc::SansBiasFeatureCreator)(s, a) = RLCore.create_features(fc, s, a)
+RLCore.create_features(fc::SansBiasFeatureCreator, s, a) =
     Float32[s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
-JuliaRL.FeatureCreators.feature_size(fc::SansBiasFeatureCreator) = 6
+RLCore.create_features(fc::SansBiasFeatureCreator, s, a::Nothing) =
+    Float32[s[1], 1-s[1], 0, 0, 0, 0]
+RLCore.feature_size(fc::SansBiasFeatureCreator) = 6
+
+mutable struct OneHotFeatureCreator <: AbstractFeatureConstructor end
+
+(fc::OneHotFeatureCreator)(s, a) = RLCore.create_features(fc, s, a)
+RLCore.create_features(fc::OneHotFeatureCreator, s, a) =
+    Float32[s[1], 1-s[1], a==1, a==2]
+RLCore.create_features(fc::OneHotFeatureCreator, s, a::Nothing) =
+    Float32[s[1], 1-s[1], 0, 0]
+RLCore.feature_size(fc::OneHotFeatureCreator) = 4
 
 # build_features_ringworld_sans_bias(s, a) = Float32[s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
 
