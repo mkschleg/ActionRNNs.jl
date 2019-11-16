@@ -24,7 +24,7 @@ end
 function save_setup(parsed, def_save_file="results.jld2")
     savefile = def_save_file
     if !(parsed["working"])
-        create_info!(parsed, parsed["exp_loc"]; filter_keys=["verbose", "working", "exp_loc"])
+        Reproduce.create_info!(parsed, parsed["exp_loc"]; filter_keys=["verbose", "working", "exp_loc"])
         savepath = Reproduce.get_save_dir(parsed)
         savefile = joinpath(savepath, "results.jld2")
         if isfile(savefile)
