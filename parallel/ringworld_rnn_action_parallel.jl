@@ -54,7 +54,7 @@ function main()
         action=:store_true
         "--numsteps"
         arg_type=Int64
-        default=30
+        default=300000
         "--numruns"
         arg_type=Int64
         default=10
