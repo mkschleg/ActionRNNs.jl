@@ -55,10 +55,11 @@ function update!(out_model, rnn::Flux.Recur{T},
     end
 end
 
-function update!(chain, h_init,
-                 # rnn::Flux.Recur{T},
+function update!(chain,
                  horde::H,
-                 opt, lu::TD,
+                 opt,
+                 lu::TD,
+                 h_init,
                  state_seq,
                  env_state_tp1,
                  action_t=nothing,

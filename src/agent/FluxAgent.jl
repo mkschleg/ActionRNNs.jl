@@ -92,11 +92,15 @@ function RLCore.step!(agent::FluxAgent, env_s_tp1, r, terminal, rng; kwargs...)
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
     
     # RNN update function
-    update!(agent.chain, agent.hidden_state_init,
-            agent.horde, agent.opt,
-            agent.lu, 
-            agent.state_list, env_s_tp1,
-            agent.action, agent.action_prob)
+    update!(agent.chain,
+            agent.horde,
+            agent.opt,
+            agent.lu,
+            agent.hidden_state_init,
+            agent.state_list,
+            env_s_tp1,
+            agent.action,
+            agent.action_prob)
     # End update function
 
     Flux.truncate!(agent.chain)
