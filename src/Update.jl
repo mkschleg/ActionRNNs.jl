@@ -31,8 +31,7 @@ function update!(out_model, rnn::Flux.Recur{T},
                  action_t=nothing, b_prob=1.0;
                  kwargs...) where {T, H<:AbstractHorde} end
 
-struct TD <: LearningUpdate
-end
+struct TD <: LearningUpdate end
 
 function update!(out_model, rnn::Flux.Recur{T},
                  horde::H,

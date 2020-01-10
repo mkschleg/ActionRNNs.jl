@@ -1,5 +1,7 @@
 module ActionRNN
 
+using RLCore
+
 export
     SingleLayer,
     Linear,

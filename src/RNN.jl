@@ -34,6 +34,15 @@ function contains_rnntype(m, rnn_type::Type)
     return any(is_rnn_type)
 end
 
+function needs_action_input(m)
+    needs_action = Bool[]
+    Flux.prefor(x -> push!(needs_action, _needs_action_input(x)), m)
+    return any(needs_action)
+end
+
+_needs_action_input(m) = false
+_needs_action_input(m::Flux.Recur{T}) where {T} = _needs_action_input(m.cell)
+
 function get_next_hidden_state(rnn::Flux.Recur{T}, h_init, input) where {T}
     return Flux.data(rnn.cell(h_init, input)[1])
 end
@@ -69,6 +78,9 @@ get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = deepcopy
 
 
 abstract type AbstractActionRNN end
+
+_needs_action_input(m::M) where {M<:AbstractActionRNN} = true
+
 
 """
     ARNNCell
@@ -130,9 +142,12 @@ function (m::ARNNCell)(h, x::Tuple{Array{<:Integer, 1}, A}) where {A}
     end
 end
 
+
+
 Flux.hidden(m::ARNNCell) = m.h
 Flux.@treelike ARNNCell
 ARNN(args...; kwargs...) = Flux.Recur(ARNNCell(args...; kwargs...))
+
 
 function Base.show(io::IO, l::ARNNCell)
   print(io, "ARNNCell(", size(l.Wx, 2), ", ", size(l.Wx, 1))

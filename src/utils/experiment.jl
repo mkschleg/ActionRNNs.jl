@@ -56,6 +56,10 @@ function pred_experiment(env, agent, rng, num_steps, parsed, err_func)
         if parsed["progress"]
            ProgressMeter.next!(prg_bar)
         end
+
+        if parsed["visualize"]
+            
+        end
     end
 end
 
