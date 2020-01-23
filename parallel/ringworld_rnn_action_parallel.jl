@@ -1,9 +1,9 @@
 #!/cvmfs/soft.computecanada.ca/easybuild/software/2017/avx2/Compiler/gcc7.3/julia/1.1.0/bin/julia
-#SBATCH -o cycle_rnn.out # Standard output
-#SBATCH -e cycle_rnn.err # Standard error
+#SBATCH -o ringworld_rnn_gammas.out # Standard output
+#SBATCH -e ringworld_rnn_gammas.err # Standard error
 #SBATCH --mem-per-cpu=2000M # Memory request of 2 GB
-#SBATCH --time=02:00:00 # Running time of 12 hours
-#SBATCH --ntasks=128
+#SBATCH --time=06:00:00 # Running time of 12 hours
+#SBATCH --ntasks=64
 #SBATCH --account=rrg-whitem
 
 using Pkg
@@ -67,7 +67,7 @@ function main()
     ])
     arg_list = ["size", "cell", "hidden", "alpha", "truncation", "seed"]
 
-    static_args = ["--steps", string(parsed["numsteps"]), "--exp_loc", save_loc]
+    static_args = ["--steps", string(parsed["numsteps"]), "--exp_loc", save_loc, "--outhorde", "gammas_term"]
     args_iterator = ArgIterator(arg_dict, static_args; arg_list=arg_list, make_args=make_arguments)
 
     if parsed["numjobs"]
