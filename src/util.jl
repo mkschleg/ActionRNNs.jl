@@ -57,6 +57,8 @@ function exp_settings!(as::ArgParseSettings)
         action=:store_true
         "--visualize"
         action=:store_true
+        "--synopsis"
+        action=:store_true
     end
 end
 

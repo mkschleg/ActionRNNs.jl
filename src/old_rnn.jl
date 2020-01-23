@@ -59,7 +59,6 @@ end
 
 ### TODO there may be extra copies here than what is actually needed. Test in the future if there is slowdown from allocations here.
 function get_hidden_state(c)
-    # h_state = IdDict{Any, Array{Float32, 1}}()
     h_state = IdDict()
     Flux.prefor(x -> x isa Flux.Recur && get!(h_state, x, get_hidden_state(x)), c)
     h_state
@@ -88,7 +87,21 @@ _needs_action_input(m::M) where {M<:AbstractActionRNN} = true
 
     An RNN cell which explicitily transforms the hidden state of the recurrent neural network according to action.
 
+    Figure for A-RNN with 3 actions.
+        O - Concatenate
+        X - Split by action
 
+          -----------------------------------
+         |     |--> W_1*[o_{t+1};h_t]-|      |
+         |     |                      |      |
+  h_t    |     |                      |      | h_{t+1}
+-------->|-O---X--> W_2*[o_{t+1};h_t]-X--------------->
+         | |   |                      |      |
+         | |   |                      |      |
+         | |   |--> W_3*[o_{t+1};h_t]-|      |
+          -|---------------------------------
+           | (o_{t+1}, a_t)
+           |
 """
 mutable struct ARNNCell{F, A, V, H} <: AbstractActionRNN
     σ::F
@@ -97,21 +110,6 @@ mutable struct ARNNCell{F, A, V, H} <: AbstractActionRNN
     b::V
     h::H
 end
-
-# Figure for A-RNN with 3 actions.
-#     O - Concatenate
-#     X - Split by action
-#           -----------------------------------
-#          |     |--> W_1*[o_{t+1};h_t]-|      |
-#          |     |                      |      |
-#   h_t    |     |                      |      | h_{t+1}
-# -------->|-O---X--> W_2*[o_{t+1};h_t]-X--------------->
-#          | |   |                      |      |
-#          | |   |                      |      |
-#          | |   |--> W_3*[o_{t+1};h_t]-|      |
-#           -|---------------------------------
-#            | (o_{t+1}, a_t)
-#            |
 
 ARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
     ARNNCell(
@@ -125,7 +123,6 @@ ARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ
 
 function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A}
     new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
-    # println("Hello")
     return new_h, new_h
 end
 
@@ -134,46 +131,17 @@ function (m::ARNNCell)(h, x::Tuple{Array{<:Integer, 1}, A}) where {A}
         new_h = m.σ.(
             cat(collect((m.Wx[x[1][i], :, :]*x[2][:, i]) for i in 1:length(x[1]))...; dims=2) .+
             cat(collect((m.Wh[x[1][i], :, :]*h) for i in 1:length(x[1]))...; dims=2) .+
-            m.b[x[1], :]')
+            m.b[x[2], :]')
         return new_h, new_h
     else
         new_h = m.σ.(
             cat(collect((m.Wx[x[1][i], :, :]*x[2][:, i]) for i in 1:length(x[1]))...; dims=2) .+
             cat(collect((m.Wh[x[1][i], :, :]*h[:, i]) for i in 1:length(x[1]))...; dims=2) .+
-            m.b[x[1], :]')
+            m.b[x[2], :]')
         return new_h, new_h
     end
 end
 
-function (m::ARNNCell)(h, x::Tuple{Array{<:AbstractFloat, 1}, A}) where {A}
-    # new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
-    @inbounds new_h =
-        m.σ.(
-            sum(m.Wx[i,:,j]*x[1][i]*x[2][j] for (i,j) ∈ Iterators.product(1:(size(m.Wx)[1]), 1:(size(m.Wx)[3]))) .+
-            sum(m.Wh[i,:,j]*x[1][i]*h[j] for (i,j) ∈ Iterators.product(1:(size(m.Wh)[1]), 1:(size(m.Wh)[3]))) .+
-            m.b'*x[1])
-    return new_h, new_h
-end
-
-function (m::ARNNCell)(h, x::Tuple{Array{<:AbstractFloat, 2}, A}) where {A}
-    # new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
-    throw("Implement")
-    @inbounds new_h =
-        m.σ.(
-            sum(m.Wx[i,:,j]*x[1][i, :]*x[2][j, :] for (i,j) ∈ Iterators.product(1:(size(m.Wx)[1]), 1:(size(m.Wx)[3]))) .+
-            sum(m.Wh[i,:,j]*x[1][i]*h[j] for (i,j) ∈ Iterators.product(1:(size(m.Wh)[1]), 1:(size(m.Wh)[3]))) .+
-            m.b'*x[1])
-    return new_h, new_h
-end
-
-function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:Flux.TrackedArray, A}
-    # new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
-    @inbounds new_h =
-        m.σ.(
-            sum(m.Wx[i,:,j]*x[1][i]*x[2][j] for (i,j) ∈ Iterators.product(1:(size(m.Wx)[1]), 1:(size(m.Wx)[3]))) .+
-            sum(m.Wh[i,:,j]*x[1][i]*h[j] for (i,j) ∈ Iterators.product(1:(size(m.Wh)[1]), 1:(size(m.Wh)[3]))) .+
-            m.b'*x[1])
-end
 
 
 Flux.hidden(m::ARNNCell) = m.h
@@ -190,66 +158,64 @@ end
 (l::Flux.Dense)(x::T) where {T<:Tuple} = (x[2], l(x[1]))
 
 
-#    `\Lambda \mathbf{W} \left(x_{t+1}\mathbf{Wx} \odot a_{t}\mathbf{Wa}\right)^\top`
-
-@doc raw"""
+"""
     FactorizedARNNCell
 
     An RNN cell which explicitily transforms the hidden state of the recurrent neural network according to action.
 
-    
-    ``W (x_{t+1}Wx \odot a_{t}Wa)^T``
+    Figure for FactorizedARNN with 3 actions.
+        O - Concatenate
+        X - Split by action
 
+          -----------------------------------
+         |                                   |
+         |                                   |
+  h_t    |                                   | h_{t+1}
+-------->|-O--- 
+         | |                                 |
+         | |                                 |
+         | |                                 |
+          -|---------------------------------
+           | (o_{t+1}, a_t)
+           |
 """
+
 mutable struct FacARNNCell{F, A, V, H} <: AbstractActionRNN
     σ::F
-    W::A
     Wx::A
     Wh::A
-    Wa::A
     b::V
     h::H
 end
 
-# Figure for A-RNN with 3 actions.
-#     O - Concatenate
-#     X - Split by action
-#           -----------------------------------
-#          |                                   |
-#          |                                   |
-#   h_t    |                                   | h_{t+1}
-# -------->|-O--- 
-#          | |                                 |
-#          | |                                 |
-#          | |                                 |
-#           -|---------------------------------
-#            | (o_{t+1}, a_t)
-#            |
-
-
-# FacARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
-FacARNNCell(in, actions, out, factors, activation=tanh; init=Flux.glorot_uniform) = 
+FacARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
     FacARNNCell(
-        activation,
-        param(init(out, factors)),
-        param(init(factors, in)),
-        param(init(factors, out)),
-        param(init(factors, actions)),
-        param(Flux.zeros(out, actions)),
-        param(Flux.zeros(out)))
-
-FacARNN(args...; kwargs...) = Flux.Recur(FacARNNCell(args...; kwargs...))
+        σ_int,
+        param(init(num_actions, num_hidden, num_ext_features)),
+        param(init(num_actions, num_hidden, num_hidden)),
+        param(zeros(Float32, num_actions, num_hidden)),
+        # cumulants,
+        # discounts,
+        param(Flux.zeros(num_hidden)))
 
 function (m::FacARNNCell)(h, x::Tuple{A, O}) where {A, O}
-    W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-    new_h = m.σ.(m.W*((Wx*o .+ Wh*h) .* Wa*a) .+ b*a)
+    # new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
+    new_h
     return new_h, new_h
 end
 
-function (m::FacARNNCell)(h, x::Tuple{A, O}) where {A<:Integer, O}
-    W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-    new_h = m.σ.(m.W*((Wx*o .+ Wh*h) .* Wa[:, a]) .+ b[a])
-    return new_h, new_h
-end
-
-Flux.hidden(m::FacARNNCell) = m.h
+# function (m::FacARNNCell)(h, x::Tuple{Array{<:Integer, 1}, A}) where {A}
+#     if length(size(h)) == 1
+#         new_h = m.σ.(
+#             cat(collect((m.Wx[x[1][i], :, :]*x[2][:, i]) for i in 1:length(x[1]))...; dims=2) .+
+#             cat(collect((m.Wh[x[1][i], :, :]*h) for i in 1:length(x[1]))...; dims=2) .+
+#             m.b[x[2], :]')
+#         return new_h, new_h
+#     else
+#         new_h = m.σ.(
+#             cat(collect((m.Wx[x[1][i], :, :]*x[2][:, i]) for i in 1:length(x[1]))...; dims=2) .+
+#             cat(collect((m.Wh[x[1][i], :, :]*h[:, i]) for i in 1:length(x[1]))...; dims=2) .+
+#             m.b[x[2], :]')
+#         return new_h, new_h
+#     end
+# end
