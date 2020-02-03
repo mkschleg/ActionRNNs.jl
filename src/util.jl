@@ -67,6 +67,7 @@ end
 include("utils/compassworld.jl")
 include("utils/cycleworld.jl")
 include("utils/ringworld.jl")
+include("utils/tmaze.jl")
 include("utils/flux.jl")
 include("utils/experiment.jl")
 

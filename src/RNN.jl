@@ -123,10 +123,19 @@ ARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ
         # discounts,
         param(Flux.zeros(num_hidden)))
 
-function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A}
-    new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
-    # println("Hello")
+
+function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A<:AbstractArray}
+    @inbounds new_h =
+        m.σ.(m.Wx[x[1], :, :]*x[2] + m.Wh[x[1], :, :]*h + m.b[x[1], :])
     return new_h, new_h
+end
+
+function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFloat, 1}, A}
+    # new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
+    new_h =
+        m.σ.(mapreduce((i)->reduce_func(m, x, h, i), +, 1:(size(m.Wx)[1]))[:,1] + m.b'x[1])
+
+    new_h, new_h
 end
 
 function (m::ARNNCell)(h, x::Tuple{Array{<:Integer, 1}, A}) where {A}
@@ -145,35 +154,13 @@ function (m::ARNNCell)(h, x::Tuple{Array{<:Integer, 1}, A}) where {A}
     end
 end
 
-function (m::ARNNCell)(h, x::Tuple{Array{<:AbstractFloat, 1}, A}) where {A}
-    # new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
-    @inbounds new_h =
-        m.σ.(
-            sum(m.Wx[i,:,j]*x[1][i]*x[2][j] for (i,j) ∈ Iterators.product(1:(size(m.Wx)[1]), 1:(size(m.Wx)[3]))) .+
-            sum(m.Wh[i,:,j]*x[1][i]*h[j] for (i,j) ∈ Iterators.product(1:(size(m.Wh)[1]), 1:(size(m.Wh)[3]))) .+
-            m.b'*x[1])
-    return new_h, new_h
+
+function reduce_func(m::ARNNCell, x, h, i)
+    @inbounds x[1][i]*view(m.Wx, i, :, :)*x[2] +
+        x[1][i]*view(m.Wh, i, :, :)*h
+        # x[1][i]*view(m.b, i, :)
 end
 
-function (m::ARNNCell)(h, x::Tuple{Array{<:AbstractFloat, 2}, A}) where {A}
-    # new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
-    throw("Implement")
-    @inbounds new_h =
-        m.σ.(
-            sum(m.Wx[i,:,j]*x[1][i, :]*x[2][j, :] for (i,j) ∈ Iterators.product(1:(size(m.Wx)[1]), 1:(size(m.Wx)[3]))) .+
-            sum(m.Wh[i,:,j]*x[1][i]*h[j] for (i,j) ∈ Iterators.product(1:(size(m.Wh)[1]), 1:(size(m.Wh)[3]))) .+
-            m.b'*x[1])
-    return new_h, new_h
-end
-
-function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:Flux.TrackedArray, A}
-    # new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
-    @inbounds new_h =
-        m.σ.(
-            sum(m.Wx[i,:,j]*x[1][i]*x[2][j] for (i,j) ∈ Iterators.product(1:(size(m.Wx)[1]), 1:(size(m.Wx)[3]))) .+
-            sum(m.Wh[i,:,j]*x[1][i]*h[j] for (i,j) ∈ Iterators.product(1:(size(m.Wh)[1]), 1:(size(m.Wh)[3]))) .+
-            m.b'*x[1])
-end
 
 
 Flux.hidden(m::ARNNCell) = m.h

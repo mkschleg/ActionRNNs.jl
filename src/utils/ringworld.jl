@@ -5,8 +5,10 @@ using ..ActionRNN, Reproduce
 using ..RLCore
 # using ..RLCore.GVFParamFuncs
 
-const GVF = ActionRNN.GVF
-const Horde = ActionRNN.Horde
+const GVF = RLCore.GVF
+const Horde = RLCore.Horde
+
+import RLCore.GVFParamFuncs: FeatureCumulant, PredictionCumulant, ConstantDiscount, StateTerminationDiscount, PersistentPolicy
 
 const RWC = ActionRNN.RingWorldConst
 

@@ -217,7 +217,7 @@ function get_action(state, env_state, rng=Random.GLOBAL_RNG)
     end
 end
 
-mutable struct ActingPolicy <: ActionRNN.AbstractActingPolicy
+mutable struct ActingPolicy <: ActionRNN.AbstractPolicy
     state::String
     ActingPolicy() = new("")
 end

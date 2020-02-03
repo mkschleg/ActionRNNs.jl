@@ -11,5 +11,8 @@ include("env/CycleWorld.jl")
 export RingWorld
 include("env/RingWorld.jl")
 
+export TMaze
+include("env/TMaze.jl")
+
 # export ContFourRooms
 # include("env/ContFourRooms.jl")

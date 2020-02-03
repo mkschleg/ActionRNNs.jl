@@ -24,7 +24,7 @@ function FluxAgent(out_horde,
                    acting_policy::Π,
                    parsed;
                    rng=Random.GLOBAL_RNG,
-                   init_func=(dims...)->glorot_uniform(rng, dims...)) where {Π<:AbstractActingPolicy}
+                   init_func=(dims...)->glorot_uniform(rng, dims...)) where {Π}
 
     num_gvfs = length(out_horde)
 
@@ -41,7 +41,7 @@ function FluxAgent(out_horde,
         end
     end
     
-    hidden_state_init = get_initial_hidden_state(c)
+    hidden_state_init = get_initial_hidden_state(model)
     
     FluxAgent(TD(),
               opt,
@@ -121,4 +121,4 @@ function RLCore.step!(agent::FluxAgent, env_s_tp1, r, terminal, rng; kwargs...)
     return Flux.data(out_preds), agent.action
 end
 
-RLCore.get_action(agent::FluxAgent, state) = agent.action
+# RLCore.get_action(agent::FluxAgent, state) = agent.action

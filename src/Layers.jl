@@ -1,5 +1,5 @@
 
-
+using Flux
 
 mutable struct SingleLayer{F, FP, A, V}
     σ::F
@@ -22,3 +22,51 @@ sigmoid′(x) = sigmoid(x)*(1.0-sigmoid(x))
 # sigmoid′(x) = begin; tmp = sigmoid(x); tmp*(1.0-tmp); end;
 
 
+struct ParallelStreams{T<:Tuple}
+    l::T
+end
+
+ParallelStreams(args...) = ParallelStreams((args))
+
+Flux.@treelike ParallelStreams
+(l::ParallelStreams)(x) = map((mdl)->mdl(x), l.l)
+
+function Base.show(io::IO, l::ParallelStreams)
+  print(io, "ParallelStreams(", (string(layer)*", " for layer in l.l)..., ")")
+end
+
+
+struct DualStreams{M1, M2}
+    m1::M1
+    m2::M2
+end
+
+Flux.@treelike DualStreams
+(l::DualStreams)(x) = (l.m1(x), l.m2(x))
+
+
+
+struct ConcatStreams{M1, M2}
+    m1::M1
+    m2::M2
+end
+
+Flux.@treelike ConcatStreams
+(l::ConcatStreams)(x) = vcat(l.m1(x), l.m2(x))
+
+function Base.show(io::IO, l::ConcatStreams)
+  print(io, "ConcatStreams(", string(l.m1), ", ", string(l.m2), ")")
+end
+
+
+struct ActionStateStreams{AM, SM}
+    action_model::AM
+    state_model::SM
+end
+
+Flux.@treelike ActionStateStreams
+(l::ActionStateStreams)(x::Tuple) = (l.action_model(x[1]), l.state_model(x[2]))
+
+function Base.show(io::IO, l::ActionStateStreams)
+  print(io, "ActionStateStream(", string(l.action_model), ", ", string(l.state_model), ")")
+end
