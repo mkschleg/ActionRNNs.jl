@@ -1,5 +1,7 @@
 module ActionRNN
 
+using RLCore
+
 export
     SingleLayer,
     Linear,
@@ -9,27 +11,11 @@ export
 
 include("Layers.jl")
 
-export
-    GVF,
-    # get, get!,
-    cumulant,
-    discount,
-    policy,
-    Horde,
-    NullPolicy,
-    PersistentPolicy,
-    ConstantDiscount,
-    StateTerminationDiscount,
-    FeatureCumulant,
-    PredictionCumulant,
-    ScaledCumulant
-
-include("GVF.jl")
-
 export ARNN, reset!, get
 include("RNN.jl")
 
-export RTD, RTD_jacobian, TDLambda, TD, update!
+# export RTD, RTD_jacobian, TDLambda, TD, update!
+export TD, update!
 include("Loss.jl")
 include("Update.jl")
 
@@ -44,7 +30,7 @@ agent_settings!(as::Reproduce.ArgParseSettings, agent_type) = throw("Settings no
 export step!, start!
 include("Environments.jl")
 
-export jacobian, glorot_uniform, glorot_normal, StopGradient
+export jacobian, glorot_uniform, glorot_normal
 include("util.jl")
 
 include("Agent.jl")

@@ -55,6 +55,10 @@ function exp_settings!(as::ArgParseSettings)
         action=:store_true
         "--progress"
         action=:store_true
+        "--visualize"
+        action=:store_true
+        "--synopsis"
+        action=:store_true
     end
 end
 
@@ -63,6 +67,7 @@ end
 include("utils/compassworld.jl")
 include("utils/cycleworld.jl")
 include("utils/ringworld.jl")
+include("utils/tmaze.jl")
 include("utils/flux.jl")
 include("utils/experiment.jl")
 

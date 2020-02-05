@@ -116,12 +116,6 @@ abstract type AbstractGVF end
 
 function get(gvf::AbstractGVF, state_t, action_t, state_tp1, action_tp1, preds_tp1) end
 
-get(gvf::AbstractGVF, state_t, action_t, state_tp1, preds_tp1) =
-    get(gvf::AbstractGVF, state_t, action_t, state_tp1, nothing, preds_tp1)
-
-get(gvf::AbstractGVF, state_t, action_t, state_tp1) =
-    get(gvf::AbstractGVF, state_t, action_t, state_tp1, nothing, nothing)
-
 function cumulant(gvf::AbstractGVF) end
 function discount(gvf::AbstractGVF) end
 function policy(gvf::AbstractGVF) end
@@ -169,8 +163,6 @@ end
 get(gvfh::Horde, state_tp1, preds_tp1) = get(gvfh::Horde, nothing, nothing, state_tp1, nothing, preds_tp1)
 get(gvfh::Horde, action_t, state_tp1, preds_tp1) = get(gvfh::Horde, nothing, action_t, state_tp1, nothing, preds_tp1)
 get(gvfh::Horde, state_t, action_t, state_tp1, preds_tp1) = get(gvfh::Horde, state_t, action_t, state_tp1, nothing, preds_tp1)
-
-get!(C, Γ, Π_probs,gvfh::Horde, action_t, state_tp1, preds_tp1) = get!(C, Γ, Π_probs, gvfh::Horde, nothing, action_t, state_tp1, nothing, preds_tp1)
 
 @forward Horde.gvfs Base.length
 

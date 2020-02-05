@@ -6,7 +6,7 @@ import DataStructures
 mutable struct FluxAgent{O, C, F, H, Φ, Π, G} <: RLCore.AbstractAgent
     lu::LearningUpdate
     opt::O
-    chain::C
+    model::C
     build_features::F
     state_list::DataStructures.CircularBuffer{Φ}
     hidden_state_init::H
@@ -18,13 +18,13 @@ mutable struct FluxAgent{O, C, F, H, Φ, Π, G} <: RLCore.AbstractAgent
 end
 
 function FluxAgent(out_horde,
-                   chain,
+                   model,
                    feature_creator,
                    feature_size,
                    acting_policy::Π,
                    parsed;
                    rng=Random.GLOBAL_RNG,
-                   init_func=(dims...)->glorot_uniform(rng, dims...)) where {Π<:AbstractActingPolicy}
+                   init_func=(dims...)->glorot_uniform(rng, dims...)) where {Π}
 
     num_gvfs = length(out_horde)
 
@@ -34,18 +34,18 @@ function FluxAgent(out_horde,
     # out_model = Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func)
 
     state_list, init_state = begin
-        if contains_rnntype(chain, ActionRNN.AbstractActionRNN)
+        if contains_rnntype(model, ActionRNN.AbstractActionRNN)
             (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 1}}}(τ+1), (0, zeros(Float32, 1)))
         else
             (DataStructures.CircularBuffer{Array{Float32, 1}}(τ+1), zeros(Float32, 1))
         end
     end
     
-    hidden_state_init = get_initial_hidden_state(c)
+    hidden_state_init = get_initial_hidden_state(model)
     
     FluxAgent(TD(),
               opt,
-              chain,
+              model,
               feature_creator,
               state_list,
               hidden_state_init,
@@ -78,7 +78,7 @@ function RLCore.start!(agent::FluxAgent, env_s_tp1, rng; kwargs...)
     fill!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
 
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-    agent.hidden_state_init = get_initial_hidden_state(agent.chain)
+    agent.hidden_state_init = get_initial_hidden_state(agent.model)
     agent.s_t = build_new_feat(agent, env_s_tp1, agent.action)
     return agent.action
 end
@@ -92,21 +92,25 @@ function RLCore.step!(agent::FluxAgent, env_s_tp1, r, terminal, rng; kwargs...)
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
     
     # RNN update function
-    update!(agent.chain, agent.hidden_state_init,
-            agent.horde, agent.opt,
-            agent.lu, 
-            agent.state_list, env_s_tp1,
-            agent.action, agent.action_prob)
+    update!(agent.model,
+            agent.horde,
+            agent.opt,
+            agent.lu,
+            agent.hidden_state_init,
+            agent.state_list,
+            env_s_tp1,
+            agent.action,
+            agent.action_prob)
     # End update function
 
-    Flux.truncate!(agent.chain)
-    reset!(agent.chain, agent.hidden_state_init)
-    out_preds = agent.chain.(agent.state_list)[end]
+    Flux.truncate!(agent.model)
+    reset!(agent.model, agent.hidden_state_init)
+    out_preds = agent.model.(agent.state_list)[end]
     # rnn_out = agent.rnn.(agent.state_list)
     # out_preds = agent.out_model(rnn_out[end])
 
     agent.hidden_state_init =
-        get_next_hidden_state(agent.chain, agent.hidden_state_init, agent.state_list[1])
+        get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1])
 
     agent.s_t = build_new_feat(agent, env_s_tp1, agent.action)
     agent.action = copy(new_action)
@@ -117,4 +121,4 @@ function RLCore.step!(agent::FluxAgent, env_s_tp1, r, terminal, rng; kwargs...)
     return Flux.data(out_preds), agent.action
 end
 
-RLCore.get_action(agent::FluxAgent, state) = agent.action
+# RLCore.get_action(agent::FluxAgent, state) = agent.action
