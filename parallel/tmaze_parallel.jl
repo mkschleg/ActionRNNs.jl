@@ -38,7 +38,7 @@ function main()
     as = ArgParseSettings()
     @add_arg_table as begin
         "numworkers"
-        arg_type=Int64
+        arg_type=Int
         default=5
         "--jobloc"
         arg_type=String
@@ -46,10 +46,13 @@ function main()
         "--numjobs"
         action=:store_true
         "--numsteps"
-        arg_type=Int64
+        arg_type=Int
         default=200000
+        "--startruns"
+        arg_type=Int
+        default=1
         "--numruns"
-        arg_type=Int64
+        arg_type=Int
         default=10
     end
     parsed = parse_args(as)
@@ -60,7 +63,7 @@ function main()
                     "cell"=>["RNN", "GRU", "LSTM", "ARNN"],
                     "size"=>tmaze_sizes,
                     "hidden"=>hidden_state_sizes,
-                    "seed"=>collect(1:parsed["numruns"]))
+                    "seed"=>collect(parsed["startruns"]:parsed["numruns"]))
     arg_list = ["size", "cell", "hidden", "alpha", "truncation", "seed"]
 
     static_args = ["--steps", string(parsed["numsteps"]), "--exp_loc", save_loc]
