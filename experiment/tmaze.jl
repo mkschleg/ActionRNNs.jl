@@ -1,7 +1,7 @@
 
 module TMazeExperiment
 
-include("../src/ActionRNN.jl")
+# include("../src/ActionRNN.jl")
 
 import Flux
 import Flux.Tracker
@@ -10,7 +10,7 @@ import LinearAlgebra.Diagonal
 import RLCore
 import ActionRNN
 
-using .ActionRNN: TMaze, step!, start!, is_terminal, get_actions, glorot_uniform
+using ActionRNN: TMaze, step!, start!, is_terminal, get_actions, glorot_uniform
 
 # using ActionRNN
 using Statistics
@@ -23,19 +23,6 @@ using Random
 
 const TMU = ActionRNN.TMazeUtils
 const FLU = ActionRNN.FluxUtils
-
-function results_synopsis(res, ::Val{true})
-    rmse = sqrt.(mean(res["err"].^2; dims=2))
-    Dict([
-        "desc"=>"All operations are on the RMSE",
-        "all"=>mean(rmse),
-        "end"=>mean(rmse[end-50000:end]),
-        "lc"=>mean(reshape(rmse, 1000, :); dims=1)[1,:],
-        "var"=>var(reshape(rmse, 1000, :); dims=1)[1,:]
-    ])
-end
-
-results_synopsis(res, ::Val{false}) = res
 
 function arg_parse(as::ArgParseSettings = ArgParseSettings(exc_handler=Reproduce.ArgParse.debug_handler))
 
@@ -53,6 +40,8 @@ function arg_parse(as::ArgParseSettings = ArgParseSettings(exc_handler=Reproduce
         default=0.99f0
         "--action_embedding"
         action=:store_true
+        "--ae_size"
+        arg_type=Int
     end
     
     return as
@@ -76,8 +65,8 @@ function construct_agent(env, parsed, rng)
             if parsed["action_embedding"]
                 Flux.Chain(
                     (x)->(Flux.onehot(x[1], 1:4), x[2]),
-                    ActionRNN.ActionStateStreams(Flux.Dense(4, 3, Flux.relu; initW=init_func), identity),
-                    ActionRNN.ARNN(fs, 3, parsed["numhidden"]; init=init_func),
+                    ActionRNN.ActionStateStreams(Flux.Dense(4, parsed["ae_size"], tanh; initW=init_func), identity),
+                    ActionRNN.ARNN(fs, parsed["ae_size"], parsed["numhidden"]; init=init_func),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             else
                 Flux.Chain(
@@ -91,9 +80,9 @@ function construct_agent(env, parsed, rng)
             if parsed["action_embedding"]
                 Flux.Chain(
                     (x)->(x[1:3], x[4:end]),
-                    ActionRNN.ActionStateStreams(Flux.param, Flux.Dense(4, 3, Flux.relu; initW=init_func)),
+                    ActionRNN.ActionStateStreams(Flux.param, Flux.Dense(4, parsed["ae_size"], Flux.sigmoid; initW=init_func)),
                     (x)->vcat(x[1], x[2]),
-                    rnntype(6, parsed["numhidden"]; init=init_func),
+                    rnntype(parsed["ae_size"] + fs, parsed["numhidden"]; init=init_func),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             else
                 Flux.Chain(rnntype(fs, parsed["numhidden"]; init=init_func),
@@ -110,6 +99,49 @@ function construct_agent(env, parsed, rng)
                                rng=rng)
 end
 
+
+function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing, checkpoint_cb=nothing, e=0)
+    terminal = false
+    
+    s_t = start!(env, rng)
+    action = start!(agent, s_t, rng)
+
+    total_rew = 0
+    steps = 0
+    success = false
+    if !(checkpoint_cb isa Nothing)
+        checkpoint_cb(agent, total_steps+step)
+    end
+    if !(progress_bar isa Nothing)
+        next!(progress_bar, showvalues=[(:episode, e), (:step, total_steps+steps)])
+    end
+    steps = 1
+
+    while !terminal
+        
+        s_tp1, rew, terminal = step!(env, action)
+
+        action = step!(agent, s_tp1, clamp(rew, -1, 1), terminal, rng)
+
+        if !(checkpoint_cb isa Nothing)
+            checkpoint_cb(agent, total_steps+steps)
+        end
+        
+        total_rew += rew
+        steps += 1
+        success = success || (rew == 4.0)
+        if !(progress_bar isa Nothing)
+            next!(progress_bar, showvalues=[(:episode, e), (:step, total_steps+steps)])
+        end
+
+        if (total_steps+steps >= max_steps) || (steps >= 1000) # 5 Minutes of Gameplay = 18k steps.
+            break
+        end
+    end
+    
+    return total_rew, steps, success
+end
+
 function main_experiment(args::Vector{String})
 
     as = arg_parse()
@@ -121,37 +153,29 @@ function main_experiment(args::Vector{String})
     end
 
     num_steps = parsed["steps"]
-    num_episodes = 10000
 
     seed = parsed["seed"]
     rng = Random.MersenneTwister(seed)
 
-
     env = TMaze(parsed["size"])
     agent = construct_agent(env, parsed, rng)
 
-    total_rews = zeros(Float32, num_episodes)
-    successes = fill(false, num_episodes)
-    @showprogress "Episode: " for eps in 1:num_episodes
-        s_t = start!(env, rng)
-        action = start!(agent, s_t, rng)
-        step = 1
-        while RLCore.is_terminal(env) == false
-            trns = step!(env, action, rng)
-            action = step!(agent, trns..., rng)
-            total_rews[eps] += trns[2]
-            if is_terminal(env)
-                successes[eps] = trns[2] == 4.0
-            end
-            step += 1
-            if step == 500
-                # println("Episode 500")
-                break;
-            end
-        end
-    end
-    total_rews, successes
+    total_rews = Float32[]
+    successes = Bool[]
+    total_steps = Int[]
 
+    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
+    eps = 1
+    while sum(total_steps) <= num_steps
+        total_rew, steps, success =
+            episode!(env, agent, rng, num_steps, sum(total_steps), parsed["progress"] ? prg_bar : nothing, nothing, eps)
+        push!(total_rews, total_rew)
+        push!(total_steps, steps)
+        push!(successes, success)
+        eps += 1
+    end
+    save_results = Dict("total_rews"=>total_rews, "steps"=>total_steps, "successes"=>successes)
+    ActionRNN.save_results(parsed, savefile, save_results)
 end
 
 

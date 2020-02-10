@@ -85,13 +85,9 @@ end
 
 get_cart_idx(a, l) = CartesianIndex.(a, 1:l)
 
-
 function q_learning_loss(q_t, a_t, r, terminal, γ, q_tp1)
     q_tp1_max = Flux.data(maximum(q_tp1))
-    # @show Flux.data(q_tp1)
-    # @show q_tp1_max
-    # @show r, terminal, γ
-    return (q_t[a_t] - (r .+ (1 .- terminal).*γ.*q_tp1_max)).^2
+    return (q_t[a_t] - (r .+ γ*(1 - terminal)*q_tp1_max)).^2
 end
 # function loss(lu::QLearning, model, s_t, a_t, s_tp1, r, terminal, target_model)
     
