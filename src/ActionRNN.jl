@@ -1,6 +1,6 @@
 module ActionRNN
 
-using RLCore
+using MinimalRLCore
 
 export
     SingleLayer,

@@ -2,8 +2,6 @@
 using Statistics
 using LinearAlgebra: Diagonal
 import Flux.Tracker.update!
-import RLCore: AbstractHorde
-
 using Flux.Optimise: apply!
 
 tderror(v_t, c, γ_tp1, ṽ_tp1) =
