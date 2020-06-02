@@ -3,7 +3,7 @@ import Flux
 import Random
 import DataStructures
 
-mutable struct ControlFluxAgent{LU<:LearningUpdate, O, C, F, H, Φ, Π} <: RLCore.AbstractAgent
+mutable struct ControlFluxAgent{LU<:LearningUpdate, O, C, F, H, Φ, Π} <: MinimalRLCore.AbstractAgent
     lu::LU # I.e. Q-learning or Double Q learning
     opt::O
     model::C
@@ -66,7 +66,7 @@ build_new_feat(agent::ControlFluxAgent{LU, O, C, F, H, Φ, Π}, state, action) w
 
 
 
-function RLCore.start!(agent::ControlFluxAgent, env_s_tp1, rng=Random.GLOBAL_RNG; kwargs...)
+function MinimalRLCore.start!(agent::ControlFluxAgent, env_s_tp1, rng=Random.GLOBAL_RNG; kwargs...)
 
 
     # agent.action, _ = agent.π(env_s_tp1, rng)
@@ -85,7 +85,7 @@ function RLCore.start!(agent::ControlFluxAgent, env_s_tp1, rng=Random.GLOBAL_RNG
 end
 
 
-function RLCore.step!(agent::ControlFluxAgent, env_s_tp1, r, terminal, rng=Random.GLOBAL_RNG; kwargs...)
+function MinimalRLCore.step!(agent::ControlFluxAgent, env_s_tp1, r, terminal, rng=Random.GLOBAL_RNG; kwargs...)
 
 
     # new_action = sample(rng, agent.π, env_s_tp1)
@@ -122,4 +122,4 @@ function RLCore.step!(agent::ControlFluxAgent, env_s_tp1, r, terminal, rng=Rando
     return agent.action
 end
 
-# RLCore.get_action(agent::ControlFluxAgent, state) = agent.action
+# MinimalRLCore.get_action(agent::ControlFluxAgent, state) = agent.action

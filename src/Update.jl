@@ -1,17 +1,19 @@
 
 using Statistics
 using LinearAlgebra: Diagonal
-import Flux.Tracker.update!
+# import Flux.Tracker.update!
 using Flux.Optimise: apply!
+using Flux
 
 tderror(v_t, c, γ_tp1, ṽ_tp1) =
     (v_t .- (c .+ γ_tp1.*ṽ_tp1))
 
-function offpolicy_tdloss(ρ_t::Array{T, 1},
-                          v_t::TrackedArray,
-                          c::Array{T, 1},
-                          γ_tp1::Array{T, 1},
-                          ṽ_tp1::Array{T, 1}) where {T<:AbstractFloat}
+# function offpolicy_tdloss(ρ_t::Array{T, 1},
+#                           v_t::TrackedArray,
+#                           c::Array{T, 1},
+#                           γ_tp1::Array{T, 1},
+#                           ṽ_tp1::Array{T, 1}) where {T<:AbstractFloat}
+function offpolicy_tdloss(ρ_t, v_t, c, γ_tp1, ṽ_tp1)
     target = T.(c .+ γ_tp1.*ṽ_tp1)
     return (T(0.5))*sum(ρ_t.*((v_t .- target).^2)) * (1//length(ρ_t))
 end
@@ -28,30 +30,30 @@ function update!(out_model, rnn::Flux.Recur{T},
                  opt, lu::LearningUpdate, h_init,
                  state_seq, env_state_tp1,
                  action_t=nothing, b_prob=1.0;
-                 kwargs...) where {T, H<:AbstractHorde} end
+                 kwargs...) where {T, H<:GVFHordes.AbstractHorde} end
 
 struct TD <: LearningUpdate end
 
-function update!(out_model, rnn::Flux.Recur{T},
-                 horde::H,
-                 opt, lu::TD, h_init,
-                 state_seq, env_state_tp1,
-                 action_t=nothing, b_prob=1.0;
-                 kwargs...) where {T, H<:AbstractHorde}
+# function update!(out_model, rnn::Flux.Recur{T},
+#                  horde::H,
+#                  opt, lu::TD, h_init,
+#                  state_seq, env_state_tp1,
+#                  action_t=nothing, b_prob=1.0;
+#                  kwargs...) where {T, H<:GVFHordes.AbstractHorde}
 
-    reset!(rnn, h_init)
-    rnn_out = rnn.(state_seq)
-    preds = out_model.(rnn_out)
-    cumulants, discounts, π_prob = get(horde, nothing, action_t, env_state_tp1, Flux.data(preds[end]))
-    ρ = Float32.(π_prob./b_prob)
-    δ = offpolicy_tdloss(ρ, preds[end-1], Float32.(cumulants), Float32.(discounts), Flux.data(preds[end]))
+#     reset!(rnn, h_init)
+#     rnn_out = rnn.(state_seq)
+#     preds = out_model.(rnn_out)
+#     cumulants, discounts, π_prob = get(horde, nothing, action_t, env_state_tp1, Flux.data(preds[end]))
+#     ρ = Float32.(π_prob./b_prob)
+#     δ = offpolicy_tdloss(ρ, preds[end-1], Float32.(cumulants), Float32.(discounts), Flux.data(preds[end]))
 
-    grads = Flux.Tracker.gradient(()->δ, Flux.params(out_model, rnn))
-    reset!(rnn, h_init)
-    for weights in Flux.params(out_model, rnn)
-        Flux.Tracker.update!(opt, weights, grads[weights])
-    end
-end
+#     grads = Flux.Tracker.gradient(()->δ, Flux.params(out_model, rnn))
+#     reset!(rnn, h_init)
+#     for weights in Flux.params(out_model, rnn)
+#         Flux.Tracker.update!(opt, weights, grads[weights])
+#     end
+# end
 
 function update!(chain,
                  horde::H,
@@ -62,7 +64,7 @@ function update!(chain,
                  env_state_tp1,
                  action_t=nothing,
                  b_prob=1.0;
-                 kwargs...) where {T, H<:AbstractHorde}
+                 kwargs...) where {T, H<:GVFHordes.AbstractHorde}
 
     reset!(chain, h_init)
     preds = chain.(state_seq)

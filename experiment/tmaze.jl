@@ -7,7 +7,8 @@ import Flux
 import Flux.Tracker
 import JLD2
 import LinearAlgebra.Diagonal
-import RLCore
+import MinimalRLCore
+using MinimalRLCore: run_episode!
 import ActionRNN
 
 using ActionRNN: TMaze, step!, start!, is_terminal, get_actions, glorot_uniform
@@ -50,9 +51,9 @@ end
 function construct_agent(env, parsed, rng)
 
     fc = TMU.OneHotFeatureCreator()
-    fs = RLCore.feature_size(fc)
+    fs = MinimalRLCore.feature_size(fc)
     
-    ap = ActionRNN.ϵGreedy(0.1, get_actions(env))
+    ap = ActionRNN.ϵGreedy(0.01, get_actions(env))
 
     init_func = (dims...)->glorot_uniform(rng, dims...)
 
@@ -100,48 +101,6 @@ function construct_agent(env, parsed, rng)
 end
 
 
-function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing, checkpoint_cb=nothing, e=0)
-    terminal = false
-    
-    s_t = start!(env, rng)
-    action = start!(agent, s_t, rng)
-
-    total_rew = 0
-    steps = 0
-    success = false
-    if !(checkpoint_cb isa Nothing)
-        checkpoint_cb(agent, total_steps+step)
-    end
-    if !(progress_bar isa Nothing)
-        next!(progress_bar, showvalues=[(:episode, e), (:step, total_steps+steps)])
-    end
-    steps = 1
-
-    while !terminal
-        
-        s_tp1, rew, terminal = step!(env, action)
-
-        action = step!(agent, s_tp1, clamp(rew, -1, 1), terminal, rng)
-
-        if !(checkpoint_cb isa Nothing)
-            checkpoint_cb(agent, total_steps+steps)
-        end
-        
-        total_rew += rew
-        steps += 1
-        success = success || (rew == 4.0)
-        if !(progress_bar isa Nothing)
-            next!(progress_bar, showvalues=[(:episode, e), (:step, total_steps+steps)])
-        end
-
-        if (total_steps+steps >= max_steps) || (steps >= 1000) # 5 Minutes of Gameplay = 18k steps.
-            break
-        end
-    end
-    
-    return total_rew, steps, success
-end
-
 function main_experiment(args::Vector{String})
 
     as = arg_parse()
@@ -167,8 +126,21 @@ function main_experiment(args::Vector{String})
     prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
     eps = 1
     while sum(total_steps) <= num_steps
-        total_rew, steps, success =
-            episode!(env, agent, rng, num_steps, sum(total_steps), parsed["progress"] ? prg_bar : nothing, nothing, eps)
+        success = false
+        total_rew, steps =
+            run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
+                if parsed["progress"]
+                    pr_suc = if length(successes) <= 100
+                        mean(successes)
+                    else
+                        mean(successes[end-100:end])
+                    end
+                        
+                    next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc)])
+                end
+                success = success || (r == 4.0)
+            end
+            # episode!(env, agent, rng, num_steps, sum(total_steps), parsed["progress"] ? prg_bar : nothing, nothing, eps)
         push!(total_rews, total_rew)
         push!(total_steps, steps)
         push!(successes, success)

@@ -1,29 +1,20 @@
 
 module CycleWorldUtils
 
-using ..ActionRNN, Reproduce
+using ..ActionRNN
 
 # export settings!, onestep, chain, gamma_chain, get_horde, oracle
 
-function env_settings!(as::ArgParseSettings)
-    @add_arg_table as begin
-        "--chain"
-        help="The length of the cycle world chain"
-        arg_type=Int64
-        default=6
-    end
-end
-
-function horde_settings!(as::ArgParseSettings, prefix::AbstractString="")
-    add_arg_table(as,
-                  "--$(prefix)gamma",
-                  Dict(:help=>"The gamma value for the gamma_chain horde",
-                       :arg_type=>Float64,
-                       :default=>0.9),
-                  "--$(prefix)horde",
-                  Dict(:help=>"The horde used for training",
-                       :default=>"gamma_chain"))
-end
+# function horde_settings!(as::ArgParseSettings, prefix::AbstractString="")
+#     add_arg_table(as,
+#                   "--$(prefix)gamma",
+#                   Dict(:help=>"The gamma value for the gamma_chain horde",
+#                        :arg_type=>Float64,
+#                        :default=>0.9),
+#                   "--$(prefix)horde",
+#                   Dict(:help=>"The horde used for training",
+#                        :default=>"gamma_chain"))
+# end
 
 function onestep(chain_length::Integer)
     gvfs = [GVF(FeatureCumulant(1), ConstantDiscount(0.0), NullPolicy())]

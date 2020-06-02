@@ -1,6 +1,10 @@
-module ActionRNN
+module ActionRNNs
 
-using MinimalRLCore
+using Reexport
+
+@reexport using MinimalRLCore
+
+using GVFHordes
 
 export
     SingleLayer,
@@ -21,13 +25,7 @@ include("Update.jl")
 
 include("ActingPolicy.jl")
 
-import Reproduce
 
-export env_settings!, agent_settings!
-env_settings!(as::Reproduce.ArgParseSettings, env_type) = throw("Settings not implemented for environment $(env_type)")
-agent_settings!(as::Reproduce.ArgParseSettings, agent_type) = throw("Settings not implemented for agent $(agent_type)")
-
-export step!, start!
 include("Environments.jl")
 
 export jacobian, glorot_uniform, glorot_normal

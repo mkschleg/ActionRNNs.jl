@@ -1,6 +1,6 @@
 
 using Random
-using RLCore
+import MinimalRLCore
 
 import Reproduce
 
@@ -36,27 +36,17 @@ end
 TMaze(size) = TMaze(size, TMC.UP, (x=1, y=0))
 TMaze(parsed::Dict) = TMaze(parsed["size"])
 
-function env_settings!(as::Reproduce.ArgParseSettings,
-                       env_type::Type{TMaze})
-    Reproduce.@add_arg_table as begin
-        "--size"
-        help="The length of the TMaze hallway"
-        arg_type=Int64
-        default=20
-    end
-end
-
 Base.size(env::TMaze) = env.size
 
-function RLCore.reset!(env::TMaze, rng::AbstractRNG=Random.GLOBAL_RNG)
+function MinimalRLCore.reset!(env::TMaze, rng::AbstractRNG=Random.GLOBAL_RNG)
     env.goal_dir = rand(rng, [TMC.UP, TMC.DOWN])
     env.state = (x=1, y=0)
 end
 
-RLCore.get_actions(env::TMaze) = [TMC.LEFT, TMC.RIGHT, TMC.UP, TMC.DOWN]
+MinimalRLCore.get_actions(env::TMaze) = [TMC.LEFT, TMC.RIGHT, TMC.UP, TMC.DOWN]
 get_num_features(env::TMaze) = 3
 
-function RLCore.environment_step!(env::TMaze, action::Int, rng=Random.GLOBAL_RNG)
+function MinimalRLCore.environment_step!(env::TMaze, action::Int, rng=Random.GLOBAL_RNG)
     
     if env.state.x == size(env)
         if action == TMC.UP
@@ -77,7 +67,7 @@ function RLCore.environment_step!(env::TMaze, action::Int, rng=Random.GLOBAL_RNG
     end
 end
 
-RLCore.get_reward(env::TMaze) = begin
+MinimalRLCore.get_reward(env::TMaze) = begin
     if env.state.x == env.size
         if env.state.y == 0
             -0.1
@@ -93,7 +83,7 @@ end
     
 
 
-function RLCore.get_state(env::TMaze) # -> get state of agent
+function MinimalRLCore.get_state(env::TMaze) # -> get state of agent
     state = env.state
     env_size = env.size
     if state.x == 1
@@ -106,7 +96,7 @@ function RLCore.get_state(env::TMaze) # -> get state of agent
 end
 
 
-RLCore.is_terminal(env::TMaze) = env.state.y != 0
+MinimalRLCore.is_terminal(env::TMaze) = env.state.y != 0
 
 
 

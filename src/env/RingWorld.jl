@@ -1,8 +1,8 @@
 
 using Random
-# using RLCore
+import MinimalRLCore
 
-# import RLCore.reset!, RLCore.environment_step!, RLCore.get_reward
+# import MinimalRLCore.reset!, MinimalRLCore.environment_step!, MinimalRLCore.get_reward
 
 """
  RingWorld
@@ -38,24 +38,14 @@ RingWorld(ring_size::Int64; partially_observable=true) =
               RingWorldConst.ACTIONS,
               partially_observable)
 
-function env_settings!(as::Reproduce.ArgParseSettings,
-                       env_type::Type{RingWorld})
-    Reproduce.@add_arg_table as begin
-        "--size"
-        help="The length of the ring world chain"
-        arg_type=Int64
-        default=6
-    end
-end
-
 
 Base.size(env::RingWorld) = env.ring_size
 
-function RLCore.reset!(env::RingWorld, rng::AbstractRNG; kwargs...)
+function MinimalRLCore.reset!(env::RingWorld, rng::AbstractRNG; kwargs...)
     env.agent_state = rand(rng, 1:size(env))
 end
 
-RLCore.get_actions(env::RingWorld) = env.actions
+MinimalRLCore.get_actions(env::RingWorld) = env.actions
 
 @inline take_forward_step(env::RingWorld, action::Int64) =
     env.agent_state == size(env) ? 1 : env.agent_state + 1
@@ -63,7 +53,7 @@ RLCore.get_actions(env::RingWorld) = env.actions
 @inline take_backward_step(env::RingWorld, action::Int64) =
     env.agent_state == 1 ? size(env) : env.agent_state - 1
 
-function RLCore.environment_step!(env::RingWorld, action::Int64, rng; kwargs...)
+function MinimalRLCore.environment_step!(env::RingWorld, action::Int64, rng; kwargs...)
 
     rwc = RingWorldConst
     
@@ -77,11 +67,11 @@ function RLCore.environment_step!(env::RingWorld, action::Int64, rng; kwargs...)
 
 end
 
-function RLCore.get_reward(env::RingWorld) # -> get the reward of the environment
-    return 0
+function MinimalRLCore.get_reward(env::RingWorld) # -> get the reward of the environment
+    return 0.0f0
 end
 
-function RLCore.get_state(env::RingWorld) # -> get state of agent
+function MinimalRLCore.get_state(env::RingWorld) # -> get state of agent
     if env.partially_observable
         return partially_observable_state(env)
     else
@@ -101,7 +91,7 @@ function partially_observable_state(env::RingWorld)
     return state
 end
 
-function RLCore.is_terminal(env::RingWorld) # -> determines if the agent_state is terminal
+function MinimalRLCore.is_terminal(env::RingWorld) # -> determines if the agent_state is terminal
     return false
 end
 

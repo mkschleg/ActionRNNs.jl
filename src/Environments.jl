@@ -1,5 +1,5 @@
 
-import RLCore
+import MinimalRLCore
 # using RLCore: AbstractEnvironment, step!, start!
 
 export CompassWorld, get_num_features

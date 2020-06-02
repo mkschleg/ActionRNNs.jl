@@ -2,10 +2,10 @@
 module RingWorldFluxExperiment
 
 import Flux
-import Flux.Tracker
+# import Flux.Tracker
 import JLD2
 import LinearAlgebra.Diagonal
-import RLCore
+
 import ActionRNN
 
 using DataStructures: CircularBuffer
@@ -17,8 +17,9 @@ using Random
 using ProgressMeter
 using Reproduce
 using Random
+using MinimalRLCore
 
-using Plots
+# using Plots
 
 const RWU = ActionRNN.RingWorldUtils
 const FLU = ActionRNN.FluxUtils
@@ -33,31 +34,41 @@ function results_synopsis(res, ::Val{true})
         "var"=>var(reshape(rmse, 1000, :); dims=1)[1,:]
     ])
 end
-
 results_synopsis(res, ::Val{false}) = res
 
-function arg_parse(as::ArgParseSettings = ArgParseSettings(exc_handler=Reproduce.ArgParse.debug_handler))
+function default_arg_parse()
+    Dict{String,Any}(
+        "save_dir" => "ringworld",
 
-    ActionRNN.exp_settings!(as)
-    ActionRNN.env_settings!(as, RingWorld)
-    ActionRNN.agent_settings!(as, ActionRNN.FluxAgent)
-    RWU.horde_settings!(as, "out")
+        "seed" => 1,
+        "steps" => 200000,
+        "size" => 6,
 
-    @add_arg_table as begin
-        "--factors"
-        arg_type=Int
-        default=0
-    end
-    
-    return as
+        "cell" => "ARNN",
+        "numhidden" => 6,
+        
+        "outhorde" => "gammas_term",
+        "outgamma" => 0.9,
+        
+        "opt" => "RMSProp",
+        "optparams" => [0.001],
+        "truncation" => 3,
+
+        "verbose" => false,
+        "synopsis" => false,
+        "prev_action_or_not" => false,
+        "progress" => true,
+        "working" => true,
+        "visualize" => false)
 end
 
 function construct_agent(parsed, rng)
 
+
     # out_horde = RWU.gammas_term(collect(0.0:0.1:0.9))
     out_horde = RWU.get_horde(parsed, "out")
     fc = RWU.OneHotFeatureCreator()
-    fs = RLCore.feature_size(fc)
+    fs = MinimalRLCore.feature_size(fc)
     ap = ActionRNN.RandomActingPolicy([0.5, 0.5])
 
 
@@ -80,18 +91,12 @@ function construct_agent(parsed, rng)
                         chain,
                         fc,
                         fs,
-                        # 2,
                         ap,
-                        parsed;
-                        rng=rng,
-                        init_func=(dims...)->glorot_uniform(rng, dims...))
+                        parsed)
 end
 
-function main_experiment(args::Vector{String})
+function main_experiment(parsed::Dict{String, Any})
 
-    as = arg_parse()
-    parsed = parse_args(args, as)
-    
     savefile = ActionRNN.save_setup(parsed, "results.jld2")
     if isnothing(savefile)
         return
@@ -103,70 +108,31 @@ function main_experiment(args::Vector{String})
     rng = Random.MersenneTwister(seed)
 
     env = RingWorld(parsed)
-
     agent = construct_agent(parsed, rng)
-    
+
     out_pred_strg = zeros(Float32, num_steps, length(agent.horde))
     out_err_strg = zeros(Float32, num_steps, length(agent.horde))
     hidden_state = zeros(Float32, num_steps, parsed["numhidden"])
+
+    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
     
-    err_func! = (env, agent, (s_tp1, rew, term), (out_preds, step)) -> begin;
-        out_pred_strg[step, :] .= Flux.data(out_preds);
-        out_err_strg[step, :] = out_pred_strg[step, :] .- RWU.oracle(env, parsed["outhorde"]);
-        ActionRNN.reset!(agent.model, agent.hidden_state_init)
-        agent.model.(agent.state_list)
-        size(ActionRNN.get_hidden_state(agent.model[1]))
-        hidden_state[step, :] .= ActionRNN.get_hidden_state(agent.model[1])
-    end;
+    cur_step = 1
+    run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
+        
+        out_preds = a.preds
+        out_pred_strg[cur_step, :] .= Flux.data(out_preds)
+        out_err_strg[cur_step, :] = out_pred_strg[cur_step, :] .- RWU.oracle(env, parsed["outhorde"]);
+        hidden_state[cur_step, :] .= a.h[agent.model[1]]
 
-    hs = Flux.data(ActionRNN.get_hidden_state(agent.model))
-    hs_strg = CircularBuffer{typeof(hs)}(64)
+        ProgressMeter.next!(prg_bar)
 
-    callback = (env, agent, (s_tp1, rew, term), (out_preds, step)) -> begin
-        err_func!(env, agent, (s_tp1, rew, term), (out_preds, step))
-        # visualize_callback(agent, step)
+        cur_step += 1
     end
-
-    pred_experiment(env, agent, rng, num_steps, parsed, callback)
+    
 
     results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg, "hidden"=>hidden_state])
     save_results = results_synopsis(results, Val(parsed["synopsis"]))
     ActionRNN.save_results(parsed, savefile, save_results)
-end
-
-
-function pred_experiment(env, agent, rng, num_steps, parsed, callback)
-    
-    s_t = start!(env, rng)
-    action = start!(agent, s_t, rng)
-    
-    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
-
-    hs = ActionRNN.get_hidden_state(agent.model)
-    hs_strg = CircularBuffer{typeof(hs)}(64)
-    
-    for step in 1:num_steps
-
-        s_tp1, rew, term = step!(env, action, rng)
-        out_preds, action = step!(agent, s_tp1, rew, term, rng)
-
-        callback(env, agent, (s_tp1, rew, term), (out_preds, step))
-        
-        if parsed["verbose"]
-            @show step
-            @show env
-            @show agent
-        end
-
-        if parsed["progress"]
-           ProgressMeter.next!(prg_bar)
-        end
-    end
-end
-
-Base.@ccallable function julia_main(ARGS::Vector{String})::Cint
-    main_experiment(ARGS)
-    return 0
 end
 
 end
@@ -195,3 +161,11 @@ end
     # else
     #     (agent, step) -> nothing
     # end
+    # err_func! = (env, agent, (s_tp1, rew, term), (out_preds, step)) -> begin;
+    #     out_pred_strg[step, :] .= Flux.data(out_preds);
+    #     out_err_strg[step, :] = out_pred_strg[step, :] .- RWU.oracle(env, parsed["outhorde"]);
+    #     ActionRNN.reset!(agent.model, agent.hidden_state_init)
+    #     agent.model.(agent.state_list)
+    #     size(ActionRNN.get_hidden_state(agent.model[1]))
+    #     hidden_state[step, :] .= ActionRNN.get_hidden_state(agent.model[1])
+    # end;
