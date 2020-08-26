@@ -1,7 +1,7 @@
 
 module CycleWorldUtils
 
-using ..ActionRNN
+using ..ActionRNNs
 
 # export settings!, onestep, chain, gamma_chain, get_horde, oracle
 

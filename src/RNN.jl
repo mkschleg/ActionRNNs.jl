@@ -12,31 +12,31 @@ function _dont_learn_initial_state!(rnn::Flux.Recur{Flux.LSTMCell})
 end
 
 reset!(m, h_init) = 
-    Flux.prefor(x -> x isa Flux.Recur && _reset!(x, h_init), m)
+    foreach(x -> x isa Flux.Recur && _reset!(x, h_init), Flux.functor(m)[1])
 
 reset!(m, h_init::IdDict) = 
-    Flux.prefor(x -> x isa Flux.Recur && _reset!(x, h_init[x]), m)
+    foreach(x -> x isa Flux.Recur && _reset!(x, h_init[x]), Flux.functor(m)[1])
 
-function _reset!(m, h_init)
+function _reset!(m::Flux.Recur, h_init)
     Flux.reset!(m)
-    m.state.data .= Flux.data(h_init)
+    m.state .= h_init
 end
 
 function _reset!(m::Flux.Recur{T}, h_init) where {T<:Flux.LSTMCell}
     Flux.reset!(m)
-    m.state[1].data .= Flux.data(h_init[1])
-    m.state[2].data .= Flux.data(h_init[2])
+    m.state[1] .= h_init[1]
+    m.state[2] .= h_init[2]
 end
 
 function contains_rnntype(m, rnn_type::Type)
     is_rnn_type = Bool[]
-    Flux.prefor(x -> push!(is_rnn_type, x isa Flux.Recur && x.cell isa rnn_type), m)
+    foreach(x -> push!(is_rnn_type, x isa Flux.Recur && x.cell isa rnn_type), Flux.functor(m)[1])
     return any(is_rnn_type)
 end
 
 function needs_action_input(m)
     needs_action = Bool[]
-    Flux.prefor(x -> push!(needs_action, _needs_action_input(x)), m)
+    foreach(x -> push!(needs_action, _needs_action_input(x)), Flux.functor(m)[1])
     return any(needs_action)
 end
 
@@ -44,11 +44,11 @@ _needs_action_input(m) = false
 _needs_action_input(m::Flux.Recur{T}) where {T} = _needs_action_input(m.cell)
 
 function get_next_hidden_state(rnn::Flux.Recur{T}, h_init, input) where {T}
-    return Flux.data(rnn.cell(h_init, input)[1])
+    return copy(rnn.cell(h_init, input)[1])
 end
 
 function get_next_hidden_state(rnn::Flux.Recur{T}, h_init, input) where {T<:Flux.LSTMCell}
-    return Flux.data.(rnn.cell(h_init, input)[1])
+    return deepcopy(rnn.cell(h_init, input)[1])
 end
 
 function get_next_hidden_state(c, h_init, input)
@@ -61,21 +61,21 @@ end
 function get_hidden_state(c)
     # h_state = IdDict{Any, Array{Float32, 1}}()
     h_state = IdDict()
-    Flux.prefor(x -> x isa Flux.Recur && get!(h_state, x, get_hidden_state(x)), c)
+    foreach(x -> x isa Flux.Recur && get!(h_state, x, get_hidden_state(x)), Flux.functor(c)[1])
     h_state
 end
 
-get_hidden_state(rnn::Flux.Recur{T}) where {T} = copy(Flux.data(rnn.state))
-get_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = copy(Flux.data.(rnn.state))
+get_hidden_state(rnn::Flux.Recur{T}) where {T} = copy(rnn.state)
+get_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = deepcopy(rnn.state)
 
 function get_initial_hidden_state(c)
     h_state = IdDict()
-    Flux.prefor(x -> x isa Flux.Recur && get!(h_state, x, get_initial_hidden_state(x)), c)
+    foreach(x -> x isa Flux.Recur && get!(h_state, x, get_initial_hidden_state(x)), Flux.functor(c)[1])
     h_state
 end
 
-get_initial_hidden_state(rnn::Flux.Recur{T}) where {T} = copy(Flux.data(rnn.init))
-get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = deepcopy(Flux.data.(rnn.init))
+get_initial_hidden_state(rnn::Flux.Recur{T}) where {T} = copy(rnn.init)
+get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = deepcopy(rnn.init)
 
 
 abstract type AbstractActionRNN end
@@ -114,10 +114,14 @@ end
 
 ARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
     ARNNCell(σ_int,
-             param(init(num_hidden, num_ext_features, num_actions)),
-             param(init(num_hidden, num_hidden, num_actions)),
-             param(zeros(Float32, num_hidden, num_actions)),
-             param(Flux.zeros(num_hidden)))
+             init(num_hidden, num_ext_features, num_actions),
+             init(num_hidden, num_hidden, num_actions),
+             zeros(Float32, num_hidden, num_actions),
+             Flux.zeros(num_hidden))
+
+Flux.hidden(m::ARNNCell) = m.h
+Flux.@functor ARNNCell
+ARNN(args...; kwargs...) = Flux.Recur(ARNNCell(args...; kwargs...))
 
 
 function _contract(W::AbstractArray{<:Number, 3}, x1::AbstractArray{<:Number, 2}, x2::AbstractArray{<:Number, 2})
@@ -154,7 +158,7 @@ function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFl
     #             (@view m.Wh[:,:,i])*h*a[i] for i ∈ 1:length(a))
     out_x = _contract_batch(W)
     
-    new_h = out_x + m.b*a
+    new_h = m.σ.(out_x + m.b*a)
     new_h, new_h
 end
 
@@ -210,9 +214,6 @@ end
 
 
 
-Flux.hidden(m::ARNNCell) = m.h
-Flux.@treelike ARNNCell
-ARNN(args...; kwargs...) = Flux.Recur(ARNNCell(args...; kwargs...))
 
 
 function Base.show(io::IO, l::ARNNCell)
@@ -265,7 +266,7 @@ end
 
 function (m::FacARNNCell)(h, x::Tuple{A, O}) where {A<:Integer, O}
     W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-    new_h = m.σ.(W*((Wx*o .+ Wh*h) .* Wa[:, a]) .+ b[a])
+    new_h = m.σ.(W*((Wx*o + Wh*h) .* Wa[:, a]) + b[:, a])
     return new_h, new_h
 end
 

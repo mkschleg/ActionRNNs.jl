@@ -1,7 +1,7 @@
 
 module RingWorldUtils
 
-using ..ActionRNN
+using ..ActionRNNs
 using ..MinimalRLCore
 
 # using ..RLCore.GVFParamFuncs
@@ -13,7 +13,7 @@ using ..GVFHordes
 
 import GVFHordes.GVFParamFuncs: FeatureCumulant, PredictionCumulant, ConstantDiscount, StateTerminationDiscount, PersistentPolicy
 
-const RWC = ActionRNN.RingWorldConst
+const RWC = ActionRNNs.RingWorldConst
 
 
 # export settings!, onestep, chain, gamma_chain, get_horde, oracle
@@ -27,7 +27,7 @@ const RWC = ActionRNN.RingWorldConst
 #     end
 # end
 
-ActionRNN.RingWorld(parsed::Dict) = ActionRNN.RingWorld(parsed["size"])
+ActionRNNs.RingWorld(parsed::Dict) = ActionRNNs.RingWorld(parsed["size"])
 
 # function horde_settings!(as::ArgParseSettings, prefix::AbstractString="")
 #     add_arg_table(as,
@@ -153,7 +153,7 @@ end
 get_horde(parsed::Dict, prefix="", pred_offset::Integer=0) =
     get_horde(parsed["$(prefix)horde"], parsed["size"], parsed["$(prefix)gamma"], pred_offset)
 
-function oracle(env::ActionRNN.RingWorld, horde_str, γ=0.9)
+function oracle(env::ActionRNNs.RingWorld, horde_str, γ=0.9)
     chain_length = env.ring_size
     state = env.agent_state
     ret = Array{Float64,1}()
@@ -215,6 +215,16 @@ MinimalRLCore.create_features(fc::OneHotFeatureCreator, s, a) =
 MinimalRLCore.create_features(fc::OneHotFeatureCreator, s, a::Nothing) =
     Float32[s[1], 1-s[1], 0, 0]
 MinimalRLCore.feature_size(fc::OneHotFeatureCreator) = 4
+
+
+mutable struct SansActionFeatureCreator <: AbstractFeatureConstructor end
+
+(fc::SansActionFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+MinimalRLCore.create_features(fc::SansActionFeatureCreator, s, a) =
+    Float32[s[1], 1-s[1]]
+MinimalRLCore.create_features(fc::SansActionFeatureCreator, s, a::Nothing) =
+    Float32[s[1], 1-s[1]]
+MinimalRLCore.feature_size(fc::SansActionFeatureCreator) = 2
 
 # build_features_ringworld_sans_bias(s, a) = Float32[s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
 

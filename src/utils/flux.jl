@@ -1,7 +1,7 @@
 module FluxUtils
 
 using ..Flux
-import ..ActionRNN.ARNN
+import ..ActionRNNs.ARNN
 
 
 # function rnn_settings!(as::ArgParseSettings)

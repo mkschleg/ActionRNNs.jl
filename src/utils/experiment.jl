@@ -3,16 +3,26 @@
 using JLD2
 import ProgressMeter
 # using Reproduce
+using FileIO
 import Reproduce
 
-function save_setup(parsed, def_save_file="results.jld2")
+function save_setup(parsed;
+                    save_dir_key="save_dir",
+                    def_save_file="results.jld2",
+                    filter_keys=["verbose",
+                                 "working",
+                                 "exp_loc",
+                                 "visualize",
+                                 "progress",
+                                 "synopsis"])
     savefile = def_save_file
-    if !(parsed["working"])
+    working = get(parsed, "working", false)
+    if !(working)
         Reproduce.create_info!(parsed,
-                               parsed["exp_loc"];
-                               filter_keys=["verbose", "working", "exp_loc", "visualize", "progress", "synopsis"])
+                               parsed[save_dir_key];
+                               filter_keys=filter_keys)
         savepath = Reproduce.get_save_dir(parsed)
-        savefile = joinpath(savepath, "results.jld2")
+        savefile = joinpath(savepath, def_save_file)
         if isfile(savefile)
             return nothing
         end

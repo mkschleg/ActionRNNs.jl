@@ -17,6 +17,4 @@ mutable struct WidgetChain
     widgets::Array{AbstractFluxWidget}
 end
 
-
-
 end

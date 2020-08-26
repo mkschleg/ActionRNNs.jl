@@ -19,6 +19,7 @@ end
 
 function FluxAgent(out_horde,
                    model,
+                   opt,
                    feature_creator,
                    feature_size,
                    acting_policy::Π,
@@ -27,10 +28,10 @@ function FluxAgent(out_horde,
     num_gvfs = length(out_horde)
 
     τ=parsed["truncation"]
-    opt = FluxUtils.get_optimizer(parsed)
+    # opt = FluxUtils.get_optimizer(parsed)
 
     state_list, init_state = begin
-        if contains_rnntype(model, ActionRNN.AbstractActionRNN)
+        if contains_rnntype(model, ActionRNNs.AbstractActionRNN)
             (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 1}}}(τ+1), (0, zeros(Float32, 1)))
         else
             (DataStructures.CircularBuffer{Array{Float32, 1}}(τ+1), zeros(Float32, 1))
@@ -75,11 +76,11 @@ end
 
 function MinimalRLCore.step!(agent::FluxAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
-
+    # println("step:")
     # new_action = sample(rng, agent.π, env_s_tp1)
     new_action, new_prob = agent.π(env_s_tp1, rng)
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-    
+    # println(agent.hidden_state_init)
     # RNN update function
     update!(agent.model,
             agent.horde,
@@ -91,11 +92,11 @@ function MinimalRLCore.step!(agent::FluxAgent, env_s_tp1, r, terminal, rng; kwar
             agent.action,
             agent.action_prob)
     # End update function
-
-    Flux.truncate!(agent.model)
+    # println(agent.hidden_state_init)
+    # Flux.truncate!(agent.model)
     reset!(agent.model, agent.hidden_state_init)
     out_preds = agent.model.(agent.state_list)[end]
-    
+
     cur_hidden_state = get_hidden_state(agent.model)
 
     agent.hidden_state_init =
@@ -105,7 +106,7 @@ function MinimalRLCore.step!(agent::FluxAgent, env_s_tp1, r, terminal, rng; kwar
     agent.action = copy(new_action)
     agent.action_prob = new_prob
 
-    return (preds=Flux.data(out_preds), h=cur_hidden_state, action=agent.action)
+    return (preds=out_preds, h=cur_hidden_state, action=agent.action)
 end
 
 # MinimalRLCore.get_action(agent::FluxAgent, state) = agent.action

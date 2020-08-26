@@ -35,18 +35,18 @@ end
 
 hidden(m::ActionLSTMCell) = (m.h, m.c)
 
-@treelike LSTMCell
+@treelike ActionLSTMCell
 
-Base.show(io::IO, l::LSTMCell) =
-    print(io, "LSTMCell(", size(l.Wi, 2), ", ", size(l.Wi, 1)÷4, ")")
+Base.show(io::IO, l::ActionLSTMCell) =
+    print(io, "ActionLSTMCell(", size(l.Wi, 2), ", ", size(l.Wi, 1)÷4, ")")
 
 
 """
-    LSTM(in::Integer, out::Integer)
+    ALSTM(in::Integer, out::Integer)
 Long Short Term Memory recurrent layer. Behaves like an RNN but generally
 exhibits a longer memory span over sequences.
 See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
 for a good overview of the internals.
 """
-LSTM(a...; ka...) = Recur(LSTMCell(a...; ka...))
+ALSTM(a...; ka...) = Recur(ActionLSTMCell(a...; ka...))
 

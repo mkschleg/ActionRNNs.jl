@@ -1,6 +1,6 @@
 module TMazeUtils
 
-using ..ActionRNN
+using ..ActionRNNs
 using ..MinimalRLCore
 
 mutable struct OneHotFeatureCreator <: AbstractFeatureConstructor end

@@ -1,15 +1,15 @@
 module CompassWorldUtils
 
-using ..ActionRNN
+using ..ActionRNNs
 
 using ..MinimalRLCore
 using Random
 
-cwc = ActionRNN.CompassWorldConst
+cwc = ActionRNNs.CompassWorldConst
 
 function rafols(pred_offset::Integer=0)
 
-    cwc = ActionRNN.CompassWorldConst
+    cwc = ActionRNNs.CompassWorldConst
     gvfs = Array{GVF, 1}()
     for color in 1:5
         new_gvfs = [GVF(FeatureCumulant(color), ConstantDiscount(0.0), PersistentPolicy(cwc.FORWARD)),
@@ -26,7 +26,7 @@ function rafols(pred_offset::Integer=0)
 end
 
 function forward()
-    cwc = ActionRNN.CompassWorldConst
+    cwc = ActionRNNs.CompassWorldConst
     gvfs = [GVF(FeatureCumulant(color),
                 StateTerminationDiscount(1.0, ((env_state)->env_state[cwc.WHITE] == 0)),
                 PersistentPolicy(cwc.FORWARD)) for color in 1:5]
@@ -34,7 +34,7 @@ function forward()
 end
 
 function gammas(gammas = [collect(0.0:0.05:0.95); [0.975, 0.99]])
-    cwc = ActionRNN.CompassWorldConst
+    cwc = ActionRNNs.CompassWorldConst
     gvfs = Array{GVF, 1}()
     for color in 1:5
         new_gvfs = [GVF(
@@ -48,7 +48,7 @@ function gammas(gammas = [collect(0.0:0.05:0.95); [0.975, 0.99]])
 end
 
 function gammas_term(gammas = [collect(0.0:0.05:0.95); [0.975, 0.99]])
-    cwc = ActionRNN.CompassWorldConst
+    cwc = ActionRNNs.CompassWorldConst
     gvfs = Array{GVF, 1}()
     for color in 1:5
         new_gvfs = [GVF(
@@ -61,7 +61,7 @@ function gammas_term(gammas = [collect(0.0:0.05:0.95); [0.975, 0.99]])
 end
 
 function gammas_scaled(gammas = [collect(0.0:0.05:0.95); [0.975, 0.99]])
-    cwc = ActionRNN.CompassWorldConst
+    cwc = ActionRNNs.CompassWorldConst
     gvfs = Array{GVF, 1}()
     for color in 1:5
         new_gvfs = [GVF(
@@ -75,7 +75,7 @@ function gammas_scaled(gammas = [collect(0.0:0.05:0.95); [0.975, 0.99]])
 end
 
 function test_network(pred_offset::Integer=0)
-    cwc = ActionRNN.CompassWorldConst
+    cwc = ActionRNNs.CompassWorldConst
     gvfs = Array{GVF, 1}()
     for color in 1:5
         new_gvfs = [GVF(FeatureCumulant(color), ConstantDiscount(0.0), PersistentPolicy(cwc.FORWARD)),
@@ -174,7 +174,7 @@ function get_action(state, env_state, rng=Random.GLOBAL_RNG)
         state = "Random"
     end
 
-    cwc = ActionRNN.CompassWorldConst
+    cwc = ActionRNNs.CompassWorldConst
     
 
     if state == "Random"
@@ -201,7 +201,7 @@ function get_action(state, env_state, rng=Random.GLOBAL_RNG)
     end
 end
 
-mutable struct ActingPolicy <: ActionRNN.AbstractPolicy
+mutable struct ActingPolicy <: ActionRNNs.AbstractPolicy
     state::String
     ActingPolicy() = new("")
 end
@@ -218,9 +218,9 @@ function get_behavior_policy(policy_str)
     if policy_str == "rafols"
         ap = ActingPolicy()
     elseif policy_str == "forward"
-        ap = ActionRNN.RandomActingPolicy([1/4, 1/4, 1/2])
+        ap = ActionRNNs.RandomActingPolicy([1/4, 1/4, 1/2])
     elseif policy_str == "random"
-        ap = ActionRNN.RandomActingPolicy([1/3, 1/3, 1/3])
+        ap = ActionRNNs.RandomActingPolicy([1/3, 1/3, 1/3])
     else
         throw("Unknown behavior policy")
     end
