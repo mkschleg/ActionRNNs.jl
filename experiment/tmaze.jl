@@ -1,7 +1,7 @@
 
 module TMazeExperiment
 
-include("../src/ActionRNN.jl")
+# include("../src/ActionRNN.jl")
 
 import Flux
 import Flux.Tracker
@@ -10,7 +10,7 @@ import LinearAlgebra.Diagonal
 import RLCore
 import ActionRNN
 
-using .ActionRNN: TMaze, step!, start!, is_terminal, get_actions, glorot_uniform
+using ActionRNN: TMaze, step!, start!, is_terminal, get_actions, glorot_uniform
 
 # using ActionRNN
 using Statistics
@@ -60,11 +60,14 @@ end
 
 function construct_agent(env, parsed, rng)
 
-    fc = TMU.OneHotFeatureCreator()
+    fc = if parsed["cell"] ∈ ["FacARNN", "ARNN"]
+        TMU.OneHotFeatureCreator{false}()
+    else
+        TMU.OneHotFeatureCreator{true}()
+    end
     fs = RLCore.feature_size(fc)
-    
-    ap = ActionRNN.ϵGreedy(0.1, get_actions(env))
 
+    ap = ActionRNN.ϵGreedy(0.1, get_actions(env))
     init_func = (dims...)->glorot_uniform(rng, dims...)
 
     chain = begin
