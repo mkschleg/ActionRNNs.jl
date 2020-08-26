@@ -68,7 +68,6 @@ build_new_feat(agent::ControlFluxAgent{LU, O, C, F, H, Φ, Π}, state, action) w
 
 function RLCore.start!(agent::ControlFluxAgent, env_s_tp1, rng=Random.GLOBAL_RNG; kwargs...)
 
-
     # agent.action, _ = agent.π(env_s_tp1, rng)
     agent.action = 1
     s_t = build_new_feat(agent, env_s_tp1, agent.action)
@@ -88,13 +87,8 @@ end
 function RLCore.step!(agent::ControlFluxAgent, env_s_tp1, r, terminal, rng=Random.GLOBAL_RNG; kwargs...)
 
 
-    # new_action = sample(rng, agent.π, env_s_tp1)
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-    
-    # reset!(agent.model, agent.hidden_state_init)
-    # values = Flux.data(agent.model.(agent.state_list))
-
-
+    is_full = DataStructures.isfull(agent.state_list)    
     
     # RNN update function
     update!(agent.model,
@@ -113,10 +107,10 @@ function RLCore.step!(agent::ControlFluxAgent, env_s_tp1, r, terminal, rng=Rando
     
     agent.action = sample(agent.π, values, rng)
 
-
-    agent.hidden_state_init =
-        get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1])
-
+    if is_full
+        agent.hidden_state_init =
+            get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1])
+    end
     agent.s_t = agent.state_list[end]
 
     return agent.action
