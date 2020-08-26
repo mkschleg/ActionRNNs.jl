@@ -121,6 +121,57 @@ function main_experiment(args::Vector{String})
 
     hs = Flux.data(ActionRNN.get_hidden_state(agent.model))
     hs_strg = CircularBuffer{typeof(hs)}(64)
+
+    callback = (env, agent, (s_tp1, rew, term), (out_preds, step)) -> begin
+        err_func!(env, agent, (s_tp1, rew, term), (out_preds, step))
+        # visualize_callback(agent, step)
+    end
+
+    pred_experiment(env, agent, rng, num_steps, parsed, callback)
+
+    results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg, "hidden"=>hidden_state])
+    save_results = results_synopsis(results, Val(parsed["synopsis"]))
+    ActionRNN.save_results(parsed, savefile, save_results)
+end
+
+
+function pred_experiment(env, agent, rng, num_steps, parsed, callback)
+    
+    s_t = start!(env, rng)
+    action = start!(agent, s_t, rng)
+    
+    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
+
+    hs = ActionRNN.get_hidden_state(agent.model)
+    hs_strg = CircularBuffer{typeof(hs)}(64)
+    
+    for step in 1:num_steps
+
+        s_tp1, rew, term = step!(env, action, rng)
+        out_preds, action = step!(agent, s_tp1, rew, term, rng)
+
+        callback(env, agent, (s_tp1, rew, term), (out_preds, step))
+        
+        if parsed["verbose"]
+            @show step
+            @show env
+            @show agent
+        end
+
+        if parsed["progress"]
+           ProgressMeter.next!(prg_bar)
+        end
+    end
+end
+
+Base.@ccallable function julia_main(ARGS::Vector{String})::Cint
+    main_experiment(ARGS)
+    return 0
+end
+
+end
+
+
     # anim = Animation()
     # visualize_callback = if parsed["visualize"]
     #     (agent, step) -> begin
@@ -144,72 +195,3 @@ function main_experiment(args::Vector{String})
     # else
     #     (agent, step) -> nothing
     # end
-
-    callback = (env, agent, (s_tp1, rew, term), (out_preds, step)) -> begin
-        err_func!(env, agent, (s_tp1, rew, term), (out_preds, step))
-        # visualize_callback(agent, step)
-    end
-
-    pred_experiment(env, agent, rng, num_steps, parsed, callback)
-
-    results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg, "hidden"=>hidden_state])
-    save_results = results_synopsis(results, Val(parsed["synopsis"]))
-    # if parsed["visualize"]
-    #     mp4(anim, parsed["cell"]*"_"*string(parsed["numhidden"])*".mp4")
-    # end
-    ActionRNN.save_results(parsed, savefile, save_results)
-end
-
-
-function pred_experiment(env, agent, rng, num_steps, parsed, callback)
-
-    
-    s_t = start!(env, rng)
-    action = start!(agent, s_t, rng)
-    
-    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
-
-    hs = ActionRNN.get_hidden_state(agent.model)
-    hs_strg = CircularBuffer{typeof(hs)}(64)
-    
-    for step in 1:num_steps
-
-        s_tp1, rew, term = step!(env, action, rng)
-        out_preds, action = step!(agent, s_tp1, rew, term, rng)
-
-        callback(env, agent, (s_tp1, rew, term), (out_preds, step))
-        
-        if parsed["verbose"]
-            println(step)
-            println(env)
-            println(agent)
-        end
-
-        if parsed["progress"]
-           ProgressMeter.next!(prg_bar)
-        end
-
-        # if parsed["visualize"] && step > num_steps-50000
-        #     ActionRNN.reset!(agent.model, agent.hidden_state_init)
-        #     agent.model.(agent.state_list)
-        #     hs = ActionRNN.get_hidden_state(agent.model)
-        #     push!(hs_strg, hs)
-        #     ky = collect(keys(hs_strg[1]))
-        #     # @show typeof(getindex.(hs_strg, ky)[1])
-        #     # @show size(cat(getindex.(hs_strg, ky)...; dims=2))
-        #     if length(hs_strg) > 10
-        #         p1 = heatmap(cat(getindex.(hs_strg, ky)...; dims=2))
-        #         p2 = plot(out_pred_strg[step-64:step, :])
-        #         p3 = plot(mean(out_err_strg[step-64:step, :].^2; dims=2))
-        #         display(plot(p1, p2, p3, layout=(3,1), legend=false))
-        #     end
-        # end
-    end
-end
-
-Base.@ccallable function julia_main(ARGS::Vector{String})::Cint
-    main_experiment(ARGS)
-    return 0
-end
-
-end
