@@ -1,10 +1,3 @@
-#!/cvmfs/soft.computecanada.ca/easybuild/software/2017/avx2/Compiler/gcc7.3/julia/1.3.0/bin/julia
-#SBATCH -o tmaze.out # Standard output
-#SBATCH -e tmaze.err # Standard error
-#SBATCH --mem-per-cpu=3000M # Memory request of 3 GB
-#SBATCH --time=24:00:00 # Running time of 12 hours
-#SBATCH --ntasks=256
-#SBATCH --account=rrg-whitem
 
 using Pkg
 Pkg.activate(".")
@@ -15,11 +8,11 @@ const save_loc = "tmaze_results"
 const exp_file = "experiment/tmaze.jl"
 const exp_module_name = :TMazeExperiment
 const exp_func_name = :main_experiment
-const optimizer = "RMSProp"
-const alphas = [0.0001, 0.0005, 0.001, 0.005, 0.01]
-const truncations = [1, 2, 6, 10, 15, 20, 30]
 
-const tmaze_sizes = [6, 10, 20]
+const optimizer = "RMSProp"
+const alphas = [0.0005]
+const truncations = [2, 4, 8, 10, 20, 30]
+const tmaze_sizes = [6, 10]
 const hidden_state_sizes = [3, 5, 6, 10, 15, 20, 30, 40]
 
 function make_arguments(args::Dict)
@@ -47,13 +40,13 @@ function main()
         action=:store_true
         "--numsteps"
         arg_type=Int
-        default=20
+        default=200000
         "--startruns"
         arg_type=Int
         default=1
-        "--numruns"
+        "--endruns"
         arg_type=Int
-        default=2
+        default=5
     end
     parsed = parse_args(as)
     num_workers = parsed["numworkers"]
@@ -63,7 +56,7 @@ function main()
                     "cell"=>["RNN", "GRU", "LSTM", "ARNN"],
                     "size"=>tmaze_sizes,
                     "hidden"=>hidden_state_sizes,
-                    "seed"=>collect(parsed["startruns"]:parsed["numruns"]))
+                    "seed"=>collect(parsed["startruns"]:parsed["endruns"]))
     arg_list = ["size", "cell", "hidden", "alpha", "truncation", "seed"]
 
     static_args = ["--steps", string(parsed["numsteps"]), "--exp_loc", save_loc]

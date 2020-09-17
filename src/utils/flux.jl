@@ -1,37 +1,36 @@
 module FluxUtils
 
 using ..Flux
-using Reproduce
-import ..ActionRNN.ARNN
+import ..ActionRNNs.ARNN
 
 
-function rnn_settings!(as::ArgParseSettings)
-    @add_arg_table as begin
-        "--truncation", "-t"
-        help="Truncation parameter for bptt"
-        arg_type=Int64
-        default=1
-        "--cell"
-        help="Cell"
-        default="RNN"
-        "--numhidden"
-        help="Number of hidden units in cell"
-        arg_type=Int64
-        default=6
-    end
-end
+# function rnn_settings!(as::ArgParseSettings)
+#     @add_arg_table as begin
+#         "--truncation", "-t"
+#         help="Truncation parameter for bptt"
+#         arg_type=Int64
+#         default=1
+#         "--cell"
+#         help="Cell"
+#         default="RNN"
+#         "--numhidden"
+#         help="Number of hidden units in cell"
+#         arg_type=Int64
+#         default=6
+#     end
+# end
 
-function opt_settings!(as::ArgParseSettings, prefix::AbstractString="")
-    add_arg_table(as,
-                  "--$(prefix)opt",
-                  Dict(:help=>"Optimizer",
-                       :default=>"Descent"),
-                  "--$(prefix)optparams",
-                  Dict(:help=>"Parameters",
-                       :arg_type=>Float64,
-                       :default=>[],
-                       :nargs=>'+'))
-end
+# function opt_settings!(as::ArgParseSettings, prefix::AbstractString="")
+#     add_arg_table(as,
+#                   "--$(prefix)opt",
+#                   Dict(:help=>"Optimizer",
+#                        :default=>"Descent"),
+#                   "--$(prefix)optparams",
+#                   Dict(:help=>"Parameters",
+#                        :arg_type=>Float64,
+#                        :default=>[],
+#                        :nargs=>'+'))
+# end
 
 function get_optimizer(parsed::Dict)
     kt = keytype(parsed)
@@ -57,16 +56,16 @@ function construct_action_rnn(in::Integer, num_actions, num_hidden, args...; kwa
     return ARNN(in, num_actions, num_hidden, args...; kwargs...)
 end
 
-function clip(a)
-    clamp.(a, 0.0, 1.0)
-end
+# function clip(a)
+#     clamp.(a, 0.0, 1.0)
+# end
 
-function clip(a::TrackedArray)
-    track(clip, a)
-end
-Flux.Tracker.@grad function clip(a)
-    return clip(Flux.data(a)), Δ -> Tuple(Δ)
-end
+# function clip(a::TrackedArray)
+#     track(clip, a)
+# end
+# Flux.Tracker.@grad function clip(a)
+#     return clip(Flux.data(a)), Δ -> Tuple(Δ)
+# end
 
 function get_activation(act::AbstractString)
     if act == "sigmoid"

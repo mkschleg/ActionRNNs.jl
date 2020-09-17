@@ -28,7 +28,7 @@ end
 
 ParallelStreams(args...) = ParallelStreams((args))
 
-Flux.@treelike ParallelStreams
+Flux.@functor ParallelStreams
 (l::ParallelStreams)(x) = map((mdl)->mdl(x), l.l)
 
 function Base.show(io::IO, l::ParallelStreams)
@@ -41,7 +41,7 @@ struct DualStreams{M1, M2}
     m2::M2
 end
 
-Flux.@treelike DualStreams
+Flux.@functor DualStreams
 (l::DualStreams)(x) = (l.m1(x), l.m2(x))
 
 
@@ -51,7 +51,7 @@ struct ConcatStreams{M1, M2}
     m2::M2
 end
 
-Flux.@treelike ConcatStreams
+Flux.@functor ConcatStreams
 (l::ConcatStreams)(x) = vcat(l.m1(x), l.m2(x))
 
 function Base.show(io::IO, l::ConcatStreams)
@@ -64,7 +64,7 @@ struct ActionStateStreams{AM, SM}
     state_model::SM
 end
 
-Flux.@treelike ActionStateStreams
+Flux.@functor ActionStateStreams
 (l::ActionStateStreams)(x::Tuple) = (l.action_model(x[1]), l.state_model(x[2]))
 
 function Base.show(io::IO, l::ActionStateStreams)

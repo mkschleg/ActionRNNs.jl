@@ -1,8 +1,8 @@
 
 using Random
-# using RLCore
+import MinimalRLCore
 
-# import RLCore.reset!, RLCore.environment_step!, RLCore.get_reward
+# import MinimalRLCore.reset!, MinimalRLCore.environment_step!, MinimalRLCore.get_reward
 
 """
  CycleWorld
@@ -27,19 +27,19 @@ mutable struct CycleWorld <: AbstractEnvironment
             partially_observable)
 end
 
-function RLCore.reset!(env::CycleWorld, rng::AbstractRNG; kwargs...)
+function MinimalRLCore.reset!(env::CycleWorld, rng::AbstractRNG; kwargs...)
     env.agent_state = 0
 end
 
-RLCore.get_actions(env::CycleWorld) = env.actions
+MinimalRLCore.get_actions(env::CycleWorld) = env.actions
 
-RLCore.environment_step!(env::CycleWorld, action::Int64, rng; kwargs...) = 
+MinimalRLCore.environment_step!(env::CycleWorld, action::Int64, rng; kwargs...) = 
     env.agent_state = (env.agent_state + 1) % env.chain_length
 
 
-RLCore.get_reward(env::CycleWorld) = 0 # -> get the reward of the environment
+MinimalRLCore.get_reward(env::CycleWorld) = 0 # -> get the reward of the environment
 
-function RLCore.get_state(env::CycleWorld) # -> get state of agent
+function MinimalRLCore.get_state(env::CycleWorld) # -> get state of agent
     if env.partially_observable
         return partially_observable_state(env)
     else
@@ -57,7 +57,7 @@ function partially_observable_state(env::CycleWorld)
     return state
 end
 
-function RLCore.is_terminal(env::CycleWorld) # -> determines if the agent_state is terminal
+function MinimalRLCore.is_terminal(env::CycleWorld) # -> determines if the agent_state is terminal
     return false
 end
 

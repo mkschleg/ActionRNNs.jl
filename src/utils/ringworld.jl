@@ -1,41 +1,44 @@
 
 module RingWorldUtils
 
-using ..ActionRNN, Reproduce
-using ..RLCore
+using ..ActionRNNs
+using ..MinimalRLCore
+
 # using ..RLCore.GVFParamFuncs
 
-const GVF = RLCore.GVF
-const Horde = RLCore.Horde
+# const GVF = RLCore.GVF
+# const Horde = RLCore.Horde
 
-import RLCore.GVFParamFuncs: FeatureCumulant, PredictionCumulant, ConstantDiscount, StateTerminationDiscount, PersistentPolicy
+using ..GVFHordes
 
-const RWC = ActionRNN.RingWorldConst
+import GVFHordes.GVFParamFuncs: FeatureCumulant, PredictionCumulant, ConstantDiscount, StateTerminationDiscount, PersistentPolicy
+
+const RWC = ActionRNNs.RingWorldConst
 
 
 # export settings!, onestep, chain, gamma_chain, get_horde, oracle
 
-function env_settings!(as::ArgParseSettings)
-    @add_arg_table as begin
-        "--size"
-        help="The length of the ring world chain"
-        arg_type=Int64
-        default=6
-    end
-end
+# function env_settings!(as::ArgParseSettings)
+#     @add_arg_table as begin
+#         "--size"
+#         help="The length of the ring world chain"
+#         arg_type=Int64
+#         default=6
+#     end
+# end
 
-ActionRNN.RingWorld(parsed::Dict) = ActionRNN.RingWorld(parsed["size"])
+ActionRNNs.RingWorld(parsed::Dict) = ActionRNNs.RingWorld(parsed["size"])
 
-function horde_settings!(as::ArgParseSettings, prefix::AbstractString="")
-    add_arg_table(as,
-                  "--$(prefix)gamma",
-                  Dict(:help=>"The gamma value for the gamma_chain horde",
-                       :arg_type=>Float64,
-                       :default=>0.9),
-                  "--$(prefix)horde",
-                  Dict(:help=>"The horde used for training",
-                       :default=>"chain"))
-end
+# function horde_settings!(as::ArgParseSettings, prefix::AbstractString="")
+#     add_arg_table(as,
+#                   "--$(prefix)gamma",
+#                   Dict(:help=>"The gamma value for the gamma_chain horde",
+#                        :arg_type=>Float64,
+#                        :default=>0.9),
+#                   "--$(prefix)horde",
+#                   Dict(:help=>"The horde used for training",
+#                        :default=>"chain"))
+# end
 
 function onestep()
     gvfs = [GVF(FeatureCumulant(1), ConstantDiscount(0.0), PersistentPolicy(RWC.FORWARD))
@@ -150,7 +153,7 @@ end
 get_horde(parsed::Dict, prefix="", pred_offset::Integer=0) =
     get_horde(parsed["$(prefix)horde"], parsed["size"], parsed["$(prefix)gamma"], pred_offset)
 
-function oracle(env::ActionRNN.RingWorld, horde_str, γ=0.9)
+function oracle(env::ActionRNNs.RingWorld, horde_str, γ=0.9)
     chain_length = env.ring_size
     state = env.agent_state
     ret = Array{Float64,1}()
@@ -187,31 +190,41 @@ end
 
 mutable struct StandardFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::StandardFeatureCreator)(s, a) = RLCore.create_features(fc, s, a)
-RLCore.create_features(fc::StandardFeatureCreator, s, a) =
+(fc::StandardFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+MinimalRLCore.create_features(fc::StandardFeatureCreator, s, a) =
     Float32[1.0, s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
-RLCore.create_features(fc::StandardFeatureCreator, s, a::Nothing) =
+MinimalRLCore.create_features(fc::StandardFeatureCreator, s, a::Nothing) =
     Float32[1.0, s[1], 1-s[1], 0, 0, 0, 0]
-RLCore.feature_size(fc::StandardFeatureCreator) = 7
+MinimalRLCore.feature_size(fc::StandardFeatureCreator) = 7
 
 
 mutable struct SansBiasFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::SansBiasFeatureCreator)(s, a) = RLCore.create_features(fc, s, a)
-RLCore.create_features(fc::SansBiasFeatureCreator, s, a) =
+(fc::SansBiasFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+MinimalRLCore.create_features(fc::SansBiasFeatureCreator, s, a) =
     Float32[s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
-RLCore.create_features(fc::SansBiasFeatureCreator, s, a::Nothing) =
+MinimalRLCore.create_features(fc::SansBiasFeatureCreator, s, a::Nothing) =
     Float32[s[1], 1-s[1], 0, 0, 0, 0]
-RLCore.feature_size(fc::SansBiasFeatureCreator) = 6
+MinimalRLCore.feature_size(fc::SansBiasFeatureCreator) = 6
 
 mutable struct OneHotFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::OneHotFeatureCreator)(s, a) = RLCore.create_features(fc, s, a)
-RLCore.create_features(fc::OneHotFeatureCreator, s, a) =
+(fc::OneHotFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+MinimalRLCore.create_features(fc::OneHotFeatureCreator, s, a) =
     Float32[s[1], 1-s[1], a==1, a==2]
-RLCore.create_features(fc::OneHotFeatureCreator, s, a::Nothing) =
+MinimalRLCore.create_features(fc::OneHotFeatureCreator, s, a::Nothing) =
     Float32[s[1], 1-s[1], 0, 0]
-RLCore.feature_size(fc::OneHotFeatureCreator) = 4
+MinimalRLCore.feature_size(fc::OneHotFeatureCreator) = 4
+
+
+mutable struct SansActionFeatureCreator <: AbstractFeatureConstructor end
+
+(fc::SansActionFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+MinimalRLCore.create_features(fc::SansActionFeatureCreator, s, a) =
+    Float32[s[1], 1-s[1]]
+MinimalRLCore.create_features(fc::SansActionFeatureCreator, s, a::Nothing) =
+    Float32[s[1], 1-s[1]]
+MinimalRLCore.feature_size(fc::SansActionFeatureCreator) = 2
 
 # build_features_ringworld_sans_bias(s, a) = Float32[s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
 

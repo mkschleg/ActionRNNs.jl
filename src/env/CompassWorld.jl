@@ -1,8 +1,8 @@
 
 using Random
-# using RLCore
+import MinimalRLCore
 
-# import RLCore.reset!, RLCore.environment_step!, RLCore.get_reward
+# import MinimalRLCore.reset!, MinimalRLCore.environment_step!, MinimalRLCore.get_reward
 
 
 module CompassWorldConst
@@ -35,7 +35,7 @@ end
  CompassWorld
 
    width=8, height=8
-     |----width----|
+```     |----width----|
    g o o o o o o o o y
    g w w w w w w w w y -
    b w w w w w w w w y h
@@ -45,7 +45,7 @@ end
    b w w w w w w w w y h
    b w w w w w w w w y t
    b w w w w w w w w y -
-   b r r r r r r r r y
+   b r r r r r r r r y ```
 
 """
 
@@ -64,14 +64,14 @@ end
 
 CompassWorld(_size; kwargs...) = CompassWorld(_size, _size; kwargs...)
 
-function RLCore.reset!(env::CompassWorld, rng::AbstractRNG; kwargs...)
+function MinimalRLCore.reset!(env::CompassWorld, rng::AbstractRNG; kwargs...)
     env.agent_state = (x=rand(rng, 1:env.world_dims.width), y=rand(rng, 1:env.world_dims.height), dir=rand(rng, 0:3))
 end
 
-RLCore.get_actions(env::CompassWorld) = env.actions
+MinimalRLCore.get_actions(env::CompassWorld) = env.actions
 get_num_features(env::CompassWorld) = env.partially_observable ? 6 : 3
 
-function RLCore.environment_step!(env::CompassWorld, action::Int64, rng; kwargs...)
+function MinimalRLCore.environment_step!(env::CompassWorld, action::Int64, rng; kwargs...)
     # actions 1 == Turn Left
     # actions 2 == Turn Right
     # actions 3 == Up
@@ -103,11 +103,11 @@ function RLCore.environment_step!(env::CompassWorld, action::Int64, rng; kwargs.
     env.agent_state = (x=x, y=y, dir=dir)
 end
 
-function RLCore.get_reward(env::CompassWorld) # -> get the reward of the environment
+function MinimalRLCore.get_reward(env::CompassWorld) # -> get the reward of the environment
     return 0
 end
 
-function RLCore.get_state(env::CompassWorld) # -> get state of agent
+function MinimalRLCore.get_state(env::CompassWorld) # -> get state of agent
     if env.partially_observable
         return partially_observable_state(env)
     else
@@ -144,7 +144,7 @@ function partially_observable_state(env::CompassWorld)
 end
 
 
-function RLCore.is_terminal(env::CompassWorld) # -> determines if the agent_state is terminal
+function MinimalRLCore.is_terminal(env::CompassWorld) # -> determines if the agent_state is terminal
     return false
 end
 

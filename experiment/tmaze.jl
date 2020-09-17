@@ -4,15 +4,15 @@ module TMazeExperiment
 # include("../src/ActionRNN.jl")
 
 import Flux
-import Flux.Tracker
 import JLD2
 import LinearAlgebra.Diagonal
-import RLCore
-import ActionRNN
+import MinimalRLCore
+using MinimalRLCore: run_episode!
+import ActionRNNs
 
-using ActionRNN: TMaze, step!, start!, is_terminal, get_actions, glorot_uniform
+using ActionRNNs: TMaze, step!, start!, is_terminal, get_actions, glorot_uniform
 
-# using ActionRNN
+# using ActionRNNs
 using Statistics
 using Random
 using ProgressMeter
@@ -21,14 +21,14 @@ using Random
 
 # using Plots
 
-const TMU = ActionRNN.TMazeUtils
-const FLU = ActionRNN.FluxUtils
+const TMU = ActionRNNs.TMazeUtils
+const FLU = ActionRNNs.FluxUtils
 
 function arg_parse(as::ArgParseSettings = ArgParseSettings(exc_handler=Reproduce.ArgParse.debug_handler))
 
-    ActionRNN.exp_settings!(as)
-    ActionRNN.env_settings!(as, TMaze)
-    ActionRNN.agent_settings!(as, ActionRNN.FluxAgent)
+    ActionRNNs.exp_settings!(as)
+    ActionRNNs.env_settings!(as, TMaze)
+    ActionRNNs.agent_settings!(as, ActionRNNs.FluxAgent)
     # RWU.horde_settings!(as, "out")
 
     @add_arg_table as begin
@@ -47,6 +47,27 @@ function arg_parse(as::ArgParseSettings = ArgParseSettings(exc_handler=Reproduce
     return as
 end
 
+function default_arg_parse()
+    Dict{String,Any}(
+        "save_dir" => "tmaze",
+
+        "seed" => 1,
+        "steps" => 200000,
+        "size" => 6,
+
+        "cell" => "ARNN",
+        "numhidden" => 6,
+        
+        "opt" => "RMSProp",
+        "optparams" => [0.001],
+        "truncation" => 10,
+
+        # "verbose" => false,
+        "synopsis" => false,
+        # "progress" => true,
+        # "working" => true,)
+end
+
 function construct_agent(env, parsed, rng)
 
     fc = if parsed["cell"] ∈ ["FacARNN", "ARNN"]
@@ -56,26 +77,27 @@ function construct_agent(env, parsed, rng)
     end
     fs = RLCore.feature_size(fc)
 
+
     ap = ActionRNN.ϵGreedy(0.1, get_actions(env))
     init_func = (dims...)->glorot_uniform(rng, dims...)
 
     chain = begin
         if parsed["cell"] == "FacARNN"
             throw("You know this doesn't work yet...")
-            Flux.Chain(ActionRNN.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"]; init=init_func),
+            Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"]; init=init_func),
                        Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
         elseif parsed["cell"] == "ARNN"
             if parsed["action_embedding"]
                 Flux.Chain(
                     (x)->(Flux.onehot(x[1], 1:4), x[2]),
-                    ActionRNN.ActionStateStreams(Flux.Dense(4, parsed["ae_size"], tanh; initW=init_func), identity),
-                    ActionRNN.ARNN(fs, parsed["ae_size"], parsed["numhidden"]; init=init_func),
+                    ActionRNNs.ActionStateStreams(Flux.Dense(4, parsed["ae_size"], tanh; initW=init_func), identity),
+                    ActionRNNs.ARNN(fs, parsed["ae_size"], parsed["numhidden"]; init=init_func),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             else
                 Flux.Chain(
                     # (x)->(Flux.onehot(x[1], 1:4), x[2]),
-                    # ActionRNN.ActionStateStreams(Flux.Dense(4, 3, Flux.relu; initW=init_func), identity),
-                    ActionRNN.ARNN(fs, 4, parsed["numhidden"]; init=init_func),
+                    # ActionRNNs.ActionStateStreams(Flux.Dense(4, 3, Flux.relu; initW=init_func), identity),
+                    ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             end
         else
@@ -83,7 +105,7 @@ function construct_agent(env, parsed, rng)
             if parsed["action_embedding"]
                 Flux.Chain(
                     (x)->(x[1:3], x[4:end]),
-                    ActionRNN.ActionStateStreams(Flux.param, Flux.Dense(4, parsed["ae_size"], Flux.sigmoid; initW=init_func)),
+                    ActionRNNs.ActionStateStreams(Flux.param, Flux.Dense(4, parsed["ae_size"], Flux.sigmoid; initW=init_func)),
                     (x)->vcat(x[1], x[2]),
                     rnntype(parsed["ae_size"] + fs, parsed["numhidden"]; init=init_func),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
@@ -94,7 +116,7 @@ function construct_agent(env, parsed, rng)
         end
     end
 
-    ActionRNN.ControlFluxAgent(chain,
+    ActionRNNs.ControlFluxAgent(chain,
                                fc,
                                fs,
                                ap,
@@ -102,55 +124,19 @@ function construct_agent(env, parsed, rng)
                                rng=rng)
 end
 
-
-function episode!(env, agent, rng, max_steps, total_steps, progress_bar=nothing, checkpoint_cb=nothing, e=0)
-    terminal = false
-    
-    s_t = start!(env, rng)
-    action = start!(agent, s_t, rng)
-
-    total_rew = 0
-    steps = 0
-    success = false
-    if !(checkpoint_cb isa Nothing)
-        checkpoint_cb(agent, total_steps+step)
-    end
-    if !(progress_bar isa Nothing)
-        next!(progress_bar, showvalues=[(:episode, e), (:step, total_steps+steps)])
-    end
-    steps = 1
-
-    while !terminal
-        
-        s_tp1, rew, terminal = step!(env, action)
-
-        action = step!(agent, s_tp1, clamp(rew, -1, 1), terminal, rng)
-
-        if !(checkpoint_cb isa Nothing)
-            checkpoint_cb(agent, total_steps+steps)
-        end
-        
-        total_rew += rew
-        steps += 1
-        success = success || (rew == 4.0)
-        if !(progress_bar isa Nothing)
-            next!(progress_bar, showvalues=[(:episode, e), (:step, total_steps+steps)])
-        end
-
-        if (total_steps+steps >= max_steps) || (steps >= 1000) # 5 Minutes of Gameplay = 18k steps.
-            break
-        end
-    end
-    
-    return total_rew, steps, success
-end
-
-function main_experiment(args::Vector{String})
-
+function main_experiment(args::Vector{String}; kwargs...)
     as = arg_parse()
     parsed = parse_args(args, as)
+    main_experiment(parsed; kwargs...)
+end
+
+function main_experiment(parsed::Dict; working=false, progress=false, verbose=false)
+
+    working = get!(parsed, "working", working)
+    progress = get!(parsed, "progress", working)
+    verbose = get!(parsed, "verbose", working)
     
-    savefile = ActionRNN.save_setup(parsed, "results.jld2")
+    savefile = ActionRNNs.save_setup(parsed, "results.jld2")
     if isnothing(savefile)
         return
     end
@@ -170,15 +156,28 @@ function main_experiment(args::Vector{String})
     prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
     eps = 1
     while sum(total_steps) <= num_steps
-        total_rew, steps, success =
-            episode!(env, agent, rng, num_steps, sum(total_steps), parsed["progress"] ? prg_bar : nothing, nothing, eps)
+        success = false
+        total_rew, steps =
+            run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
+                if parsed["progress"]
+                    pr_suc = if length(successes) <= 100
+                        mean(successes)
+                    else
+                        mean(successes[end-100:end])
+                    end
+                        
+                    next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc)])
+                end
+                success = success || (r == 4.0)
+            end
+            # episode!(env, agent, rng, num_steps, sum(total_steps), parsed["progress"] ? prg_bar : nothing, nothing, eps)
         push!(total_rews, total_rew)
         push!(total_steps, steps)
         push!(successes, success)
         eps += 1
     end
     save_results = Dict("total_rews"=>total_rews, "steps"=>total_steps, "successes"=>successes)
-    ActionRNN.save_results(parsed, savefile, save_results)
+    ActionRNNs.save_results(parsed, savefile, save_results)
 end
 
 
