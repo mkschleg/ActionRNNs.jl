@@ -11,6 +11,18 @@ Pkg.activate(".")
 
 using Reproduce
 
+<<<<<<< HEAD
+const save_loc = "ringworld_arnn_sweep_cell_size_sgd"
+const exp_file = "experiment/ringworld_flux_agent.jl"
+const exp_module_name = :RingWorldFluxExperiment
+const exp_func_name = :main_experiment
+const optimizer = "Descent"
+const alphas = clamp.(0.1*1.5.^(-6:2:6), 0.0, 1.0)
+# const alphas = [0.01,  0.1]
+const truncations = 1:2:15
+
+const ringworld_sizes = [10, 15, 20]
+=======
 const save_loc = "ringworld_rnn_sweep_rmsprop"
 const exp_file = "experiment/ringworld_flux_agent.jl"
 const exp_module_name = :RingWorldFluxExperiment
@@ -22,6 +34,7 @@ const truncations = [1, 2, 4, 6]
 
 const ringworld_sizes = [6, 10, 20]
 const hidden_state_sizes = [3, 6, 9, 12]
+>>>>>>> 327e1ad7ca915b44538bf0e7d0f7ed0a49ffd895
 
 function make_arguments(args::Dict)
     alpha = args["alpha"]
@@ -60,9 +73,13 @@ function main()
     arg_dict = Dict([
         "alpha"=>alphas,
         "truncation"=>truncations,
-        "cell"=>["RNN", "ARNN"],
+        "cell"=>["ARNN"],
         "size"=>ringworld_sizes,
+<<<<<<< HEAD
+        "hsize"=>[1, 2, 4, 6, 8, 10, 12, 15, 20],
+=======
         "hidden"=>hidden_state_sizes,
+>>>>>>> 327e1ad7ca915b44538bf0e7d0f7ed0a49ffd895
         "seed"=>collect(1:parsed["numruns"])
     ])
     arg_list = ["size", "cell", "hidden", "alpha", "truncation", "seed"]

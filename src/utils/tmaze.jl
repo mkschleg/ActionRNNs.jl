@@ -3,7 +3,9 @@ module TMazeUtils
 using ..ActionRNNs
 using ..MinimalRLCore
 
-mutable struct OneHotFeatureCreator <: AbstractFeatureConstructor end
+mutable struct OneHotFeatureCreator{WA} <: AbstractFeatureConstructor end
+
+OneHotFeatureCreator() = OneHotFeatureCreator{true}()
 
 (fc::OneHotFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
 MinimalRLCore.create_features(fc::OneHotFeatureCreator, s, a) =

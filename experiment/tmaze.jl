@@ -70,11 +70,15 @@ end
 
 function construct_agent(env, parsed, rng)
 
-    fc = TMU.OneHotFeatureCreator()
-    fs = MinimalRLCore.feature_size(fc)
-    
-    ap = ActionRNNs.ϵGreedy(0.01, get_actions(env))
+    fc = if parsed["cell"] ∈ ["FacARNN", "ARNN"]
+        TMU.OneHotFeatureCreator{false}()
+    else
+        TMU.OneHotFeatureCreator{true}()
+    end
+    fs = RLCore.feature_size(fc)
 
+
+    ap = ActionRNN.ϵGreedy(0.1, get_actions(env))
     init_func = (dims...)->glorot_uniform(rng, dims...)
 
     chain = begin

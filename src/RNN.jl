@@ -65,8 +65,10 @@ function get_hidden_state(c)
     h_state
 end
 
+
 get_hidden_state(rnn::Flux.Recur{T}) where {T} = copy(rnn.state)
 get_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = deepcopy(rnn.state)
+
 
 function get_initial_hidden_state(c)
     h_state = IdDict()
