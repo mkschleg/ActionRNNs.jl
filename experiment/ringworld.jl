@@ -53,7 +53,7 @@ function default_arg_parse()
         "outgamma" => 0.9,
         
         "opt" => "RMSProp",
-        "optparams" => [0.001],
+        "alpha" => 0.001,
         "truncation" => 3,
 
         "verbose" => false,

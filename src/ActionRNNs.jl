@@ -15,8 +15,9 @@ export
 
 include("Layers.jl")
 
-export ARNN, reset!, get
+export ARNN, ALSTM, reset!, get
 include("RNN.jl")
+include("LSTM.jl")
 
 # export RTD, RTD_jacobian, TDLambda, TD, update!
 export TD, update!

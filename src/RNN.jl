@@ -142,6 +142,9 @@ _contract(W::Array{<:Number, 3}, x1::AbstractArray{<:Number, 1}, x2::AbstractArr
 
 
 function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A<:AbstractArray}
+    # @info "Here"
+    # @inbounds new_h =
+    #     m.σ.((@view m.Wx[:, :, x[1]])*x[2] + (@view m.Wh[:, :, x[1]])*h + (@view m.b[:, x[1]]))
     @inbounds new_h =
         m.σ.((@view m.Wx[:, :, x[1]])*x[2] + (@view m.Wh[:, :, x[1]])*h + (@view m.b[:, x[1]]))
 
