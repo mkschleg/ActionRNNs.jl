@@ -92,6 +92,12 @@ function get_rnn_config(parsed, out_horde, rng)
         elseif cell_str == "RNN"
             Flux.Chain(Flux.RNN(fs, parsed["numhidden"]; init=init_func),
                        Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
+        elseif cell_str == "ALSTM"
+            Flux.Chain(ActionRNNs.ALSTM(fs, 2, parsed["numhidden"]; init=init_func),
+                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
+        elseif cell_str == "LSTM"
+            Flux.Chain(Flux.LSTM(fs, parsed["numhidden"]; init=init_func),
+                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
         else
             throw("Unknown Cell type " * cell_str)
         end
@@ -141,7 +147,7 @@ function main_experiment(parsed::Dict{String, Any})
 
     out_pred_strg = zeros(Float32, num_steps, length(agent.horde))
     out_err_strg = zeros(Float32, num_steps, length(agent.horde))
-    hidden_state = zeros(Float32, num_steps, parsed["numhidden"])
+    # hidden_state = zeros(Float32, num_steps, parsed["numhidden"])
 
     prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
     
@@ -151,7 +157,7 @@ function main_experiment(parsed::Dict{String, Any})
         out_preds = a.preds
         out_pred_strg[cur_step, :] .= out_preds
         out_err_strg[cur_step, :] = out_pred_strg[cur_step, :] .- RWU.oracle(env, parsed["outhorde"]);
-        hidden_state[cur_step, :] .= a.h[agent.model[1]]
+        # hidden_state[cur_step, :] .= a.h[agent.model[1]]
 
         # @show env
         if prgs
@@ -162,7 +168,8 @@ function main_experiment(parsed::Dict{String, Any})
     end
     
 
-    results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg, "hidden"=>hidden_state])
+    # results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg, "hidden"=>hidden_state])
+    results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg])
     save_results = results_synopsis(results, Val(parsed["synopsis"]))
     ActionRNNs.save_results(parsed, savefile, save_results)
 end

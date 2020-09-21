@@ -6,7 +6,7 @@ function (m::Flux.LSTMCell)((h, c), x::T) where {T<:Tuple}
     m((h,c), x[2])
 end
 
-mutable struct ActionLSTMCell{A1,A2, V1, V2, H}
+mutable struct ActionLSTMCell{A1,A2, V1, V2, H} <: AbstractActionRNN
     Wi_input::A1
     Wh_input::A1
     b_input::V1
@@ -34,6 +34,24 @@ function ActionLSTMCell(in::Integer, num_actions::Integer, out::Integer;
 end
 
 
+function _dont_learn_initial_state!(rnn::Flux.Recur{ActionLSTMCell})
+    rnn.init = Flux.data.(rnn.init)
+end
+
+get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:ActionLSTMCell} = deepcopy(rnn.init)
+
+get_hidden_state(rnn::Flux.Recur{T}) where {T<:ActionLSTMCell} = deepcopy(rnn.state)
+
+function get_next_hidden_state(rnn::Flux.Recur{T}, h_init, input) where {T<:ActionLSTMCell}
+    return deepcopy(rnn.cell(h_init, input)[1])
+end
+
+function _reset!(m::Flux.Recur{T}, h_init) where {T<:ActionLSTMCell}
+    Flux.reset!(m)
+    m.state[1] .= h_init[1]
+    m.state[2] .= h_init[2]
+end
+
 function _contract(W::AbstractArray{N, 3}, x1::AbstractArray{N, 1}) where {N<:Number}
     [(@view W[:,:,l])*x1 for l in 1:size(W)[3]]
 end
@@ -57,9 +75,9 @@ function (m::ActionLSTMCell)((h, c), ax::Tuple{I, A}) where {I<:Integer, A<:Abst
 
     g = Wi*x .+ Wh*h .+ b
     input = σ.(Wi_input*x .+ Wh_input*h .+ b_input)
-    forget = gate(g, o, 1)
-    cell = gate(g, o, 2)
-    output = gate(g, o, 3)
+    forget = σ.(gate(g, o, 1))
+    cell = tanh.(gate(g, o, 2))
+    output = σ.(gate(g, o, 3))
 
     c = forget .* c .+ input .* cell
     h′ = output .* tanh.(c)

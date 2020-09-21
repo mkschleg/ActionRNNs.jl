@@ -60,7 +60,8 @@ function pred_experiment(env, agent, rng, num_steps, parsed, err_func)
 end
 
 function save_results(parsed::Dict, savefile, results)
-    if !parsed["working"]
+    working = get(parsed, "working", false)
+    if !(working)
         JLD2.@save savefile results
     else
         return results

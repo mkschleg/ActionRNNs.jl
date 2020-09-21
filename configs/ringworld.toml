@@ -1,12 +1,12 @@
 [config]
-save_dir="ringworld_rnn_rmsprop"
+save_dir="ringworld_lstm_rmsprop"
 exp_file="experiment/ringworld.jl"
 exp_module_name = "RingWorldExperiment"
 exp_func_name = "main_experiment"
 arg_iter_type = "iter"
 
 [static_args]
-"steps" = 3000
+"steps" = 200000
 "opt" = "RMSProp"
 "outgamma" = 0.0
 "gamma" = 0.95
@@ -15,7 +15,7 @@ arg_iter_type = "iter"
 [sweep_args]
 "size" = [6]
 "outhorde" = ["gammas_term", "onestep"]
-"rnn_config" = ["ARNN_OneHot", "RNN_OneHot", "RNN_SansAction"]
+"rnn_config" = ["LSTM_SansAction", "LSTM_OneHot", "ALSTM_OneHot"]
 "alpha" = "clamp.(0.01*1.5.^(-9:1), 0.0, 1.0)"
 "truncation" = [1, 2, 3, 4, 6, 8, 12]
 "numhidden" = [3, 6, 9, 12]

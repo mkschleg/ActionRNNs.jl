@@ -11,6 +11,7 @@ function _dont_learn_initial_state!(rnn::Flux.Recur{Flux.LSTMCell})
     rnn.init = Flux.data.(rnn.init)
 end
 
+
 reset!(m, h_init) = 
     foreach(x -> x isa Flux.Recur && _reset!(x, h_init), Flux.functor(m)[1])
 
@@ -27,6 +28,8 @@ function _reset!(m::Flux.Recur{T}, h_init) where {T<:Flux.LSTMCell}
     m.state[1] .= h_init[1]
     m.state[2] .= h_init[2]
 end
+
+
 
 function contains_rnntype(m, rnn_type::Type)
     is_rnn_type = Bool[]
@@ -78,6 +81,7 @@ end
 
 get_initial_hidden_state(rnn::Flux.Recur{T}) where {T} = copy(rnn.init)
 get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = deepcopy(rnn.init)
+
 
 
 abstract type AbstractActionRNN end

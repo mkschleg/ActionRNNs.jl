@@ -59,7 +59,9 @@ function update!(chain,
     end
     reset!(chain, h_init)
     for weights in Flux.params(chain)
-        Flux.update!(opt, weights, grads[weights])
+        if !(grads[weights] === nothing)
+            Flux.update!(opt, weights, grads[weights])
+        end
     end
 end
 
