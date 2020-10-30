@@ -138,6 +138,8 @@ function get_horde(horde_str::AbstractString, chain_length::Integer, gamma::Abst
         horde = gammas(collect(0.0:0.1:0.9))
     elseif horde_str == "gammas_term"
         horde = gammas_term(collect(0.0:0.1:0.9))
+    elseif horde_str == "gammas_term_one"
+        horde = gammas_term([0.9])
     elseif horde_str == "gammas_scaled"
         horde = gammas_scaled(collect(0.0:0.1:0.9))
     elseif horde_str == "gammas_aj"
@@ -180,6 +182,15 @@ function oracle(env::ActionRNNs.RingWorld, horde_str, γ=0.9)
         else
             ret[1:10] .= collect(0.0:0.1:0.9).^(chain_length - state)
             ret[11:end] .= collect(0.0:0.1:0.9).^(state - 2)
+        end
+    elseif horde_str == "gammas_term_one"
+        ret = zeros(2)
+        if state == 1
+            ret[1] = 0.9^(chain_length)
+            ret[2] = 0.9^(chain_length)
+        else
+            ret[1] = 0.9^(chain_length - state)
+            ret[2] = 0.9^(state - 2)
         end
     else
         throw("Bug Found")

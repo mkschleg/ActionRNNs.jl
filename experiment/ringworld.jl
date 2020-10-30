@@ -6,6 +6,7 @@ import Flux
 import JLD2
 import LinearAlgebra.Diagonal
 
+# include("../src/ActionRNNs.jl")
 import ActionRNNs
 
 using DataStructures: CircularBuffer
@@ -145,9 +146,21 @@ function main_experiment(parsed::Dict{String, Any})
     env = RingWorld(parsed)
     agent = construct_agent(parsed, rng)
 
+    out_pred_strg, out_err_strg =
+        experiment_loop(env, agent, parsed["outhorde"], num_steps, rng; prgs=prgs)
+
+    results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg])
+    save_results = results_synopsis(results, Val(parsed["synopsis"]))
+    ActionRNNs.save_results(parsed, savefile, save_results)
+end
+
+# Creating an environment for to run in jupyter.
+
+function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
+
     out_pred_strg = zeros(Float32, num_steps, length(agent.horde))
     out_err_strg = zeros(Float32, num_steps, length(agent.horde))
-    # hidden_state = zeros(Float32, num_steps, parsed["numhidden"])
+    out_loss_strg = zeros(Float32, num_steps)
 
     prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
     
@@ -156,10 +169,8 @@ function main_experiment(parsed::Dict{String, Any})
         
         out_preds = a.preds
         out_pred_strg[cur_step, :] .= out_preds
-        out_err_strg[cur_step, :] = out_pred_strg[cur_step, :] .- RWU.oracle(env, parsed["outhorde"]);
-        # hidden_state[cur_step, :] .= a.h[agent.model[1]]
-
-        # @show env
+        out_err_strg[cur_step, :] = out_pred_strg[cur_step, :] .- RWU.oracle(env, outhorde_str);
+        out_loss_strg[cur_step] = a.loss
         if prgs
             ProgressMeter.next!(prg_bar)
         end
@@ -167,12 +178,13 @@ function main_experiment(parsed::Dict{String, Any})
         cur_step += 1
     end
     
-
-    # results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg, "hidden"=>hidden_state])
-    results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg])
-    save_results = results_synopsis(results, Val(parsed["synopsis"]))
-    ActionRNNs.save_results(parsed, savefile, save_results)
+    out_pred_strg, out_err_strg, out_loss_strg
+    
 end
+
+
+
+
 
 end
 

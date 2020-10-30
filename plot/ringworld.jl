@@ -41,17 +41,18 @@ function heatmap_ring(loc::AbstractString, y_axis, x_axis;
     data_matrix
 end
 
+data_ring(loc::AbstractString, args...; kwargs...) =
+    data_ring(ItemCollection(loc), args...; kwargs...)
 
-function data_ring(loc::AbstractString, y_axis, x_axis, sweep_key;
+
+function data_ring(ic::ItemCollection, y_axis, x_axis, sweep_key;
                    static_params::Dict{String, Any}=Dict{String,Any}(), clean_data=(data)->data, data_type=Float64)
 
-    ic = ItemCollection(loc)
+    subset_ic = search(ic, static_params)
 
-    _, hashes, subset_items = search(ic, static_params)
-
-    subset_ic = ItemCollection(subset_items)
+    # subset_ic = ItemCollection(subset_items)
     
-    diff_dict = diff(subset_items)
+    diff_dict = diff(subset_ic)
     y_axis_params = diff_dict[y_axis]
     x_axis_params = diff_dict[x_axis]
     sweep_params = diff_dict[sweep_key]
@@ -66,16 +67,16 @@ function data_ring(loc::AbstractString, y_axis, x_axis, sweep_key;
         res_sum = zeros(length(sweep_params))
 
         for (sp_idx, sp) ∈ enumerate(sweep_params)
-            _, setting_hashes, setting_items =
+            setting_ic =
                 search(subset_ic, Dict(y_axis=>y_param, x_axis=>x_param, sweep_key=>sp))
             i = 0
-            for si ∈ setting_items
+            for si ∈ setting_ic
                 # res_sum[sp_idx] += clean_data(load(joinpath(dirname(si.folder_str), "results.jld2")))
                 try
-                    res_sum[sp_idx] += clean_data(load(joinpath(dirname(si.folder_str), "results.jld2")))
+                    res_sum[sp_idx] += clean_data(FileIO.load(joinpath(si.folder_str, "results.jld2")))
                     i += 1
                 catch
-                    # @info "Can't open: $(si.folder_str)"
+                    @info "Can't open: $(si.folder_str)"
                 end
             end
             res_sum[sp_idx] /= i
@@ -89,13 +90,15 @@ function data_ring(loc::AbstractString, y_axis, x_axis, sweep_key;
     # heatmap(string.(x_axis_params), string.(y_axis_params), data_matrix, ylabel=y_axis, xlabel=x_axis)
 end
 
+heatmap_ring(loc::AbstractString, args...; kwargs...) =
+    heatmap_ring(ItemCollection(loc), args...; kwargs...)
 
-function heatmap_ring(loc, y_axis, x_axis, sweep_key;
+function heatmap_ring(ic::ItemCollection, y_axis, x_axis, sweep_key;
                       static_params=Dict{String,Any}(),
                       clean_data=(data)->data,
                       data_type=Float64,
                       kwargs...)
-    data_matrix, _, _, (y_axis_params, x_axis_params) = data_ring(loc, y_axis, x_axis, sweep_key; static_params=static_params, clean_data=clean_data, data_type=data_type)
+    data_matrix, _, _, (y_axis_params, x_axis_params) = data_ring(ic, y_axis, x_axis, sweep_key; static_params=static_params, clean_data=clean_data, data_type=data_type)
     heatmap(string.(x_axis_params),
             string.(y_axis_params),
             data_matrix,

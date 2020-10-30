@@ -20,15 +20,10 @@ end
 function FluxAgent(out_horde,
                    model,
                    opt,
+                   τ,
                    feature_creator,
                    feature_size,
-                   acting_policy::Π,
-                   parsed) where {Π}
-
-    num_gvfs = length(out_horde)
-
-    τ=parsed["truncation"]
-    # opt = FluxUtils.get_optimizer(parsed)
+                   acting_policy)
 
     state_list, init_state = begin
         if contains_rnntype(model, ActionRNNs.AbstractActionRNN)

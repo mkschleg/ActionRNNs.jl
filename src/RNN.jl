@@ -4,12 +4,15 @@ using Flux
 using OMEinsum
 
 # Utilities for using RNNs and Action RNNs online and in chains.
-dont_learn_initial_state!(rnn) = prefor(x -> x isa Flux.Recur && _dont_learn_initial_state_!(x), rnn)
-dont_learn_initial_state_!(rnn) = 
+
+_dont_learn_initial_state!(rnn) = 
     rnn.init = Flux.data(rnn.init)
+
 function _dont_learn_initial_state!(rnn::Flux.Recur{Flux.LSTMCell})
     rnn.init = Flux.data.(rnn.init)
 end
+
+dont_learn_initial_state!(rnn) = foreach(x -> x isa Flux.Recur && _dont_learn_initial_state!(x), rnn)
 
 
 reset!(m, h_init) = 
@@ -18,9 +21,14 @@ reset!(m, h_init) =
 reset!(m, h_init::IdDict) = 
     foreach(x -> x isa Flux.Recur && _reset!(x, h_init[x]), Flux.functor(m)[1])
 
-function _reset!(m::Flux.Recur, h_init)
+function _reset!(m::Flux.Recur, h_init::Array{<:Number, 1})
     Flux.reset!(m)
     m.state .= h_init
+end
+
+function _reset!(m::Flux.Recur, h_init)
+    Flux.reset!(m)
+    m.state = h_init
 end
 
 function _reset!(m::Flux.Recur{T}, h_init) where {T<:Flux.LSTMCell}
@@ -28,8 +36,6 @@ function _reset!(m::Flux.Recur{T}, h_init) where {T<:Flux.LSTMCell}
     m.state[1] .= h_init[1]
     m.state[2] .= h_init[2]
 end
-
-
 
 function contains_rnntype(m, rnn_type::Type)
     is_rnn_type = Bool[]

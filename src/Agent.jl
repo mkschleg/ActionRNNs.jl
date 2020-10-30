@@ -6,7 +6,7 @@
 
 include("agent/FluxAgent.jl")
 include("agent/ControlFluxAgent.jl")
-
+include("agent/PredERAgent.jl")
 
 
 
