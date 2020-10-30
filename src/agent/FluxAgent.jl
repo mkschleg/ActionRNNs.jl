@@ -101,7 +101,7 @@ function MinimalRLCore.step!(agent::FluxAgent, env_s_tp1, r, terminal, rng; kwar
     agent.action = copy(new_action)
     agent.action_prob = new_prob
 
-    return (preds=out_preds, h=cur_hidden_state, action=agent.action)
+    return (preds=out_preds, h=cur_hidden_state, action=agent.action, loss=0.0f0)
 end
 
 # MinimalRLCore.get_action(agent::FluxAgent, state) = agent.action

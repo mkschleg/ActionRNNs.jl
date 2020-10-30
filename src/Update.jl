@@ -85,7 +85,7 @@ function update_batch!(chain,
     v_tp1 = preds[n]
     # print("Here")
     # print(Base.get(horde, nothing, action_t, env_state_tp1[1,:], v_tp1[1,:]))
-    println("env_state_tp1_update: ", env_state_tp1)
+    # println("env_state_tp1_update: ", env_state_tp1)
     params = if length(size(env_state_tp1)) == 1
         dropgrad([get(horde, nothing, action_t[1], env_state_tp1, v_tp1)])
     else

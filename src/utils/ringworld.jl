@@ -97,13 +97,13 @@ function gammas(gms::Array{Float64, 1})
     return Horde(gvfs)
 end
 
-function gammas_scaled(gms::Array{Float64, 1})
+function gammas_scaled(gms::AbstractArray)
     gvfs = [[GVF(ScaledCumulant(1-γ, FeatureCumulant(1)), ConstantDiscount(γ), PersistentPolicy(RWC.FORWARD)) for γ in gms];
             [GVF(ScaledCumulant(1-γ, FeatureCumulant(1)), ConstantDiscount(γ), PersistentPolicy(RWC.BACKWARD)) for γ in gms]]
     return Horde(gvfs)
 end
 
-function gammas_term(gms::Array{Float64, 1})
+function gammas_term(gms::AbstractArray)
     gvfs = [[GVF(FeatureCumulant(1), StateTerminationDiscount(γ, ((env_state)->env_state[1] == 1)), PersistentPolicy(RWC.FORWARD)) for γ in gms];
             [GVF(FeatureCumulant(1), StateTerminationDiscount(γ, ((env_state)->env_state[1] == 1)), PersistentPolicy(RWC.BACKWARD)) for γ in gms]]
     return Horde(gvfs)

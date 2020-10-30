@@ -59,15 +59,15 @@ end
 Base.length(er::SequenceReplay) = length(er.buffer)
 Base.getindex(er::SequenceReplay, idx) =
     if idx isa AbstractArray
-        er.buffer[(idx .+ (er.place - 1)) .% er.buffer._capacity]
+        er.buffer[(idx .+ er.place .- 2) .% er.buffer._capacity .+ 1]
     else
-        er.buffer[(idx + er.place - 1) % er.buffer._capacity]
+        er.buffer[(idx + er.place - 2) % er.buffer._capacity + 1]
     end
 Base.view(er::SequenceReplay, idx) =
     if idx isa AbstractArray
-        @view er.buffer[(idx .+ (er.place - 1)) .% er.buffer._capacity]
+        @view er.buffer[(idx .+ er.place .- 2) .% er.buffer._capacity .+ 1]
     else
-        @view er.buffer[(idx + er.place - 1) % er.buffer._capacity]
+        @view er.buffer[(idx + er.place - 2) % er.buffer._capacity + 1]
     end
 
 function Base.push!(er::SequenceReplay, experience)
@@ -75,7 +75,6 @@ function Base.push!(er::SequenceReplay, experience)
         er.place = (er.place % capacity(er.buffer)) + 1
     end
     push!(er.buffer, experience)
-    
 end
 
 sample(er::SequenceReplay, batch_size) = sample(Random.GLOBAL_RNG, er, batch_size)

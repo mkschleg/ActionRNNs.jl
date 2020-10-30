@@ -81,9 +81,9 @@ build_new_feat(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, state, action) whe
 add_exp!(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, env_s_tp1, r, terminal, hs) where {O, C, F, H, ER, Φ, Π, G} = 
     push!(agent.replay,
           (agent.am1,
-           agent.s_t,
+           agent.state_list[1],
            agent.action,
-           agent.state_list[end],
+           agent.state_list[2],
            env_s_tp1,
            Float32(agent.action_prob),
            r,
@@ -93,9 +93,9 @@ add_exp!(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, env_s_tp1, r, terminal, 
 add_exp!(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, env_s_tp1, r, terminal, hs) where {O, C, F, H, ER, Φ<:Tuple, Π, G}= 
     push!(agent.replay,
           (agent.am1,
-           agent.s_t[2],
+           agent.s_t[1],
            agent.action,
-           agent.state_list[end][2],
+           agent.state_list[2][2],
            env_s_tp1,
            Float32(agent.action_prob),
            r,
@@ -126,7 +126,9 @@ function MinimalRLCore.step!(agent::PredERAgent, env_s_tp1, r, terminal, rng; kw
 
     #Deal with ER buffer
     # println(typeof((agent.hidden_state_init[k] for k in keys(agent.hidden_state_init))...))
-    println("env_s_tp1: ", env_s_tp1)
+    # println("env_s_tp1: ", env_s_tp1)
+    # hidden_state_init =
+    #     get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1])
     add_ret = add_exp!(agent,
                        Float32.(env_s_tp1),
                        r,
@@ -152,9 +154,9 @@ function MinimalRLCore.step!(agent::PredERAgent, env_s_tp1, r, terminal, rng; kw
         end
 
         sp1 = exp[end].esp
-        println("SP1:", sp1)
+        # println("SP1:", sp1)
         action = exp[end].a
-        println(agent.replay.buffer._stg_tuple.esp)
+        # println(agent.replay.buffer._stg_tuple.esp)
 
         # hs = deepcopy(agent.hidden_state_init)
         hs = IdDict()
@@ -174,7 +176,7 @@ function MinimalRLCore.step!(agent::PredERAgent, env_s_tp1, r, terminal, rng; kw
     # End update function
 
     reset!(agent.model, agent.hidden_state_init)
-    out_preds = agent.model.(agent.state_list[1:(end-1)])[end]
+    out_preds = agent.model.(agent.state_list)[end]
 
     cur_hidden_state = get_hidden_state(agent.model)
 
