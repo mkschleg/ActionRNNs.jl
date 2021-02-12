@@ -1,16 +1,17 @@
 
 module TMazeExperiment
 
-# include("../src/ActionRNN.jl")
+# include("../src/ActionRNNs.jl")
 
 import Flux
 import JLD2
 import LinearAlgebra.Diagonal
 import MinimalRLCore
-using MinimalRLCore: run_episode!
+using MinimalRLCore: run_episode!, get_actions
 import ActionRNNs
 
-using ActionRNNs: TMaze, step!, start!, is_terminal, get_actions, glorot_uniform
+using ActionRNNs: TMaze
+
 
 # using ActionRNNs
 using Statistics
@@ -24,30 +25,7 @@ using Random
 const TMU = ActionRNNs.TMazeUtils
 const FLU = ActionRNNs.FluxUtils
 
-function arg_parse(as::ArgParseSettings = ArgParseSettings(exc_handler=Reproduce.ArgParse.debug_handler))
-
-    ActionRNNs.exp_settings!(as)
-    ActionRNNs.env_settings!(as, TMaze)
-    ActionRNNs.agent_settings!(as, ActionRNNs.FluxAgent)
-    # RWU.horde_settings!(as, "out")
-
-    @add_arg_table as begin
-        "--factors"
-        arg_type=Int
-        default=0
-        "--gamma"
-        arg_type=Float32
-        default=0.99f0
-        "--action_embedding"
-        action=:store_true
-        "--ae_size"
-        arg_type=Int
-    end
-    
-    return as
-end
-
-function default_arg_parse()
+function default_config()
     Dict{String,Any}(
         "save_dir" => "tmaze",
 
@@ -59,27 +37,35 @@ function default_arg_parse()
         "numhidden" => 6,
         
         "opt" => "RMSProp",
-        "optparams" => [0.001],
+        "eta" => 0.001,
+        "rho" => 0.9,
         "truncation" => 10,
 
-        # "verbose" => false,
-        "synopsis" => false,
-        # "progress" => true,
-        # "working" => true,)
+        "hs_learnable" => true,
+
+        "gamma"=>0.99)
+
 end
 
 function construct_agent(env, parsed, rng)
 
-    fc = if parsed["cell"] ∈ ["FacARNN", "ARNN"]
-        TMU.OneHotFeatureCreator{false}()
+    num_actions = length(get_actions(env))
+    is_actionrnn = parsed["cell"] ∈ ["FacARNN", "ARNN"]
+
+    
+    fc = if is_actionrnn
+        # States without one hot action encoding.
+        TMU.StandardFeatureCreator{false}()
     else
-        TMU.OneHotFeatureCreator{true}()
+        # States with one hot action encoding
+        TMU.StandardFeatureCreator{true}()
     end
-    fs = RLCore.feature_size(fc)
+    fs = MinimalRLCore.feature_size(fc)
+
+    ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+    init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
 
 
-    ap = ActionRNN.ϵGreedy(0.1, get_actions(env))
-    init_func = (dims...)->glorot_uniform(rng, dims...)
 
     chain = begin
         if parsed["cell"] == "FacARNN"
@@ -87,7 +73,7 @@ function construct_agent(env, parsed, rng)
             Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"]; init=init_func),
                        Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
         elseif parsed["cell"] == "ARNN"
-            if parsed["action_embedding"]
+            if false#parsed["action_embedding"]
                 Flux.Chain(
                     (x)->(Flux.onehot(x[1], 1:4), x[2]),
                     ActionRNNs.ActionStateStreams(Flux.Dense(4, parsed["ae_size"], tanh; initW=init_func), identity),
@@ -97,12 +83,18 @@ function construct_agent(env, parsed, rng)
                 Flux.Chain(
                     # (x)->(Flux.onehot(x[1], 1:4), x[2]),
                     # ActionRNNs.ActionStateStreams(Flux.Dense(4, 3, Flux.relu; initW=init_func), identity),
-                    ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func),
+                    ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             end
+        elseif parsed["cell"] == "RNN"
+            Flux.Chain(
+                # (x)->(Flux.onehot(x[1], 1:4), x[2]),
+                # ActionRNNs.ActionStateStreams(Flux.Dense(4, 3, Flux.relu; initW=init_func), identity),
+                ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
+                Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
         else
             rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-            if parsed["action_embedding"]
+            if false#parsed["action_embedding"]
                 Flux.Chain(
                     (x)->(x[1:3], x[4:end]),
                     ActionRNNs.ActionStateStreams(Flux.param, Flux.Dense(4, parsed["ae_size"], Flux.sigmoid; initW=init_func)),
@@ -124,19 +116,13 @@ function construct_agent(env, parsed, rng)
                                rng=rng)
 end
 
-function main_experiment(args::Vector{String}; kwargs...)
-    as = arg_parse()
-    parsed = parse_args(args, as)
-    main_experiment(parsed; kwargs...)
-end
-
 function main_experiment(parsed::Dict; working=false, progress=false, verbose=false)
 
     working = get!(parsed, "working", working)
     progress = get!(parsed, "progress", working)
     verbose = get!(parsed, "verbose", working)
     
-    savefile = ActionRNNs.save_setup(parsed, "results.jld2")
+    savefile = ActionRNNs.save_setup(parsed)
     if isnothing(savefile)
         return
     end
@@ -158,14 +144,13 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
     while sum(total_steps) <= num_steps
         success = false
         total_rew, steps =
-            run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
+            run_episode!(env, agent, min(max((num_steps - sum(total_steps)), 2), 10000), rng) do (s, a, s′, r)
                 if parsed["progress"]
-                    pr_suc = if length(successes) <= 100
+                    pr_suc = if length(successes) <= 1000
                         mean(successes)
                     else
-                        mean(successes[end-100:end])
+                        mean(successes[end-1000:end])
                     end
-                        
                     next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc)])
                 end
                 success = success || (r == 4.0)
@@ -178,6 +163,9 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
     end
     save_results = Dict("total_rews"=>total_rews, "steps"=>total_steps, "successes"=>successes)
     ActionRNNs.save_results(parsed, savefile, save_results)
+    if working
+        agent, save_results
+    end
 end
 
 

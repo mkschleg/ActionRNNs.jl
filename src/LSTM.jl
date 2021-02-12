@@ -65,7 +65,7 @@ function get_views(m, o, a)
     ((@view m.Wi[idx, :]), (@view m.Wh[idx, :]), (@view m.b[idx]))
 end
 
-function (m::ActionLSTMCell)((h, c), ax::Tuple{I, A}) where {I<:Integer, A<:AbstractArray}
+function (m::ActionLSTMCell)((h, c), ax::Tuple{Action, Obs}) where {Action<:Integer, Obs<:AbstractArray}
     o = size(h, 1)
     x = ax[2]
     a = ax[1]

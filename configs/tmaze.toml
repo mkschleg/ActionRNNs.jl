@@ -1,0 +1,21 @@
+[config]
+save_dir="tmaze_rnn_rmsprop"
+exp_file="experiment/tmaze.jl"
+exp_module_name = "TMazeExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iter"
+
+[static_args]
+"steps" = 500000
+"opt" = "RMSProp"
+"rho" = 0.9
+"size" = 6
+
+[sweep_args]
+"cell" = ["ARNN", "RNN"]
+"hs_learnable" = [false, true]
+"eta" = "clamp.(0.01*1.5.^(-10:2:0), 0.0, 1.0)"
+"truncation" = [1, 2, 6, 8, 10, 12, 16]
+"numhidden" = [3, 6, 12]
+"gamma" = [0.9, 1.0]
+"seed" = "1:10"

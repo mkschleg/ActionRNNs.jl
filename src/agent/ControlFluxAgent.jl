@@ -28,7 +28,7 @@ function ControlFluxAgent(model,
     opt = FluxUtils.get_optimizer(parsed)
 
     state_list, init_state = begin
-        if contains_rnntype(model, ActionRNN.AbstractActionRNN)
+        if contains_rnntype(model, AbstractActionRNN)
             (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 1}}}(τ+1), (0, zeros(Float32, 1)))
         else
             (DataStructures.CircularBuffer{Array{Float32, 1}}(τ+1), zeros(Float32, 1))
@@ -71,7 +71,7 @@ function MinimalRLCore.start!(agent::ControlFluxAgent, env_s_tp1, rng=Random.GLO
     # agent.action, _ = agent.π(env_s_tp1, rng)
     agent.action = 1
     s_t = build_new_feat(agent, env_s_tp1, agent.action)
-    values = Flux.data(agent.model(s_t))
+    values = agent.model(s_t)
     agent.action = sample(agent.π, values, rng)
 
     # fill!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
@@ -88,7 +88,6 @@ function MinimalRLCore.step!(agent::ControlFluxAgent, env_s_tp1, r, terminal, rn
 
 
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-    is_full = DataStructures.isfull(agent.state_list)    
     
     # RNN update function
     update!(agent.model,
@@ -101,13 +100,13 @@ function MinimalRLCore.step!(agent::ControlFluxAgent, env_s_tp1, r, terminal, rn
             terminal)
     # End update function
 
-    Flux.truncate!(agent.model)
+    # Flux.truncate!(agent.model)
     reset!(agent.model, agent.hidden_state_init)
-    values = Flux.data(agent.model.(agent.state_list)[end])
+    values = agent.model.(agent.state_list)[end]
     
     agent.action = sample(agent.π, values, rng)
 
-    if is_full
+    if DataStructures.isfull(agent.state_list)
         agent.hidden_state_init =
             get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1])
     end

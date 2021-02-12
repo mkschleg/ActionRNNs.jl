@@ -20,7 +20,7 @@ function main()
     experiment = Experiment(parsed["config"])
 
     create_experiment_dir(experiment; tldr="")
-    add_experiment(experiment; settings_dir="settings")
+    add_experiment(experiment)
     ret = job(experiment; num_workers=parsed["numworkers"])
     post_experiment(experiment, ret)
 

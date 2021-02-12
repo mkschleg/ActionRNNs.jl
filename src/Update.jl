@@ -19,8 +19,14 @@ function offpolicy_tdloss(ρ_t, v_t, c, γ_tp1, ṽ_tp1)
     sum(ρ_t.*((v_t - target).^2)) * (1//(2*size(ρ_t)[1]))
 end
 
-tdloss(v_t, c, γ_tp1, ṽ_tp1) =
-    (1//2)*length(c)*Flux.mse(v_t, Flux.data(c .+ γ_tp1.*ṽ_tp1))
+function offpolicy_tdloss_batch(ρ_t, v_t, c, γ_tp1, ṽ_tp1)
+    println(size(ρ_t), size(v_t), size(c), size(γ_tp1), size(ṽ_tp1))
+    target = dropgrad(Float32.(c + γ_tp1.*ṽ_tp1))
+    sum(ρ_t.*((v_t - target).^2)) * (1//(2*size(ρ_t)[1]))
+end
+
+# tdloss(v_t, c, γ_tp1, ṽ_tp1) =
+#     (1//2)*length(c)*Flux.mse(v_t, Flux.data(c .+ γ_tp1.*ṽ_tp1))
 
 
 
@@ -75,21 +81,20 @@ function update_batch!(chain,
                        env_state_tp1,
                        action_t=nothing,
                        b_prob=1.0;
-                       kwargs...) where {T, H<:GVFHordes.AbstractHorde}
+                       kwargs...) where {H<:GVFHordes.AbstractHorde}
 
     reset!(chain, h_init)
-    # println(chain[1].state)
 
     n = length(state_seq)
     preds = map(chain, state_seq)
     v_tp1 = preds[n]
-    # print("Here")
-    # print(Base.get(horde, nothing, action_t, env_state_tp1[1,:], v_tp1[1,:]))
-    # println("env_state_tp1_update: ", env_state_tp1)
-    params = if length(size(env_state_tp1)) == 1
+
+    params = if length(size(v_tp1)) == 1
         dropgrad([get(horde, nothing, action_t[1], env_state_tp1, v_tp1)])
+    elseif length(size(env_state_tp1)) == 1
+        dropgrad([get(horde, nothing, action_t[i], env_state_tp1[i], v_tp1[:, i]) for i in 1:(size(env_state_tp1)[2])])
     else
-        dropgrad([get(horde, nothing, action_t[1], env_state_tp1[:, i], v_tp1[:, i]) for i in 1:(size(env_state_tp1)[2])])
+        dropgrad([get(horde, nothing, action_t[i], env_state_tp1[:, i], v_tp1[:, i]) for i in 1:(size(env_state_tp1)[2])])
     end
 
     cumulants = dropgrad(Flux.batch(Base.getindex.(params, 1)))
@@ -126,8 +131,8 @@ end
 get_cart_idx(a, l) = CartesianIndex.(a, 1:l)
 
 function q_learning_loss(q_t, a_t, r, terminal, γ, q_tp1)
-    q_tp1_max = Flux.data(maximum(q_tp1))
-    return (q_t[a_t] - (r .+ γ*(1 - terminal)*q_tp1_max)).^2
+    target = dropgrad(r .+ γ*(1-terminal)*maximum(q_tp1))
+    return (q_t[a_t] - target).^2
 end
 
 function update!(chain,
@@ -139,18 +144,64 @@ function update!(chain,
                  reward,
                  terminal)
 
-    reset!(chain, h_init)
 
-    grads = Flux.Tracker.gradient(Flux.params(chain)) do
-        preds = chain.(state_seq)
-        for i in 1:n
-            preds[i] = chain(state_seq[i])
-        end
+    reset!(chain, h_init)
+    n = length(state_seq)
+    grads = gradient(Flux.params(chain)) do
+        
+        preds = map(chain, state_seq)
+
         q_tp1 = dropgrad(preds[n])
+        # cumulants, discounts, π_prob = dropgrad(get(horde, nothing, action_t, env_state_tp1, v_tp1))
+        # ρ = dropgrad(Float32.(π_prob./b_prob))
+        # offpolicy_tdloss(ρ, preds[n-1], cumulants, discounts, v_tp1)
         q_learning_loss(preds[end-1], action_t, reward, terminal, lu.γ, q_tp1)
+    end
+    
+    Flux.reset!(chain)
+    for weights in Flux.params(chain)
+        if !(grads[weights] === nothing) && !(weights isa Flux.Zeros)
+            Flux.update!(opt, weights, grads[weights])
+        end
+    end
+
+    
+end
+
+function update_batch!(chain,
+                       opt,
+                       lu::QLearning,
+                       h_init,
+                       state_seq,
+                       reward,
+                       terminal,
+                       action_t)
+
+    
+    ℒ = 0.0f0
+    reset!(chain, h_init)
+    γ = lu.γ
+
+    # println(action_t)
+    a_t = [CartesianIndex(action_t[i], i) for i in 1:length(action_t)]
+
+    grads = gradient(Flux.params(chain)) do
+
+        preds = map(chain, state_seq)
+        # println(size(preds[end]))
+        
+        q_tp1 = dropgrad(preds[end])
+        q_t = preds[end-1]
+        target = dropgrad(reward .+ γ*(1 .- terminal).*(maximum(q_tp1;dims=1)[1, :]))
+        ℒ = sum((q_t[a_t] - target).^2)
+        # ℒ = q_learning_loss(preds[end-1], action_t, reward, terminal, lu.γ, q_tp1)
+        # ℒ = offpolicy_tdloss(ρ, preds[n-1], cumulants, discounts, v_tp1)
     end
     reset!(chain, h_init)
     for weights in Flux.params(chain)
-        Flux.Tracker.update!(opt, weights, grads[weights])
+        if !(grads[weights] === nothing)
+            Flux.update!(opt, weights, grads[weights])
+        end
     end
+    ℒ
 end

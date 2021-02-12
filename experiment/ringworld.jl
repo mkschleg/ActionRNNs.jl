@@ -70,7 +70,7 @@ function get_rnn_config(parsed, out_horde, rng)
     rnn_config_str = parsed["rnn_config"]
     
     cell_str, fc_str = split(rnn_config_str, "_")
-    
+
     fc = if fc_str == "OneHot"
         RWU.OneHotFeatureCreator()
     elseif fc_str == "SansAction"
@@ -120,13 +120,13 @@ function construct_agent(parsed, rng)
     
     ap = ActionRNNs.RandomActingPolicy([0.5, 0.5])
 
-    ActionRNNs.FluxAgent(out_horde,
-                         chain,
-                         opt,
-                         fc,
-                         fs,
-                         ap,
-                         parsed)
+    ActionRNNs.PredOnlineAgent(out_horde,
+                               chain,
+                               opt,
+                               fc,
+                               fs,
+                               ap)
+                               # parsed)
 end
 
 function main_experiment(parsed::Dict{String, Any})

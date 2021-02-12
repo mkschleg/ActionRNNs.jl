@@ -4,48 +4,64 @@ using ..Flux
 import ..ActionRNNs.ARNN
 
 
-# function rnn_settings!(as::ArgParseSettings)
-#     @add_arg_table as begin
-#         "--truncation", "-t"
-#         help="Truncation parameter for bptt"
-#         arg_type=Int64
-#         default=1
-#         "--cell"
-#         help="Cell"
-#         default="RNN"
-#         "--numhidden"
-#         help="Number of hidden units in cell"
-#         arg_type=Int64
-#         default=6
+
+function get_optimizer(parsed::Dict; opt_key="opt")
+    opt_string = parsed[opt_key]
+    get_optimizer(opt_string, parsed)
+end
+
+function get_optimizer(opt_string, parsed)
+    opt_type = getproperty(Flux, Symbol(opt_string))
+    _init_optimizer(opt_type, parsed)
+end
+
+function _init_optimizer(opt, parsed::Dict)
+    throw("Optimizer initialization not found")
+end
+
+function _init_optimizer(opt_type::Union{Type{Descent}, Type{ADAGrad}, Type{ADADelta}}, parsed::Dict)
+    try
+        η = parsed["eta"]
+        opt_type(η)
+    catch
+        throw("$(opt_type) needs: eta (float)")
+    end
+end
+
+function _init_optimizer(opt_type::Union{Type{RMSProp}, Type{Momentum}, Type{Nesterov}}, parsed::Dict)
+    try
+        η = parsed["eta"]
+        ρ = parsed["rho"]
+        opt_type(η, ρ)
+    catch
+        throw("$(opt_type) needs: eta (float), and rho (float)")
+    end
+end
+
+function _init_optimizer(opt_type::Union{Type{ADAM}, Type{RADAM}, Type{NADAM}, Type{AdaMax}, Type{OADAM}, Type{AMSGrad}, Type{AdaBelief}}, parsed::Dict)
+    try
+        η = parsed["eta"]
+        β = if "beta" ∈ keys(parsed)
+            parsed["beta"]
+        else
+            (parsed["beta_m"], parsed["beta_v"])
+        end
+        opt_type(η, β)
+    catch
+        throw("$(opt_type) needs: eta (float), and beta ((float, float)), or (beta_m, beta_v))")
+    end
+end
+
+
+
+# function construct_rnn(in::Integer, parsed::Dict, args...; kwargs...)
+#     kt = keytype(parsed)
+#     if parsed[kt("cell")] = "RNN"
+#         construct_rnn(in, parsed[kt("numhidden")], args...; islearnablekwargs...)
+#     else
+#         construct_rnn(parsed[kt("cell")], in, parsed[kt("numhidden")], args...; kwargs...)
 #     end
 # end
-
-# function opt_settings!(as::ArgParseSettings, prefix::AbstractString="")
-#     add_arg_table(as,
-#                   "--$(prefix)opt",
-#                   Dict(:help=>"Optimizer",
-#                        :default=>"Descent"),
-#                   "--$(prefix)optparams",
-#                   Dict(:help=>"Parameters",
-#                        :arg_type=>Float64,
-#                        :default=>[],
-#                        :nargs=>'+'))
-# end
-
-function get_optimizer(parsed::Dict)
-    kt = keytype(parsed)
-    get_optimizer(parsed[kt("opt")], parsed[kt("optparams")])
-end
-
-function get_optimizer(opt_string::AbstractString, params)
-    opt_func = getproperty(Flux, Symbol(opt_string))
-    return opt_func(params...)
-end
-
-function construct_rnn(in::Integer, parsed::Dict, args...; kwargs...)
-    kt = keytype(parsed)
-    return construct_rnn(parsed[kt("cell")], in, parsed[kt("numhidden")], args...; kwargs...)
-end
 
 function construct_rnn(cell::AbstractString, in::Integer, num_hidden::Integer, args...; kwargs...)
     cell_func = getproperty(Flux, Symbol(cell))
@@ -56,17 +72,6 @@ function construct_action_rnn(in::Integer, num_actions, num_hidden, args...; kwa
     return ARNN(in, num_actions, num_hidden, args...; kwargs...)
 end
 
-# function clip(a)
-#     clamp.(a, 0.0, 1.0)
-# end
-
-# function clip(a::TrackedArray)
-#     track(clip, a)
-# end
-# Flux.Tracker.@grad function clip(a)
-#     return clip(Flux.data(a)), Δ -> Tuple(Δ)
-# end
-
 function get_activation(act::AbstractString)
     if act == "sigmoid"
         return Flux.σ
@@ -74,8 +79,6 @@ function get_activation(act::AbstractString)
         return tanh
     elseif act == "linear"
         return Flux.identity
-    elseif act == "clip"
-        return clip
     elseif act == "relu"
         return Flux.relu
     elseif act == "softplus"

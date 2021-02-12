@@ -12,9 +12,8 @@ const RIGHT = 2
 const UP = 3
 const DOWN = 4
 
-const GOOD_REW = 4.0
-const BAD_REW = -1.0
-
+const GOOD_REW = 4.0f0
+const BAD_REW = -1.0f0
 end
 
 const TMC = TMazeConst
@@ -70,14 +69,14 @@ end
 MinimalRLCore.get_reward(env::TMaze) = begin
     if env.state.x == env.size
         if env.state.y == 0
-            -0.1
+            -0.1f0
         elseif env.state.y == 1
             env.goal_dir == TMC.UP ? TMC.GOOD_REW : TMC.BAD_REW
         elseif env.state.y == -1
             env.goal_dir == TMC.DOWN ? TMC.GOOD_REW : TMC.BAD_REW
         end
     else
-        -0.1
+        -0.1f0
     end
 end
     
@@ -99,7 +98,19 @@ end
 MinimalRLCore.is_terminal(env::TMaze) = env.state.y != 0
 
 
+function to_string(env::TMaze)
+    char_strg = fill(' ', 3, env.size)
+    char_strg[:, 1] .= Char(0x25A1)
+    char_strg[2, :] .= Char(0x25A1)
+    char_strg[env.state.x+1, env.state.y+1] = 'a'
+    str = ""
+    for i ∈ 1:3
+        str *= *(char_strg[i, :]...)
+        str *= "\n"
+    end
+    str
+end
 
-function Base.print(io::IO, env::TMaze)
-
+function Base.show(io::IO, env::TMaze)
+    println(to_string(env))
 end

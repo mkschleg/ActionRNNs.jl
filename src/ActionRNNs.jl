@@ -15,6 +15,8 @@ export
 
 include("Layers.jl")
 
+include("RNNUtil.jl")
+
 export ARNN, ALSTM, AGRU, reset!, get
 include("RNN.jl")
 include("LSTM.jl")

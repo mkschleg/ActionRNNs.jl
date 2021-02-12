@@ -77,13 +77,60 @@ function Base.push!(er::SequenceReplay, experience)
     push!(er.buffer, experience)
 end
 
-sample(er::SequenceReplay, batch_size) = sample(Random.GLOBAL_RNG, er, batch_size)
+sample(er::SequenceReplay, batch_size, seq_length) = sample(Random.GLOBAL_RNG, er, batch_size, seq_length)
 
-function sample(rng::Random.AbstractRNG, er::SequenceReplay, batch_size)
-    idx = rand(rng, 1:length(er), batch_size)
-    return er[idx]
+function sample(rng::Random.AbstractRNG, er::SequenceReplay, batch_size, seq_length)
+    bs = rand(rng, 1:(length(er) + 1 - seq_length), batch_size)
+    [view(er, bs .+ (i-1)) for i ∈ 1:seq_length]
 end
 
+
+
+# mutable struct EpisodicSequenceReplay{CB, P} <: AbstractReplay
+#     buffer::CB
+#     place::Int64
+#     terminal_symbol::Symbol
+#     padding::P
+# end
+
+
+# function EpisodicSequenceReplay(size, types, shapes, column_names; terminal_symbol = :t) 
+#     cb = CircularBuffer(size, types, shapes, column_names)
+#     throw("Broken still")
+#     EpisodicSequenceReplay(cb, 1, terminal_symbol)
+# end
+
+# Base.length(er::EpisodicSequenceReplay) = length(er.buffer)
+# Base.getindex(er::EpisodicSequenceReplay, idx) =
+#     if idx isa AbstractArray
+#         er.buffer[(idx .+ er.place .- 2) .% er.buffer._capacity .+ 1]
+#     else
+#         er.buffer[(idx + er.place - 2) % er.buffer._capacity + 1]
+#     end
+# Base.view(er::EpisodicSequenceReplay, idx) =
+#     if idx isa AbstractArray
+#         @view er.buffer[(idx .+ er.place .- 2) .% er.buffer._capacity .+ 1]
+#     else
+#         @view er.buffer[(idx + er.place - 2) % er.buffer._capacity + 1]
+#     end
+
+# function Base.push!(er::EpisodicSequenceReplay, experience)
+#     if er.buffer._full
+#         er.place = (er.place % capacity(er.buffer)) + 1
+#     end
+#     push!(er.buffer, experience)
+# end
+
+# function get_sequence_dims(rng::Random.AbstractRNG, er::EpisodicSequenceReplay, batch_size, seq_length)
+    
+# end
+
+# sample(er::EpisodicSequenceReplay, batch_size, seq_length) = sample(Random.GLOBAL_RNG, er, batch_size, seq_length)
+
+# function sample(rng::Random.AbstractRNG, er::EpisodicSequenceReplay, batch_size, seq_length)
+#     bs = rand(rng, 1:(length(er) + 1 - seq_length), batch_size)
+#     [view(er, bs .+ (i-1)) for i ∈ 1:seq_length]
+# end
 
 # mutable struct OnlineReplay{CB<:DataStructures.CircularBuffer, T<:Tuple} <: AbstractReplay
 #     buffer::CB

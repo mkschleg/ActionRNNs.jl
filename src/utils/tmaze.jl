@@ -3,16 +3,18 @@ module TMazeUtils
 using ..ActionRNNs
 using ..MinimalRLCore
 
-mutable struct OneHotFeatureCreator{WA} <: AbstractFeatureConstructor end
+mutable struct StandardFeatureCreator{WA} <: AbstractFeatureConstructor end
 
-OneHotFeatureCreator() = OneHotFeatureCreator{true}()
+StandardFeatureCreator() = StandardFeatureCreator{true}()
 
-(fc::OneHotFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
-MinimalRLCore.create_features(fc::OneHotFeatureCreator, s, a) =
+(fc::StandardFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+
+MinimalRLCore.create_features(fc::StandardFeatureCreator, s, a) =
     Float32[s; [a==1, a==2, a==3, a==4]]
-MinimalRLCore.create_features(fc::OneHotFeatureCreator, s, a::Nothing) =
-    Float32[s; [0, 0, 0, 0]]
-MinimalRLCore.feature_size(fc::OneHotFeatureCreator) = 7
+MinimalRLCore.feature_size(fc::StandardFeatureCreator{true}) = 7
 
+MinimalRLCore.create_features(fc::StandardFeatureCreator{false}, s, a::Nothing=nothing) =
+    Float32.(s)
+MinimalRLCore.feature_size(fc::StandardFeatureCreator{false}) = 3
 
 end
