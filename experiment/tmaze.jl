@@ -51,7 +51,9 @@ function construct_agent(env, parsed, rng)
 
     num_actions = length(get_actions(env))
     is_actionrnn = parsed["cell"] ∈ ["FacARNN", "ARNN"]
-
+    τ = parsed["truncation"]
+    γ = parsed["gamma"]
+    opt = FluxUtils.get_optimizer(parsed)
     
     fc = if is_actionrnn
         # States without one hot action encoding.
@@ -65,65 +67,55 @@ function construct_agent(env, parsed, rng)
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
 
-
-
     chain = begin
-        if parsed["cell"] == "FacARNN"
-            throw("You know this doesn't work yet...")
-            Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-        elseif parsed["cell"] == "ARNN"
-            if false#parsed["action_embedding"]
-                Flux.Chain(
-                    (x)->(Flux.onehot(x[1], 1:4), x[2]),
-                    ActionRNNs.ActionStateStreams(Flux.Dense(4, parsed["ae_size"], tanh; initW=init_func), identity),
-                    ActionRNNs.ARNN(fs, parsed["ae_size"], parsed["numhidden"]; init=init_func),
-                    Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-            else
-                Flux.Chain(
-                    # (x)->(Flux.onehot(x[1], 1:4), x[2]),
-                    # ActionRNNs.ActionStateStreams(Flux.Dense(4, 3, Flux.relu; initW=init_func), identity),
-                    ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
-                    Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-            end
-        elseif parsed["cell"] == "RNN"
+        if false
+            # ARNN
             Flux.Chain(
-                # (x)->(Flux.onehot(x[1], 1:4), x[2]),
-                # ActionRNNs.ActionStateStreams(Flux.Dense(4, 3, Flux.relu; initW=init_func), identity),
-                ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
+                (x)->(Flux.onehot(x[1], 1:4), x[2]),
+                ActionRNNs.ActionStateStreams(Flux.Dense(4, parsed["ae_size"], tanh; initW=init_func), identity),
+                ActionRNNs.ARNN(fs, parsed["ae_size"], parsed["numhidden"]; init=init_func),
+                Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
+
+            # generic RNN
+            Flux.Chain(
+                (x)->(x[1:3], x[4:end]),
+                ActionRNNs.ActionStateStreams(Flux.param,
+                                              Flux.Dense(4, parsed["ae_size"], Flux.sigmoid; initW=init_func)),
+                (x)->vcat(x[1], x[2]),
+                rnntype(parsed["ae_size"] + fs, parsed["numhidden"]; init=init_func),
                 Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
         else
-            rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-            if false#parsed["action_embedding"]
+            if parsed["cell"] == "FacARNN"
+                throw("You know this doesn't work yet...")
+                Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"]; init=init_func),
+                           Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
+            elseif parsed["cell"] == "ARNN"
                 Flux.Chain(
-                    (x)->(x[1:3], x[4:end]),
-                    ActionRNNs.ActionStateStreams(Flux.param, Flux.Dense(4, parsed["ae_size"], Flux.sigmoid; initW=init_func)),
-                    (x)->vcat(x[1], x[2]),
-                    rnntype(parsed["ae_size"] + fs, parsed["numhidden"]; init=init_func),
+                    ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
+                    Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
+            elseif parsed["cell"] == "RNN"
+                Flux.Chain(
+                    ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             else
+                rnntype = getproperty(Flux, Symbol(parsed["cell"]))
                 Flux.Chain(rnntype(fs, parsed["numhidden"]; init=init_func),
                            Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             end
         end
     end
 
-    ActionRNNs.ControlFluxAgent(chain,
-                               fc,
-                               fs,
-                               ap,
-                               parsed;
-                               rng=rng)
+    ActionRNNs.ControlOnlineAgent(chain, opt, τ, γ, fc, fs, ap)
 end
 
-function main_experiment(parsed::Dict; working=false, progress=false, verbose=false)
+function main_experiment(parsed::Dict; working=false, progress=false)
 
     working = get!(parsed, "working", working)
-    progress = get!(parsed, "progress", working)
-    verbose = get!(parsed, "verbose", working)
+    progress = get!(parsed, "progress", progress)
+    verbose = get!(parsed, "verbose", verbose)
     
     savefile = ActionRNNs.save_setup(parsed)
-    if isnothing(savefile)
+    if check_save_file_loadable(savefile)
         return
     end
 
@@ -145,7 +137,7 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
         success = false
         total_rew, steps =
             run_episode!(env, agent, min(max((num_steps - sum(total_steps)), 2), 10000), rng) do (s, a, s′, r)
-                if parsed["progress"]
+                if progress
                     pr_suc = if length(successes) <= 1000
                         mean(successes)
                     else
@@ -155,7 +147,6 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
                 end
                 success = success || (r == 4.0)
             end
-            # episode!(env, agent, rng, num_steps, sum(total_steps), parsed["progress"] ? prg_bar : nothing, nothing, eps)
         push!(total_rews, total_rew)
         push!(total_steps, steps)
         push!(successes, success)

@@ -3,7 +3,7 @@ import Flux
 import Random
 import DataStructures
 
-mutable struct ControlFluxAgent{LU<:LearningUpdate, O, C, F, H, Φ, Π} <: MinimalRLCore.AbstractAgent
+mutable struct ControlOnlineAgent{LU<:LearningUpdate, O, C, F, H, Φ, Π} <: MinimalRLCore.AbstractAgent
     lu::LU # I.e. Q-learning or Double Q learning
     opt::O
     model::C
@@ -15,17 +15,16 @@ mutable struct ControlFluxAgent{LU<:LearningUpdate, O, C, F, H, Φ, Π} <: Minim
     action::Int
 end
 
-function ControlFluxAgent(model,
+function ControlOnlineAgent(model,
+                          opt,
+                          τ,
+                          γ
                           feature_creator,
                           feature_size,
-                          acting_policy,
-                          parsed;
-                          rng=Random.GLOBAL_RNG)
+                          acting_policy)
 
-    # num_gvfs = length(out_horde)
-
-    τ=parsed["truncation"]
-    opt = FluxUtils.get_optimizer(parsed)
+    # τ=parsed["truncation"]
+    # opt = FluxUtils.get_optimizer(parsed)
 
     state_list, init_state = begin
         if contains_rnntype(model, AbstractActionRNN)
@@ -37,7 +36,7 @@ function ControlFluxAgent(model,
     
     hidden_state_init = get_initial_hidden_state(model)
     
-    ControlFluxAgent(QLearning(parsed["gamma"]),
+    ControlOnlineAgent(QLearning(γ),
                      opt,
                      model,
                      feature_creator,
@@ -50,23 +49,23 @@ function ControlFluxAgent(model,
 end
 
 function agent_settings!(as::Reproduce.ArgParseSettings,
-                         env_type::Type{ControlFluxAgent})
+                         env_type::Type{ControlOnlineAgent})
     FluxUtils.opt_settings!(as)
     FluxUtils.rnn_settings!(as)
 end
 
 
-build_new_feat(agent::ControlFluxAgent, state, action) = 
+build_new_feat(agent::ControlOnlineAgent, state, action) = 
     agent.build_features(state, action)
 
-build_new_feat(agent::ControlFluxAgent{LU, O, C, F, H, Φ, Π}, state, action) where {LU<:LearningUpdate, O, C, F, H, Φ<:Tuple, Π} = 
+build_new_feat(agent::ControlOnlineAgent{LU, O, C, F, H, Φ, Π}, state, action) where {LU<:LearningUpdate, O, C, F, H, Φ<:Tuple, Π} = 
     (action, agent.build_features(state, nothing))
 
 
 
 
 
-function MinimalRLCore.start!(agent::ControlFluxAgent, env_s_tp1, rng=Random.GLOBAL_RNG; kwargs...)
+function MinimalRLCore.start!(agent::ControlOnlineAgent, env_s_tp1, rng=Random.GLOBAL_RNG; kwargs...)
 
     # agent.action, _ = agent.π(env_s_tp1, rng)
     agent.action = 1
@@ -84,7 +83,7 @@ function MinimalRLCore.start!(agent::ControlFluxAgent, env_s_tp1, rng=Random.GLO
 end
 
 
-function MinimalRLCore.step!(agent::ControlFluxAgent, env_s_tp1, r, terminal, rng=Random.GLOBAL_RNG; kwargs...)
+function MinimalRLCore.step!(agent::ControlOnlineAgent, env_s_tp1, r, terminal, rng=Random.GLOBAL_RNG; kwargs...)
 
 
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
@@ -115,4 +114,4 @@ function MinimalRLCore.step!(agent::ControlFluxAgent, env_s_tp1, r, terminal, rn
     return agent.action
 end
 
-# MinimalRLCore.get_action(agent::ControlFluxAgent, state) = agent.action
+# MinimalRLCore.get_action(agent::ControlOnlineAgent, state) = agent.action

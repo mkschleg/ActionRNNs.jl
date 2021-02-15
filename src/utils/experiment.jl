@@ -16,18 +16,11 @@ function save_setup(parsed;
                                  "progress",
                                  "synopsis"])
     savefile = def_save_file
-    working = get(parsed, "working", false)
-    if !(working)
-        Reproduce.create_info!(parsed,
-                               parsed[save_dir_key];
-                               filter_keys=filter_keys)
-        savepath = Reproduce.get_save_dir(parsed)
-        savefile = joinpath(savepath, def_save_file)
-        if isfile(savefile)
-            return nothing
-        end
-    end
-    savefile
+    Reproduce.create_info!(parsed,
+                           parsed[save_dir_key];
+                           filter_keys=filter_keys)
+    savepath = Reproduce.get_save_dir(parsed)
+    joinpath(savepath, def_save_file)
 end
 
 function pred_experiment(env, agent, rng, num_steps, parsed, err_func)
@@ -59,11 +52,15 @@ function pred_experiment(env, agent, rng, num_steps, parsed, err_func)
     end
 end
 
-function save_results(parsed::Dict, savefile, results)
-    working = get(parsed, "working", false)
-    if !(working)
-        JLD2.@save savefile results
-    else
-        return results
+function save_results(savefile, results)
+    JLD2.@save savefile results
+end
+
+function check_save_file_loadable(savefile)
+    try
+        JLD2.@load savefile results
+    catch
+        return false
     end
+    return true
 end
