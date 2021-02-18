@@ -37,9 +37,9 @@ function default_config()
         "numhidden" => 6,
         
         "opt" => "RMSProp",
-        "eta" => 0.001,
-        "rho" => 0.9,
-        "truncation" => 10,
+        "eta" => 0.0005,
+        "rho" => 0.99,
+        "truncation" => 8,
 
         "hs_learnable" => true,
 
@@ -53,7 +53,7 @@ function construct_agent(env, parsed, rng)
     is_actionrnn = parsed["cell"] ∈ ["FacARNN", "ARNN"]
     τ = parsed["truncation"]
     γ = parsed["gamma"]
-    opt = FluxUtils.get_optimizer(parsed)
+    opt = FLU.get_optimizer(parsed)
     
     fc = if is_actionrnn
         # States without one hot action encoding.
@@ -110,52 +110,59 @@ end
 
 function main_experiment(parsed::Dict; working=false, progress=false)
 
-    working = get!(parsed, "working", working)
-    progress = get!(parsed, "progress", progress)
-    verbose = get!(parsed, "verbose", verbose)
-    
-    savefile = ActionRNNs.save_setup(parsed)
-    if check_save_file_loadable(savefile)
-        return
-    end
+    ActionRNNs.experiment_wrapper(parsed, working) do (parsed)
 
-    num_steps = parsed["steps"]
-
-    seed = parsed["seed"]
-    rng = Random.MersenneTwister(seed)
-
-    env = TMaze(parsed["size"])
-    agent = construct_agent(env, parsed, rng)
-
-    total_rews = Float32[]
-    successes = Bool[]
-    total_steps = Int[]
-
-    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
-    eps = 1
-    while sum(total_steps) <= num_steps
-        success = false
-        total_rew, steps =
-            run_episode!(env, agent, min(max((num_steps - sum(total_steps)), 2), 10000), rng) do (s, a, s′, r)
-                if progress
-                    pr_suc = if length(successes) <= 1000
-                        mean(successes)
-                    else
-                        mean(successes[end-1000:end])
+        seed = parsed["seed"]
+        rng = Random.MersenneTwister(seed)
+        
+        num_steps = parsed["steps"]
+        env = TMaze(parsed["size"])
+        agent = construct_agent(env, parsed, rng)
+        
+        total_rews = Float32[]
+        successes = Bool[]
+        losses = Float32[]
+        l1_grads = Float32[]
+        total_steps = Int[]
+        
+        mv_avg_losses = 1.0f0
+        
+        prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
+        eps = 1
+        while sum(total_steps) <= num_steps
+            success = false
+            ℒ = 0.0f0
+            l1_grad = 0.0f0
+            total_rew, steps =
+                run_episode!(env, agent, min(max((num_steps - sum(total_steps)), 2), 10000), rng) do (s, a, s′, r)
+                    success = success || (r == 4.0)
+                    ℒ += a.loss
+                    l1_grad += a.l1_grads
+                    mv_avg_losses = 0.9*mv_avg_losses + 0.1*ℒ
+                    
+                    if progress
+                        pr_suc = if length(successes) <= 1000
+                            mean(successes)
+                        else
+                            mean(successes[end-1000:end])
+                        end
+                        next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc), (:loss, mv_avg_losses)])
                     end
-                    next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc)])
                 end
-                success = success || (r == 4.0)
-            end
-        push!(total_rews, total_rew)
-        push!(total_steps, steps)
-        push!(successes, success)
-        eps += 1
-    end
-    save_results = Dict("total_rews"=>total_rews, "steps"=>total_steps, "successes"=>successes)
-    ActionRNNs.save_results(parsed, savefile, save_results)
-    if working
-        agent, save_results
+            push!(total_rews, total_rew)
+            push!(total_steps, steps)
+            push!(successes, success)
+            push!(losses, ℒ \ steps)
+            push!(l1_grads, l1_grad \ steps)
+            eps += 1
+        end
+        save_results = Dict("total_rews"=>total_rews,
+                            "steps"=>total_steps,
+                            "successes"=>successes,
+                            "losses"=>losses,
+                            "l1_grads" => l1_grads)
+        
+        (agent = agent, save_results = save_results)
     end
 end
 

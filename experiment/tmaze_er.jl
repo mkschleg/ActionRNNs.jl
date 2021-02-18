@@ -11,15 +11,11 @@ import ActionRNNs
 
 using ActionRNNs: TMaze
 
-
-# using ActionRNNs
 using Statistics
 using Random
 using ProgressMeter
 using Reproduce
 using Random
-
-# using Plots
 
 const TMU = ActionRNNs.TMazeUtils
 const FLU = ActionRNNs.FluxUtils
@@ -34,19 +30,17 @@ function default_config()
 
         "cell" => "ARNN",
         "numhidden" => 6,
-        
+
         "opt" => "RMSProp",
-        "eta" => 0.001,
-        "rho" =>0.9,
+        "eta" => 0.0005,
+        "rho" =>0.99,
 
         "replay_size"=>10000,
         "warm_up" => 1000,
-        "batch_size"=>32,
+        "batch_size"=>4,
+        "update_wait"=>4,
+        "truncation" => 8,
         
-        "truncation" => 10,
-
-        "synopsis" => false,
-
         "gamma"=>0.99)
 
 end
@@ -54,9 +48,9 @@ end
 function construct_agent(env, parsed, rng)
 
     fc = if parsed["cell"] ∈ ["FacARNN", "ARNN"]
-        TMU.OneHotFeatureCreator{false}()
+        TMU.StandardFeatureCreator{false}()
     else
-        TMU.OneHotFeatureCreator{true}()
+        TMU.StandardFeatureCreator{true}()
     end
     fs = MinimalRLCore.feature_size(fc)
 
@@ -114,64 +108,61 @@ function construct_agent(env, parsed, rng)
                               parsed["replay_size"],
                               parsed["warm_up"],
                               parsed["batch_size"],
+                              parsed["update_wait"],
                               ap)
-end
-
-function main_experiment(args::Vector{String}; kwargs...)
-    as = arg_parse()
-    parsed = parse_args(args, as)
-    main_experiment(parsed; kwargs...)
 end
 
 function main_experiment(parsed::Dict; working=false, progress=false, verbose=false)
 
-    working = get!(parsed, "working", working)
-    progress = get!(parsed, "progress", working)
-    verbose = get!(parsed, "verbose", working)
-    
-    savefile = ActionRNNs.save_setup(parsed)
-    if isnothing(savefile)
-        return
-    end
+    ActionRNNs.experiment_wrapper(parsed, working) do (parsed)
 
-    num_steps = parsed["steps"]
+        num_steps = parsed["steps"]
 
-    seed = parsed["seed"]
-    rng = Random.MersenneTwister(seed)
-
-    env = TMaze(parsed["size"])
-    agent = construct_agent(env, parsed, rng)
-
-    total_rews = Float32[]
-    successes = Bool[]
-    total_steps = Int[]
-
-    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
-    eps = 1
-    while sum(total_steps) <= num_steps
-        success = false
-        total_rew, steps =
-            run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
-                if parsed["progress"]
-                    pr_suc = if length(successes) <= 1000
-                        mean(successes)
-                    else
-                        mean(successes[end-1000:end])
+        seed = parsed["seed"]
+        rng = Random.MersenneTwister(seed)
+        
+        env = TMaze(parsed["size"])
+        agent = construct_agent(env, parsed, rng)
+        
+        total_rews = Float32[]
+        losses = Float32[]
+        successes = Bool[]
+        total_steps = Int[]
+        
+        mean_loss = 1.0f0
+        
+        prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
+        eps = 1
+        while sum(total_steps) <= num_steps
+            success = false
+            ℒ = 0.0f0
+            total_rew, steps =
+                run_episode!(env, agent, min(max((num_steps - sum(total_steps)), 2), 1000), rng) do (s, a, s′, r)
+                    mean_loss = 0.99 * mean_loss + 0.01 * a.loss
+                    if progress
+                        pr_suc = if length(successes) <= 1000
+                            mean(successes)
+                        else
+                            mean(successes[end-1000:end])
+                        end
+                        next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc), (:loss, mean_loss), (:action, a.action)])
                     end
-                        
-                    next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc)])
+                    success = success || (r == 4.0)
+                    ℒ += a.loss
+                    
                 end
-                success = success || (r == 4.0)
-            end
             # episode!(env, agent, rng, num_steps, sum(total_steps), parsed["progress"] ? prg_bar : nothing, nothing, eps)
-        push!(total_rews, total_rew)
-        push!(total_steps, steps)
-        push!(successes, success)
-        eps += 1
-    end
-    save_results = Dict("total_rews"=>total_rews, "steps"=>total_steps, "successes"=>successes)
-    ActionRNNs.save_results(parsed, savefile, save_results)
+            push!(total_rews, total_rew)
+            push!(total_steps, steps)
+            push!(successes, success)
+            push!(losses, ℒ / steps)
+            eps += 1
+        end
+        save_results = Dict("total_rews"=>total_rews, "steps"=>total_steps, "successes"=>successes, "losses"=>losses)
+        (agent = agent, save_results = save_results)
+    end        
 end
+
 
 
 end

@@ -81,7 +81,6 @@ MinimalRLCore.get_reward(env::TMaze) = begin
 end
     
 
-
 function MinimalRLCore.get_state(env::TMaze) # -> get state of agent
     state = env.state
     env_size = env.size
@@ -97,20 +96,25 @@ end
 
 MinimalRLCore.is_terminal(env::TMaze) = env.state.y != 0
 
-
 function to_string(env::TMaze)
     char_strg = fill(' ', 3, env.size)
-    char_strg[:, 1] .= Char(0x25A1)
-    char_strg[2, :] .= Char(0x25A1)
-    char_strg[env.state.x+1, env.state.y+1] = 'a'
+    char_strg[:, end] .= Char(0x25A2)
+    char_strg[2, :] .= Char(0x25A2)
+    if env.goal_dir == TMC.UP
+        char_strg[1, end] = Char(0x25C8)
+    else
+        char_strg[end, end] = Char(0x25C8)
+    end
+    char_strg[(-env.state.y)+2, env.state.x] = Char(0x25A3)
     str = ""
     for i ∈ 1:3
-        str *= *(char_strg[i, :]...)
+        str *= join(char_strg[i, :], " ")
         str *= "\n"
     end
     str
 end
 
 function Base.show(io::IO, env::TMaze)
-    println(to_string(env))
+    print(to_string(env))
+    println("(size: $(env.size), goal: $(env.goal_dir), state: $(env.state)")
 end

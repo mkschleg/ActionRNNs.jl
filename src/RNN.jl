@@ -79,24 +79,6 @@ mutable struct ARNNCell{F, A, V, H} <: AbstractActionRNN
     islearnable::Bool
 end
 
-#TODO: modernize the einstein summation code
-# Figure for A-RNN with 3 actions.
-#     O - Concatenate
-#     X - Split by action
-#           -----------------------------------
-#          |     |--> W_1*[o_{t+1};h_t]-|      |
-#          |     |                      |      |
-#   h_t    |     |                      |      | h_{t+1}
-# -------->|-O---X--> W_2*[o_{t+1};h_t]-X--------------->
-#          | |   |                      |      |
-#          | |   |                      |      |
-#          | |   |--> W_3*[o_{t+1};h_t]-|      |
-#           -|---------------------------------
-#            | (o_{t+1}, a_t)
-#            |
-
-create_hidden(islearnable::Bool, iftrue, dims...) = islearnable ? iftrue(dims...) : Flux.Zeros(dims...)
-
 ARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh, islearnable=true) =
     ARNNCell(σ_int,
              init(num_hidden, num_ext_features, num_actions),
@@ -114,6 +96,29 @@ Flux.trainable(m::ARNNCell) = if  hidden_learnable(m)
     (Wx = m.Wx, Wh = m.Wh, b = m.b, h = m.h)
 else
     (Wx = m.Wx, Wh = m.Wh, b = m.b)
+end
+
+function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A<:AbstractArray{<:AbstractFloat, 1}}
+
+    @inbounds new_h =
+        m.σ.((@view m.Wx[:, :, x[1]])*x[2] + (@view m.Wh[:, :, x[1]])*h + (@view m.b[:, x[1]]))
+
+    return new_h, new_h
+end
+
+function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Array{<:Integer, 1}, A<:Array{<:AbstractFloat, 2}}
+    # @info "Here"
+    wx = ein_mul((@view m.Wx[:, :, x[1]]), x[2])
+    wh = ein_mul((@view m.Wh[:, :, x[1]]), h)
+    
+    @inbounds new_h =
+        m.σ.(wx + wh + (m.b[:, x[1]]))
+
+    return new_h, new_h
+end
+
+function ein_mul(x::AbstractArray{<:Number, 3}, y::AbstractArray{<:Number, 2})
+    @tullio ret[i, k] := x[i, j, k]*y[j,k]
 end
 
 
@@ -134,49 +139,20 @@ end
 _contract(W::Array{<:Number, 3}, x1::AbstractArray{<:Number, 1}, x2::AbstractArray{<:Number, 1}) = throw("Not Implemented")
     # @ein ret[i] := W[i,j,k]*x1[j]*x2[k]
 
-function ein_mul(x::AbstractArray{<:Number, 3}, y::AbstractArray{<:Number, 2})
-    # @ein ret[i, k] := x[i, j, k]*y[j,k]
-    @tullio ret[i, k] := x[i, j, k]*y[j,k]
-end
-
-function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A<:AbstractArray{<:AbstractFloat, 1}}
-
-    @inbounds new_h =
-        m.σ.((@view m.Wx[:, :, x[1]])*x[2] + (@view m.Wh[:, :, x[1]])*h + (@view m.b[:, x[1]]))
-
-    return new_h, new_h
-end
 
 
-function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Array{<:Integer, 1}, A<:Array{<:AbstractFloat, 2}}
-    # @info "Here"
-    wx = ein_mul((m.Wx[:, :, x[1]]), x[2])
-    wh = ein_mul((m.Wh[:, :, x[1]]), h)
-    
-    @inbounds new_h =
-        m.σ.(wx + wh + (m.b[:, x[1]]))
 
-    return new_h, new_h
-end
+
+
+
 
 
 function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFloat, 2}, A}
-    # new_h = m.σ.(m.Wx[x[1], :, :]*x[2] .+ m.Wh[x[1], :, :]*h .+ m.b[x[1], :])
-    # new_h =
-    #     m.σ.(mapreduce((i)->reduce_func(m, x, h, i), +, 1:(size(m.Wx)[3]))[:,1] + m.b*x[1])
     a = x[1]
     o = x[2]
 
-    # out_x = _contract(m.Wx, o, a)
-    # @show size(out_x)
-    
+    @show size(h)
     out_h = _contract(m.Wh, h, a)
-    # @show size(out_h)
-    # out_h = if length(size(h)) == 1
-    #     hcat((_contract_batch_tensor_1(m.Wh, a, h, l) for l in 1:size(a)[2])...)
-    # else
-    #     hcat((_contract_batch_tensor(m.Wh, a, h, l) for l in 1:size(a)[2])...)
-    # end
 
     new_h = m.σ.(out_h + m.b*a)
     new_h, new_h
@@ -204,9 +180,6 @@ function reduce_func(m::ARNNCell, x, h, i)
     @inbounds x[1][i]*view(m.Wx, :, :, i)*x[2] +
         x[1][i]*view(m.Wh, :, :, i)*h
 end
-
-
-
 
 
 function Base.show(io::IO, l::ARNNCell)

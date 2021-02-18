@@ -144,7 +144,7 @@ function update!(chain,
                  reward,
                  terminal)
 
-
+    ℒ = 0.0f0
     reset!(chain, h_init)
     n = length(state_seq)
     grads = gradient(Flux.params(chain)) do
@@ -155,17 +155,19 @@ function update!(chain,
         # cumulants, discounts, π_prob = dropgrad(get(horde, nothing, action_t, env_state_tp1, v_tp1))
         # ρ = dropgrad(Float32.(π_prob./b_prob))
         # offpolicy_tdloss(ρ, preds[n-1], cumulants, discounts, v_tp1)
-        q_learning_loss(preds[end-1], action_t, reward, terminal, lu.γ, q_tp1)
+        ℒ = q_learning_loss(preds[end-1], action_t, reward, terminal, lu.γ, q_tp1)
     end
     
     Flux.reset!(chain)
+    l1_grads = 0.0f0
     for weights in Flux.params(chain)
         if !(grads[weights] === nothing) && !(weights isa Flux.Zeros)
             Flux.update!(opt, weights, grads[weights])
+            l1_grads += sum(abs.(grads[weights]))
         end
     end
 
-    
+    ℒ,  l1_grads
 end
 
 function update_batch!(chain,
@@ -175,32 +177,27 @@ function update_batch!(chain,
                        state_seq,
                        reward,
                        terminal,
-                       action_t)
+                       action_t,
+                       actual_seq_len,
+                       cb=nothing)
 
-    
     ℒ = 0.0f0
-    reset!(chain, h_init)
     γ = lu.γ
-
-    # println(action_t)
-    a_t = [CartesianIndex(action_t[i], i) for i in 1:length(action_t)]
-
+    reset!(chain, h_init)
     grads = gradient(Flux.params(chain)) do
-
         preds = map(chain, state_seq)
-        # println(size(preds[end]))
-        
-        q_tp1 = dropgrad(preds[end])
-        q_t = preds[end-1]
-        target = dropgrad(reward .+ γ*(1 .- terminal).*(maximum(q_tp1;dims=1)[1, :]))
-        ℒ = sum((q_t[a_t] - target).^2)
-        # ℒ = q_learning_loss(preds[end-1], action_t, reward, terminal, lu.γ, q_tp1)
-        # ℒ = offpolicy_tdloss(ρ, preds[n-1], cumulants, discounts, v_tp1)
+        for i ∈ 1:length(actual_seq_len)
+            target = dropgrad((reward[i] + γ*(1 - terminal[i])*maximum(preds[actual_seq_len[i] + 1][:, i])))
+            ℒ += (preds[actual_seq_len[i]][action_t[i], i] - target)^2
+        end
+        ℒ
     end
     reset!(chain, h_init)
+    l1_grads = 0.0f0
     for weights in Flux.params(chain)
         if !(grads[weights] === nothing)
             Flux.update!(opt, weights, grads[weights])
+            l1_grads += sum(abs.(grads[weights]))
         end
     end
     ℒ

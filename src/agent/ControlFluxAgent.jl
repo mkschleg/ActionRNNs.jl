@@ -16,12 +16,12 @@ mutable struct ControlOnlineAgent{LU<:LearningUpdate, O, C, F, H, Φ, Π} <: Min
 end
 
 function ControlOnlineAgent(model,
-                          opt,
-                          τ,
-                          γ
-                          feature_creator,
-                          feature_size,
-                          acting_policy)
+                            opt,
+                            τ,
+                            γ,
+                            feature_creator,
+                            feature_size,
+                            acting_policy)
 
     # τ=parsed["truncation"]
     # opt = FluxUtils.get_optimizer(parsed)
@@ -87,16 +87,16 @@ function MinimalRLCore.step!(agent::ControlOnlineAgent, env_s_tp1, r, terminal, 
 
 
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-    
+    # println(terminal)
     # RNN update function
-    update!(agent.model,
-            agent.opt,
-            agent.lu,
-            agent.hidden_state_init,
-            agent.state_list,
-            agent.action,
-            r,
-            terminal)
+    loss, l1_grads = update!(agent.model,
+                             agent.opt,
+                             agent.lu,
+                             agent.hidden_state_init,
+                             agent.state_list,
+                             agent.action,
+                             r,
+                             terminal)
     # End update function
 
     # Flux.truncate!(agent.model)
@@ -111,7 +111,7 @@ function MinimalRLCore.step!(agent::ControlOnlineAgent, env_s_tp1, r, terminal, 
     end
     agent.s_t = agent.state_list[end]
 
-    return agent.action
+    return (action = agent.action, loss = loss, l1_grads = l1_grads, q=values)
 end
 
 # MinimalRLCore.get_action(agent::ControlOnlineAgent, state) = agent.action

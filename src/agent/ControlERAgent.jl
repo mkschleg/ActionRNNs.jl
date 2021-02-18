@@ -17,6 +17,7 @@ mutable struct ControlERAgent{O, C, F, H, ER, Φ,  Π} <: MinimalRLCore.Abstract
     replay::ER
     warm_up::Int
     batch_size::Int
+    update_wait::Int
     τ::Int
     s_t::Φ
     π::Π
@@ -24,6 +25,8 @@ mutable struct ControlERAgent{O, C, F, H, ER, Φ,  Π} <: MinimalRLCore.Abstract
     action::Int
     am1::Int
     action_prob::Float64
+
+    cur_step::Int
 end
 
 function ControlERAgent(model,
@@ -36,6 +39,7 @@ function ControlERAgent(model,
                         replay_size,
                         warm_up,
                         batch_size,
+                        update_time,
                         acting_policy)
 
     
@@ -50,15 +54,14 @@ function ControlERAgent(model,
     println(typeof(state_list))
 
     hidden_state_init = get_initial_hidden_state(model[1])
-    println(hidden_state_init)
-    println(eltype(hidden_state_init))
-    # TODO: Fix sequence Replay for episodes.
-    replay = SequenceReplay(replay_size+τ-1,
-                            (Int, Float32, Int, Float32, Float32, Float32, Float32, Bool, eltype(hidden_state_init)),
-                            (1, feature_size, 1, feature_size, env_state_size, 1, 1, 1, length(hidden_state_init)),
-                            (:am1, :s, :a, :sp, :esp, :ap, :r, :t, :hs))
-
-
+    # println(hidden_state_init)
+    # println(eltype(hidden_state_init))
+    # TODO: Fix 
+    replay = EpisodicSequenceReplay(replay_size+τ-1,
+                                    (Int, Float32, Int, Float32, Float32, Bool, eltype(hidden_state_init)),
+                                    (1, feature_size, 1, feature_size, 1, 1, length(hidden_state_init)),
+                                    (:am1, :s, :a, :sp, :r, :t, :hs))
+    
     ControlERAgent(QLearning(γ),
                    opt,
                    model,
@@ -68,11 +71,12 @@ function ControlERAgent(model,
                    replay,
                    warm_up,
                    batch_size,
+                   update_time,
                    τ,
                    init_state,
                    acting_policy,
                    γ,
-                   1, 1, 0.0)
+                   1, 1, 0.0, 0)
 
 end
 
@@ -88,8 +92,8 @@ add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, 
            agent.state_list[1],
            agent.action,
            agent.state_list[2],
-           env_s_tp1,
-           Float32(agent.action_prob),
+           # env_s_tp1,
+           # Float32(agent.action_prob),
            r,
            terminal,
            hs))
@@ -100,8 +104,8 @@ add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, 
            agent.state_list[1][2],
            agent.action,
            agent.state_list[2][2],
-           env_s_tp1,
-           Float32(agent.action_prob),
+           # env_s_tp1,
+           # Float32(agent.action_prob),
            r,
            terminal,
            hs))
@@ -111,6 +115,7 @@ end
 function MinimalRLCore.start!(agent::ControlERAgent, env_s_tp1, rng; kwargs...)
 
     agent.action = 1
+    agent.am1 = 1
     s_t = build_new_feat(agent, env_s_tp1, agent.action)
     values = agent.model(s_t)
     agent.action = sample(agent.π, values, rng)
@@ -133,15 +138,26 @@ function MinimalRLCore.start!(agent::ControlERAgent, env_s_tp1, rng; kwargs...)
 end
 
 
+function batchseq_with_action(exp)
+    # for e ∈ exp
+    #     println(length(e))
+    #     println(e[end])
+    # end
+    s_1 = Flux.batchseq([[getindex.(seq, :s); [seq[end].sp]] for seq in exp], zero(exp[1][1].s))
+    a_1 = [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], length(s_1), 1) for seq in exp]
+    [([a_1[b][t] for b ∈ 1:length(a_1)], st) for (t, st) ∈ enumerate(s_1)]
+end
+
+
 function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
     # new_action, new_prob = agent.π(env_s_tp1, rng)
-    
+
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
     is_full = DataStructures.isfull(agent.state_list)
 
     #Deal with ER buffer
-
+    # println(env_s_tp1, r, terminal)
     add_ret = add_exp!(agent,
                        Float32.(env_s_tp1),
                        r,
@@ -149,35 +165,51 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
                        (agent.hidden_state_init[k] for k in keys(agent.hidden_state_init))...)
     
     ℒ = 0.0f0
-    if length(agent.replay) >= agent.warm_up
+    if length(agent.replay) >= agent.warm_up && (agent.cur_step % agent.update_wait == 0)
 
-        bs = rand(1:(length(agent.replay) + 1 - agent.τ), agent.batch_size)
-        exp = [view(agent.replay, bs .+ (i-1)) for i ∈ 1:agent.τ]
+        # bs = rand(1:(length(agent.replay) + 1 - agent.τ), agent.batch_size)
+        # exp = [view(agent.replay, bs .+ (i-1)) for i ∈ 1:agent.τ]
 
-        state_list = if eltype(agent.state_list) <: Tuple
-            sl = [(collect(exp[i].am1), collect(exp[i].s)) for i in 1:length(exp)]
-            push!(sl, (collect(exp[end].a), collect(exp[end].sp)))
+        τ = agent.τ
+        batch_size = agent.batch_size
+
+
+        exp = sample(rng, agent.replay, batch_size, 2, τ)
+        # for i in 1:batch_size
+        #     println(length(exp[i]))
+        # end
+        # println([getindex.(exp[1], :s); [exp[1][end].sp]])
+
+        s = if eltype(agent.state_list) <: Tuple
+            batchseq_with_action(exp)
         else
-            sl = [exp[i].s for i in 1:length(exp)]
-            push!(sl, exp[end].sp)
+            Flux.batchseq([[getindex.(exp[i], :s); [exp[i][end].sp]] for i in 1:batch_size])
         end
 
-        sp1 = collect(exp[end].esp')
+        t = [exp[i][end].t[1]::Bool for i in 1:batch_size]
+        r = [exp[i][end].r[1]::Float32 for i in 1:batch_size]
+        a = [exp[i][end].a[1]::Int for i in 1:batch_size]
 
-        action = exp[end].a
+        # sp1 = collect(exp[end].esp')
+        # action = exp[end].a
 
+        actual_seq_lengths = [length(exp[i]) for i in 1:batch_size]
+        mask = [[actual_seq_lengths[j] >= τ for j ∈ 1:batch_size] for i ∈ 1:τ]
 
         hs = IdDict()
-        hs[agent.model[1]] = collect(exp[1].hs)
+        hs[agent.model[1]] = hcat([seq[1].hs for seq in exp]...)
+        # println(size(hs[agent.model[1]]))
+        # throw("broken")
 
         ℒ = update_batch!(agent.model,
                           agent.opt,
                           agent.lu,
                           hs,
-                          state_list,
-                          exp[end].r,
-                          exp[end].t,
-                          exp[end-1].a)
+                          s,
+                          r,
+                          t,
+                          a,
+                          actual_seq_lengths)
     end
     # End update function
 
@@ -194,6 +226,6 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
     agent.s_t = build_new_feat(agent, env_s_tp1, agent.action)
     agent.am1 = copy(agent.action)
     agent.action = sample(agent.π, out_preds, rng)
-
+    agent.update_wait += 1
     return (preds=out_preds, h=cur_hidden_state, action=agent.action, loss=ℒ)
 end
