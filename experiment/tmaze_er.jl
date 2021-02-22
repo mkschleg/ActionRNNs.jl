@@ -40,6 +40,8 @@ function default_config()
         "batch_size"=>4,
         "update_wait"=>4,
         "truncation" => 8,
+
+        "hs_learnable" => true,
         
         "gamma"=>0.99)
 
@@ -62,39 +64,42 @@ function construct_agent(env, parsed, rng)
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
 
     opt = FLU.get_optimizer(parsed)
-    
+
     chain = begin
-        if parsed["cell"] == "FacARNN"
-            throw("You know this doesn't work yet...")
-            Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-        elseif parsed["cell"] == "ARNN"
-            if false#parsed["action_embedding"]
+        # if false
+            # ARNN
+            # Flux.Chain(
+            #     (x)->(Flux.onehot(x[1], 1:4), x[2]),
+            #     ActionRNNs.ActionStateStreams(Flux.Dense(4, parsed["ae_size"], tanh; initW=init_func), identity),
+            #     ActionRNNs.ARNN(fs, parsed["ae_size"], parsed["numhidden"]; init=init_func),
+            #     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
+
+            # # generic RNN
+            # Flux.Chain(
+            #     (x)->(x[1:3], x[4:end]),
+            #     ActionRNNs.ActionStateStreams(Flux.param,
+            #                                   Flux.Dense(4, parsed["ae_size"], Flux.sigmoid; initW=init_func)),
+            #     (x)->vcat(x[1], x[2]),
+            #     rnntype(parsed["ae_size"] + fs, parsed["numhidden"]; init=init_func),
+            #     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
+        # else
+            if parsed["cell"] == "FacARNN"
+                throw("You know this doesn't work yet...")
+                Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"]; init=init_func),
+                           Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
+            elseif parsed["cell"] == "ARNN"
                 Flux.Chain(
-                    (x)->(Flux.onehot(x[1], 1:4), x[2]),
-                    ActionRNNs.ActionStateStreams(Flux.Dense(4, parsed["ae_size"], tanh; initW=init_func), identity),
-                    ActionRNNs.ARNN(fs, parsed["ae_size"], parsed["numhidden"]; init=init_func),
+                    ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
+                    Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
+            elseif parsed["cell"] == "RNN"
+                Flux.Chain(
+                    ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             else
-                Flux.Chain(
-                    # (x)->(Flux.onehot(x[1], 1:4), x[2]),
-                    # ActionRNNs.ActionStateStreams(Flux.Dense(4, 3, Flux.relu; initW=init_func), identity),
-                    ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func),
-                    Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-            end
-        else
-            rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-            if false#parsed["action_embedding"]
-                Flux.Chain(
-                    (x)->(x[1:3], x[4:end]),
-                    ActionRNNs.ActionStateStreams(Flux.param, Flux.Dense(4, parsed["ae_size"], Flux.sigmoid; initW=init_func)),
-                    (x)->vcat(x[1], x[2]),
-                    rnntype(parsed["ae_size"] + fs, parsed["numhidden"]; init=init_func),
-                    Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-            else
+                rnntype = getproperty(Flux, Symbol(parsed["cell"]))
                 Flux.Chain(rnntype(fs, parsed["numhidden"]; init=init_func),
                            Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-            end
+            # end
         end
     end
 
@@ -109,7 +114,8 @@ function construct_agent(env, parsed, rng)
                               parsed["warm_up"],
                               parsed["batch_size"],
                               parsed["update_wait"],
-                              ap)
+                              ap,
+                              parsed["hs_learnable"])
 end
 
 function main_experiment(parsed::Dict; working=false, progress=false, verbose=false)
@@ -159,7 +165,8 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
             eps += 1
         end
         save_results = Dict("total_rews"=>total_rews, "steps"=>total_steps, "successes"=>successes, "losses"=>losses)
-        (agent = agent, save_results = save_results)
+        # (agent = agent, save_results = save_results)
+        (save_results = save_results)
     end        
 end
 

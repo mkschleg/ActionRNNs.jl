@@ -188,6 +188,7 @@ function sample(rng::Random.AbstractRNG, er::EpisodicSequenceReplay, batch_size,
     valid_inx = get_valid_indicies(er, min_seq_length)
     start_inx = rand(rng, valid_inx, batch_size)
     exp = [get_sequence(er, si, max_seq_length) for si ∈ start_inx]
+    start_inx, exp
     # padding and batching handled by agent.
 end
 

@@ -140,13 +140,6 @@ _contract(W::Array{<:Number, 3}, x1::AbstractArray{<:Number, 1}, x2::AbstractArr
     # @ein ret[i] := W[i,j,k]*x1[j]*x2[k]
 
 
-
-
-
-
-
-
-
 function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFloat, 2}, A}
     a = x[1]
     o = x[2]

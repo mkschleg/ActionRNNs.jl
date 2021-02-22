@@ -25,6 +25,7 @@ mutable struct ControlERAgent{O, C, F, H, ER, Φ,  Π} <: MinimalRLCore.Abstract
     action::Int
     am1::Int
     action_prob::Float64
+    hs_learnable::Bool
 
     cur_step::Int
 end
@@ -40,7 +41,8 @@ function ControlERAgent(model,
                         warm_up,
                         batch_size,
                         update_time,
-                        acting_policy)
+                        acting_policy,
+                        hs_learnable)
 
     
     state_list, init_state = begin
@@ -76,7 +78,7 @@ function ControlERAgent(model,
                    init_state,
                    acting_policy,
                    γ,
-                   1, 1, 0.0, 0)
+                   1, 1, 0.0, hs_learnable, 0)
 
 end
 
@@ -127,37 +129,18 @@ function MinimalRLCore.start!(agent::ControlERAgent, env_s_tp1, rng; kwargs...)
     agent.hidden_state_init = get_initial_hidden_state(agent.model)
     agent.s_t = build_new_feat(agent, env_s_tp1, agent.action)
     
-    # agent.action, agent.action_prob = agent.π(env_s_tp1, rng)
-
-    # fill!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-    # # push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-    
-    # agent.hidden_state_init = get_initial_hidden_state(agent.model)
-    # agent.s_t = build_new_feat(agent, env_s_tp1, agent.action)
     return agent.action
-end
-
-
-function batchseq_with_action(exp)
-    # for e ∈ exp
-    #     println(length(e))
-    #     println(e[end])
-    # end
-    s_1 = Flux.batchseq([[getindex.(seq, :s); [seq[end].sp]] for seq in exp], zero(exp[1][1].s))
-    a_1 = [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], length(s_1), 1) for seq in exp]
-    [([a_1[b][t] for b ∈ 1:length(a_1)], st) for (t, st) ∈ enumerate(s_1)]
 end
 
 
 function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
     # new_action, new_prob = agent.π(env_s_tp1, rng)
-
-    push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
+    s = build_new_feat(agent, env_s_tp1, agent.action)
+    push!(agent.state_list, s)
     is_full = DataStructures.isfull(agent.state_list)
 
     #Deal with ER buffer
-    # println(env_s_tp1, r, terminal)
     add_ret = add_exp!(agent,
                        Float32.(env_s_tp1),
                        r,
@@ -167,39 +150,29 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
     ℒ = 0.0f0
     if length(agent.replay) >= agent.warm_up && (agent.cur_step % agent.update_wait == 0)
 
-        # bs = rand(1:(length(agent.replay) + 1 - agent.τ), agent.batch_size)
-        # exp = [view(agent.replay, bs .+ (i-1)) for i ∈ 1:agent.τ]
-
         τ = agent.τ
         batch_size = agent.batch_size
 
-
-        exp = sample(rng, agent.replay, batch_size, 2, τ)
-        # for i in 1:batch_size
-        #     println(length(exp[i]))
-        # end
-        # println([getindex.(exp[1], :s); [exp[1][end].sp]])
+        exp_idx, exp = sample(rng, agent.replay, batch_size, 2, τ)
 
         s = if eltype(agent.state_list) <: Tuple
-            batchseq_with_action(exp)
+            get_state(seq) = seq.s
+            s_1 = Flux.batchseq([[get_state.(seq); [seq[end].sp]] for seq in exp], zero(exp[1][1].s))
+            a_1 = [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], length(s_1), 1) for seq in exp]
+            [([a_1[b][t] for b ∈ 1:length(a_1)], st) for (t, st) ∈ enumerate(s_1)]
         else
             Flux.batchseq([[getindex.(exp[i], :s); [exp[i][end].sp]] for i in 1:batch_size])
         end
 
-        t = [exp[i][end].t[1]::Bool for i in 1:batch_size]
-        r = [exp[i][end].r[1]::Float32 for i in 1:batch_size]
-        a = [exp[i][end].a[1]::Int for i in 1:batch_size]
-
-        # sp1 = collect(exp[end].esp')
-        # action = exp[end].a
+        t = [exp[i][end].t[1] for i in 1:batch_size]
+        r = [exp[i][end].r[1] for i in 1:batch_size]
+        a = [exp[i][end].a[1] for i in 1:batch_size]
 
         actual_seq_lengths = [length(exp[i]) for i in 1:batch_size]
         mask = [[actual_seq_lengths[j] >= τ for j ∈ 1:batch_size] for i ∈ 1:τ]
 
         hs = IdDict()
         hs[agent.model[1]] = hcat([seq[1].hs for seq in exp]...)
-        # println(size(hs[agent.model[1]]))
-        # throw("broken")
 
         ℒ = update_batch!(agent.model,
                           agent.opt,
@@ -210,8 +183,15 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
                           t,
                           a,
                           actual_seq_lengths)
+
+        if agent.hs_learnable
+            for (i, idx) ∈ enumerate(exp_idx)
+                agent.replay.buffer._stg_tuple.hs[:, idx] .= hs[agent.model[1]][:, i]
+            end
+        end
     end
     # End update function
+
 
     reset!(agent.model, agent.hidden_state_init)
     out_preds = agent.model.(agent.state_list)[end]
