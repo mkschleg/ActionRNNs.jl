@@ -90,6 +90,7 @@ function construct_agent(env, parsed, rng)
             elseif parsed["cell"] == "ARNN"
                 Flux.Chain(
                     ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
+                    ActionRNNs.RNN(parsed["numhidden"], parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             elseif parsed["cell"] == "RNN"
                 Flux.Chain(
@@ -120,7 +121,7 @@ end
 
 function main_experiment(parsed::Dict; working=false, progress=false, verbose=false)
 
-    ActionRNNs.experiment_wrapper(parsed, working) do (parsed)
+    ActionRNNs.experiment_wrapper(parsed, working) do parsed
 
         num_steps = parsed["steps"]
 
@@ -155,7 +156,6 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
                     end
                     success = success || (r == 4.0)
                     ℒ += a.loss
-                    
                 end
             # episode!(env, agent, rng, num_steps, sum(total_steps), parsed["progress"] ? prg_bar : nothing, nothing, eps)
             push!(total_rews, total_rew)

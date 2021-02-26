@@ -27,6 +27,7 @@ mutable struct ControlERAgent{O, C, F, H, ER, Φ,  Π} <: MinimalRLCore.Abstract
     action_prob::Float64
     hs_learnable::Bool
 
+    beg::Bool
     cur_step::Int
 end
 
@@ -53,16 +54,15 @@ function ControlERAgent(model,
         end
     end
 
-    println(typeof(state_list))
+    hidden_state_init = get_initial_hidden_state(model)
 
-    hidden_state_init = get_initial_hidden_state(model[1])
-    # println(hidden_state_init)
-    # println(eltype(hidden_state_init))
-    # TODO: Fix 
+    hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
+
+    
     replay = EpisodicSequenceReplay(replay_size+τ-1,
-                                    (Int, Float32, Int, Float32, Float32, Bool, eltype(hidden_state_init)),
-                                    (1, feature_size, 1, feature_size, 1, 1, length(hidden_state_init)),
-                                    (:am1, :s, :a, :sp, :r, :t, :hs))
+                                    (Int, Float32, Int, Float32, Float32, Bool, Bool, hs_type...),
+                                    (1, feature_size, 1, feature_size, 1, 1, 1, hs_length...),
+                                    (:am1, :s, :a, :sp, :r, :t, :beg, hs_symbol...))
     
     ControlERAgent(QLearning(γ),
                    opt,
@@ -78,8 +78,7 @@ function ControlERAgent(model,
                    init_state,
                    acting_policy,
                    γ,
-                   1, 1, 0.0, hs_learnable, 0)
-
+                   1, 1, 0.0, hs_learnable, true, 0)
 end
 
 build_new_feat(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, state, action) where {O, C, F, H, ER, Φ, Π} = 
@@ -88,29 +87,27 @@ build_new_feat(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, state, action) whe
 build_new_feat(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, state, action) where {O, C, F, H, ER, Φ<:Tuple, Π} = 
     (action, agent.build_features(state, nothing))
 
-add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, hs) where {O, C, F, H, ER, Φ, Π} = 
+add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, hs...) where {O, C, F, H, ER, Φ, Π} = 
     push!(agent.replay,
           (agent.am1,
            agent.state_list[1],
            agent.action,
            agent.state_list[2],
-           # env_s_tp1,
-           # Float32(agent.action_prob),
            r,
            terminal,
-           hs))
+           agent.beg,
+           hs...))
 
-add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, hs) where {O, C, F, H, ER, Φ<:Tuple, Π}= begin
+add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, hs...) where {O, C, F, H, ER, Φ<:Tuple, Π}= begin
     push!(agent.replay,
           (agent.am1,
            agent.state_list[1][2],
            agent.action,
            agent.state_list[2][2],
-           # env_s_tp1,
-           # Float32(agent.action_prob),
            r,
            terminal,
-           hs))
+           agent.beg,
+           hs...))
 end
 
 
@@ -118,11 +115,11 @@ function MinimalRLCore.start!(agent::ControlERAgent, env_s_tp1, rng; kwargs...)
 
     agent.action = 1
     agent.am1 = 1
+    agent.beg = true
     s_t = build_new_feat(agent, env_s_tp1, agent.action)
     values = agent.model(s_t)
     agent.action = sample(agent.π, values, rng)
 
-    # fill!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
     empty!(agent.state_list)
 
     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
@@ -146,6 +143,8 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
                        r,
                        terminal,
                        (agent.hidden_state_init[k] for k in keys(agent.hidden_state_init))...)
+
+    agent.beg = false
     
     ℒ = 0.0f0
     if length(agent.replay) >= agent.warm_up && (agent.cur_step % agent.update_wait == 0)
@@ -169,11 +168,9 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
         a = [exp[i][end].a[1] for i in 1:batch_size]
 
         actual_seq_lengths = [length(exp[i]) for i in 1:batch_size]
-        mask = [[actual_seq_lengths[j] >= τ for j ∈ 1:batch_size] for i ∈ 1:τ]
 
-        hs = IdDict()
-        hs[agent.model[1]] = hcat([seq[1].hs for seq in exp]...)
-
+        hs = ActionRNNs.get_hs_from_experience(agent.model, exp)
+        
         ℒ = update_batch!(agent.model,
                           agent.opt,
                           agent.lu,
@@ -184,9 +181,29 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
                           a,
                           actual_seq_lengths)
 
+        # TODO: Make general for LSTM and for RNN in any place.
+
         if agent.hs_learnable
-            for (i, idx) ∈ enumerate(exp_idx)
-                agent.replay.buffer._stg_tuple.hs[:, idx] .= hs[agent.model[1]][:, i]
+            rnn_idx = find_layers_with_eq(agent.model, (l)->l isa Flux.Recur)
+            for ridx in rnn_idx
+                if tuple_hidden_state(agent.model[ridx])
+                    throw("How did you get here?")
+                else
+                    hs_symbol = ActionRNNs.hs_symbol_layer(agent.model[ridx], ridx)
+                    init_grad = zero(agent.model[ridx].init)
+                    init_grad_n = 0
+                    for (i, idx) ∈ enumerate(exp_idx)
+                        if exp[i][1].beg == true
+                            init_grad  .+= hs[agent.model[ridx]][:, i]
+                            init_grad_n += 1
+                        else
+                            getindex(agent.replay.buffer._stg_tuple, hs_symbol)[:, idx] .= hs[agent.model[ridx]][:, i]
+                        end
+                    end
+                    if init_grad_n != 0
+                        agent.model[ridx].init .= init_grad ./ init_grad_n
+                    end
+                end
             end
         end
     end

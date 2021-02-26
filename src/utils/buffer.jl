@@ -90,6 +90,11 @@ function Base.getindex(buffer::CircularBuffer{TPL, TPS, NAMES}, idx) where {TPL,
     (;zip(NAMES, (_get_data_row(buffer._stg_tuple[i], idx) for i in 1:length(NAMES)))...)
 end
 
+function Base.getindex(buffer::CircularBuffer, idx::Symbol) 
+    # NamedTuple{NAMES}(_get_data_row(buffer._stg_tuple[i], idx) for i in 1:length(NAMES))
+    getindex(buffer._stg_tuple, idx)
+end
+
 Base.view(buffer::CircularBuffer{TPL, TPS, NAMES}, idx) where {TPL, TPS, NAMES} = 
     NamedTuple{NAMES}(_get_data_row_view(buffer._stg_tuple[i], idx) for i in 1:length(NAMES))
 

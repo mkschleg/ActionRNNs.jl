@@ -118,3 +118,46 @@ function Base.show(io::IO, env::TMaze)
     print(to_string(env))
     println("(size: $(env.size), goal: $(env.goal_dir), state: $(env.state)")
 end
+
+using RecipesBase
+
+module PlotParams
+
+using Colors
+
+const SIZE = 10
+const BG = Colors.RGB(1.0, 1.0, 1.0)
+const WALL = Colors.RGB(0.3, 0.3, 0.3)
+const AC = Colors.RGB(0.69921875, 0.10546875, 0.10546875)
+const GOAL = Colors.RGB(0.796875, 0.984375, 0.76953125)
+const AGENT = [AC AC AC AC;
+               AC AC AC AC;
+               AC AC AC AC;
+               AC AC AC AC;]
+
+end
+
+@recipe function f(env::TMaze)
+    ticks := nothing
+    foreground_color_border := nothing
+    grid := false
+    legend := false
+    aspect_ratio := 1
+    xaxis := false
+    yaxis := false
+
+    PP = PlotParams
+
+    screen = fill(PP.WALL, 5, env.size+2)
+    screen[2:4, end-1] .= PP.BG
+    screen[2+1, 2:end-1] .= PP.BG
+    if env.goal_dir == TMC.UP
+        screen[1+1, end-1] = PP.GOAL
+    else
+        screen[end-1, end-1] = PP.GOAL
+    end
+    screen[(-env.state.y)+2+1, env.state.x+1] = PP.AC
+
+    screen
+end
+

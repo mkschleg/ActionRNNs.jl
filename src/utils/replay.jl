@@ -30,24 +30,18 @@ function Base.iterate(asr::AbstractReplay, state::Integer)
     (result, state)
 end
 
-# abstract type AbstractWeightedReplay <: AbstractReplay end
-
-
-mutable struct ExperienceReplay{CB} <: AbstractReplay
+mutable struct ExperienceReplay{CB<:CircularBuffer} <: AbstractReplay
     buffer::CB
 end
 
 const ExperienceReplayDef{TPL, TPS} = ExperienceReplay{CircularBuffer{TPL, TPS, (:s, :a, :sp, :r, :t)}}
-# const SequenceExperienceReplay{TPL, TPS} = ExperienceReplay{CircularBuffer{TPL, TPS, (:s, :a, :sp, :r, :t, :hs)}}
-# const SequenceExperienceReplayLSTM{TPL, TPS} = ExperienceReplay{CircularBuffer{TPL, TPS, (:s, :a, :sp, :r, :t, :cs, :hs)}}
-
 
 ExperienceReplay(size, types, shapes, column_names) = begin
     cb = CircularBuffer(size, types, shapes, column_names)
     ExperienceReplay(cb)
 end
 
-ExperienceReplay(size, obs_size, obs_type) =
+ExperienceReplayDef(size, obs_size, obs_type) =
     ExperienceReplay(size,
                      (obs_type, Int, obs_type, Float32, Bool),
                      (obs_size, 1, obs_size, 1, 1),
@@ -55,6 +49,7 @@ ExperienceReplay(size, obs_size, obs_type) =
 
 Base.length(er::ExperienceReplay) = length(er.buffer)
 Base.getindex(er::ExperienceReplay, idx) = er.buffer[idx]
+# Base.getindex(er::ExperienceReplay, idx::Symbol) = getindex(er.buffer, idx)
 Base.view(er::ExperienceReplay, idx) = @view er.buffer[idx]
 
 Base.push!(er::ExperienceReplay, experience) = push!(er.buffer, experience)

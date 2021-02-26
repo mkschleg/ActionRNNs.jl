@@ -5,6 +5,8 @@ version = "0.1.0"
 
 [deps]
 BSON = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+Blink = "ad839575-38b3-5650-b840-f874b8c74a25"
+Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataStructures = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
@@ -18,6 +20,7 @@ OMEinsum = "ebe7aa44-baf0-506c-a96f-8464559b3922"
 PaddedViews = "5432bcbf-9aad-5242-b902-cca2824c8663"
 ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+RecipesBase = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 Reproduce = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
@@ -25,7 +28,6 @@ StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 TensorCast = "02d47bb6-7ce6-556a-be16-bb1710789e2b"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
-
 
 [compat]
 Flux = "0.11.6"
