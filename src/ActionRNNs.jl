@@ -1,10 +1,11 @@
 module ActionRNNs
 
-using Reexport
-
+using GVFHordes
+import Reexport: @reexport
 @reexport using MinimalRLCore
 
-using GVFHordes
+export glorot_uniform, glorot_normal, ExperienceReplay
+include("util.jl")
 
 export
     SingleLayer,
@@ -22,20 +23,17 @@ include("RNN.jl")
 include("LSTM.jl")
 include("GRU.jl")
 
-# export RTD, RTD_jacobian, TDLambda, TD, update!
-export TD, update!
+export QLearning, TD, update!
 include("Loss.jl")
 include("Update.jl")
 
 include("ActingPolicy.jl")
 
-
 include("Environments.jl")
-
-export glorot_uniform, glorot_normal, ExperienceReplay
-include("util.jl")
-
 include("Agent.jl")
+
+
+include("exp_util.jl")
 
 
 end # module

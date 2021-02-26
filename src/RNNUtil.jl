@@ -3,15 +3,6 @@ using Flux
 
 # Utilities for using RNNs and Action RNNs online and in chains.
 
-# _dont_learn_initial_state!(rnn) = 
-#     rnn.init = Flux.data(rnn.init)
-
-# function _dont_learn_initial_state!(rnn::Flux.Recur{Flux.LSTMCell})
-#     rnn.init = Flux.data.(rnn.init)
-# end
-
-# dont_learn_initial_state!(rnn) = foreach(x -> x isa Flux.Recur && _dont_learn_initial_state!(x), rnn)
-
 reset!(m, h_init) = 
     foreach(x -> x isa Flux.Recur && _reset!(x, h_init), Flux.functor(m)[1])
 
