@@ -86,8 +86,8 @@ function construct_agent(env, parsed, rng)
                 Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
         else
             if parsed["cell"] == "FacARNN"
-                throw("You know this doesn't work yet...")
-                Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"]; init=init_func),
+                # throw("You know this doesn't work yet...")
+                Flux.Chain(ActionRNNs.FacARNN(fs, 4, parsed["numhidden"], parsed["factors"]; hs_learnable = parsed["hs_learnable"], init=init_func),
                            Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             elseif parsed["cell"] == "ARNN"
                 Flux.Chain(
@@ -118,51 +118,50 @@ function main_experiment(parsed::Dict; working=false, progress=false)
         num_steps = parsed["steps"]
         env = TMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
+
+        logger = ActionRNNs.SimpleLogger(
+            (:total_rews, :losses, :successes, :total_steps),
+            (Float32, Float32, Bool, Int),
+            Dict(
+                :total_rews => (rew, steps, success, usa) -> rew,
+                :losses => (rew, steps, success, usa) -> usa[:loss]/steps,
+                :successes => (rew, steps, success, usa) -> success,
+                :total_steps => (rew, steps, success, usa) -> steps
+            )
+        )
         
-        total_rews = Float32[]
-        successes = Bool[]
-        losses = Float32[]
-        l1_grads = Float32[]
-        total_steps = Int[]
-        
-        mv_avg_losses = 1.0f0
-        
+
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
-        while sum(total_steps) <= num_steps
+        while sum(logger[:total_steps]) <= num_steps
             success = false
-            ℒ = 0.0f0
-            l1_grad = 0.0f0
+            usa = ActionRNNs.UpdateStateAnalysis(
+                (loss = 0.0f0, avg_loss = 1.0f0),
+                Dict(
+                    :loss => (s, us) -> s + us.loss,
+                    :avg_loss => (s, us) -> 0.9 * s + 0.1 * us.loss
+                ))
+            max_episode_steps = min(max((num_steps - sum(logger[:total_steps])), 2), 10000)
             total_rew, steps =
-                run_episode!(env, agent, min(max((num_steps - sum(total_steps)), 2), 10000), rng) do (s, a, s′, r)
+                run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
+                    
                     success = success || (r == 4.0)
-                    ℒ += a.loss
-                    l1_grad += a.l1_grads
-                    mv_avg_losses = 0.9*mv_avg_losses + 0.1*ℒ
+                    usa(a.update_state)
                     
                     if progress
-                        pr_suc = if length(successes) <= 1000
-                            mean(successes)
+                        pr_suc = if length(logger[:successes]) <= 1000
+                            mean(logger[:successes])
                         else
-                            mean(successes[end-1000:end])
+                            mean(logger[:successes][end-1000:end])
                         end
-                        next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc), (:loss, mv_avg_losses)])
+                        next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc), (:loss, usa[:avg_loss])])
                     end
                 end
-            push!(total_rews, total_rew)
-            push!(total_steps, steps)
-            push!(successes, success)
-            push!(losses, ℒ \ steps)
-            push!(l1_grads, l1_grad \ steps)
+            logger(total_rew, steps, success, usa)
             eps += 1
         end
-        save_results = Dict("total_rews"=>total_rews,
-                            "steps"=>total_steps,
-                            "successes"=>successes,
-                            "losses"=>losses,
-                            "l1_grads" => l1_grads)
         
-        (agent = agent, save_results = save_results)
+        (agent = agent, save_results = logger.data)
     end
 end
 

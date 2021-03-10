@@ -202,74 +202,45 @@ mutable struct FacARNNCell{F, A, V, H} <: AbstractActionRNN
     Wa::A
     b::V
     h::H
+    hs_learnable::Bool
 end
 
 # FacARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
-FacARNNCell(in, actions, out, factors, activation=tanh; init=Flux.glorot_uniform) = 
-    FacARNNCell(
-        activation,
-        param(init(out, factors)),
-        param(init(factors, in)),
-        param(init(factors, out)),
-        param(init(factors, actions)),
-        param(Flux.zeros(out, actions)),
-        param(Flux.zeros(out)))
+FacARNNCell(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform) = 
+    FacARNNCell(activation,
+                init(out, factors),
+                init(factors, in),
+                init(factors, out),
+                init(factors, actions),
+                Flux.zeros(out, actions),
+                Flux.zeros(out),
+                hs_learnable)
 
 FacARNN(args...; kwargs...) = Flux.Recur(FacARNNCell(args...; kwargs...))
 
-function (m::FacARNNCell)(h, x::Tuple{A, O}) where {A, O}
-    W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-    new_h = m.σ.(m.W*((Wx*o .+ Wh*h) .* Wa*a) .+ b*a)
-    return new_h, new_h
+hidden_learnable(m::FacARNNCell) = m.hs_learnable
+
+function get_Wabya(Wa, a)
+    if a isa Int
+        Wa[:, a]
+    elseif eltype(a) <: Int
+        Wa[:, a]
+    else
+        Wa*a
+    end
 end
 
-function (m::FacARNNCell)(h, x::Tuple{A, O}) where {A<:Integer, O}
+function (m::FacARNNCell)(h, x::Tuple{A, O}) where {A, O}
     W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-    new_h = m.σ.(W*((Wx*o + Wh*h) .* Wa[:, a]) + b[:, a])
+    new_h = m.σ.(W*((Wx*o + Wh*h) .* get_Wabya(Wa, a)) + b[:, a])
     return new_h, new_h
 end
 
 Flux.hidden(m::FacARNNCell) = m.h
+Flux.@functor FacARNNCell
 
-
-# @doc raw"""
-#     FactorizedARNNCell
-
-#     An RNN cell which explicitily transforms the hidden state of the recurrent neural network according to action.
-    
-#     ```math
-#         W (x_{t+1}Wx \odot a_{t}Wa)^T
-#     ```
-
-# """
-# mutable struct FiltARNNCell{F, A, V, H} <: AbstractActionRNN
-#     σ::F
-#     W::A
-#     b::V
-#     h::H
-# end
-
-# # FiltARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
-# FiltARNNCell(in, actions, out, factors, out_act=tanh, filter_act=tanh; init=Flux.glorot_uniform) = 
-#     FiltARNNCell(
-#         activation,
-#         param(init(out, )),
-#         param(Flux.zeros(out)),
-#         param(Flux.zeros(out)))
-
-# FiltARNN(args...; kwargs...) = Flux.Recur(FiltARNNCell(args...; kwargs...))
-
-# function (m::FiltARNNCell)(h, x::Tuple{A, O}) where {A, O}
-#     W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-#     new_h = m.σ.(m.W*((Wx*o .+ Wh*h) .* Wa*a) .+ b*a)
-#     return new_h, new_h
-# end
-
-# function (m::FiltARNNCell)(h, x::Tuple{A, O}) where {A<:Integer, O}
-#     W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-#     new_h = m.σ.(W*((Wx*o .+ Wh*h) .* Wa[:, a]) .+ b[a])
-#     return new_h, new_h
-# end
-
-# Flux.hidden(m::FiltARNNCell) = m.h
-
+Flux.trainable(m::FacARNNCell) = if  hidden_learnable(m)
+    (W = m.W, Wx = m.Wx, Wh = m.Wh, Wa = m.Wa, b = m.b, h = m.h)
+else
+    (W = m.W, Wx = m.Wx, Wh = m.Wh, Wa = m.Wa, b = m.b)
+end

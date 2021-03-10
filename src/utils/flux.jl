@@ -1,7 +1,7 @@
 module FluxUtils
 
 using ..Flux
-import ..ActionRNNs.ARNN
+import ..ActionRNNs: ARNN
 
 
 

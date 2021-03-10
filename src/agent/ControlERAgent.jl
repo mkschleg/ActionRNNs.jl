@@ -146,7 +146,7 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
 
     agent.beg = false
     
-    ℒ = 0.0f0
+    us = nothing #ActionRNNs.UpdateState(0.0f0, nothing, nothing, nothing)
     if length(agent.replay) >= agent.warm_up && (agent.cur_step % agent.update_wait == 0)
 
         τ = agent.τ
@@ -171,15 +171,15 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
 
         hs = ActionRNNs.get_hs_from_experience(agent.model, exp)
         
-        ℒ = update_batch!(agent.model,
-                          agent.opt,
-                          agent.lu,
-                          hs,
-                          s,
-                          r,
-                          t,
-                          a,
-                          actual_seq_lengths)
+        us = update_batch!(agent.model,
+                           agent.opt,
+                           agent.lu,
+                           hs,
+                           s,
+                           r,
+                           t,
+                           a,
+                           actual_seq_lengths)
 
         # TODO: Make general for LSTM and for RNN in any place.
 
@@ -224,5 +224,5 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
     agent.am1 = copy(agent.action)
     agent.action = sample(agent.π, out_preds, rng)
     agent.update_wait += 1
-    return (preds=out_preds, h=cur_hidden_state, action=agent.action, loss=ℒ)
+    return (preds=out_preds, h=cur_hidden_state, action=agent.action, update_state=us)
 end

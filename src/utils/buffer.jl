@@ -25,8 +25,6 @@ mutable struct CircularBuffer{TPL, TPS, NAMES}
 end
 
 
-
-
 _get_data_row(x::Array{T, 1}, idx) where {T} = x[idx]
 _get_data_row(x::Array{T, 2}, idx) where {T} = x[:, idx]
 _get_data_row(x::Array{T, 3}, idx) where {T} = x[:, :, idx]
@@ -91,8 +89,7 @@ function Base.getindex(buffer::CircularBuffer{TPL, TPS, NAMES}, idx) where {TPL,
 end
 
 function Base.getindex(buffer::CircularBuffer, idx::Symbol) 
-    # NamedTuple{NAMES}(_get_data_row(buffer._stg_tuple[i], idx) for i in 1:length(NAMES))
-    getindex(buffer._stg_tuple, idx)
+    buffer._stg_tuple[idx]
 end
 
 Base.view(buffer::CircularBuffer{TPL, TPS, NAMES}, idx) where {TPL, TPS, NAMES} = 

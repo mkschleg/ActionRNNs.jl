@@ -4,9 +4,11 @@ using LinearAlgebra: Diagonal
 # import Flux.Tracker.update!
 using Flux.Optimise: apply!
 using Flux
-using Zygote: dropgrad, ignore, Buffer
+using Flux.Zygote: dropgrad, ignore, Buffer
 
 abstract type LearningUpdate end
+
+include("update_utils.jl")
 
 # Control
 include("update/QLearning.jl")

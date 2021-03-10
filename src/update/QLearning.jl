@@ -23,18 +23,21 @@ function update!(chain,
     grads = gradient(Flux.params(chain)) do
         preds = map(chain, state_seq)
         q_tp1 = dropgrad(preds[end])
-        ℒ = q_learning_loss(preds[end-1], action_t, reward, terminal, lu.γ, q_tp1)
+        loss = q_learning_loss(preds[end-1], action_t, reward, terminal, lu.γ, q_tp1)
+        ignore() do
+            ℒ = loss
+        end
+        loss
     end
     
     Flux.reset!(chain)
-    l1_grads = 0.0f0
     for weights in Flux.params(chain)
         if !(grads[weights] === nothing) && !(weights isa Flux.Zeros)
             Flux.update!(opt, weights, grads[weights])
         end
     end
 
-    ℒ,  l1_grads
+    UpdateState(ℒ, grads, Flux.params(chain), opt)
 end
 
 q_learning_loss_batch_single(q_t_i, r, γ, term, q_tp1_i) = 
@@ -65,29 +68,24 @@ function update_batch!(chain,
                        cb=nothing;
                        hs_learnable=true)
 
-    # ℒ = 0.0f0
-    loss = 0.0f0
+    ℒ = 0.0f0
     γ = lu.γ
     reset!(chain, h_init)
     ps = if hs_learnable
-        # Flux.params(h_v for (h_k, h_v) ∈ h_init)
         Flux.params(chain, [h_v for (h_k, h_v) ∈ h_init]...)
     else
         Flux.params(chain)
     end
-    # println(ps)
 
     grads = gradient(ps) do
         preds = map(chain, state_seq)
-        ℒ = 0.0f0
-        ℒ = qloss(preds, action_t, reward, γ, terminal, actual_seq_len)
-        # ℒ = sum(qloss(preds, i) for i in 1:length(actual_seq_len))
+        loss = qloss(preds, action_t, reward, γ, terminal, actual_seq_len)
         ignore() do
-            loss = ℒ
+            ℒ = loss
         end
-        ℒ
+        loss
     end
     reset!(chain, h_init)
     Flux.update!(opt, ps, grads)
-    loss
+    UpdateState(ℒ, grads, Flux.params(chain), opt)
 end

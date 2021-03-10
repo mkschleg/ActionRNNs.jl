@@ -76,17 +76,10 @@ end
 
 Base.length(er::SequenceReplay) = length(er.buffer)
 Base.getindex(er::SequenceReplay, idx) =
-    if idx isa AbstractArray
-        er.buffer[(idx .+ er.place .- 2) .% er.buffer._capacity .+ 1]
-    else
-        er.buffer[(idx + er.place - 2) % er.buffer._capacity + 1]
-    end
+    er.buffer[idx]
+
 Base.view(er::SequenceReplay, idx) =
-    if idx isa AbstractArray
-        @view er.buffer[(idx .+ er.place .- 2) .% er.buffer._capacity .+ 1]
-    else
-        @view er.buffer[(idx + er.place - 2) % er.buffer._capacity + 1]
-    end
+    @view er.buffer[idx]
 
 function Base.push!(er::SequenceReplay, experience)
     if er.buffer._full
@@ -105,29 +98,22 @@ end
 mutable struct EpisodicSequenceReplay{CB} <: AbstractSequenceReplay
     buffer::CB
     place::Int64
+    terminal_locs::Vector{Int}
     terminal_symbol::Symbol
 end
 
 function EpisodicSequenceReplay(size, types, shapes, column_names; terminal_symbol = :t)
     cb = CircularBuffer(size, types, shapes, column_names)
-    EpisodicSequenceReplay(cb, 1, terminal_symbol)
+    EpisodicSequenceReplay(cb, 1, Int[], terminal_symbol)
 end
 
 
 Base.length(er::EpisodicSequenceReplay) = length(er.buffer)
 Base.getindex(er::EpisodicSequenceReplay, idx) =
-    if idx isa AbstractArray
-        er.buffer[(idx .+ (er.place - 2)) .% er.buffer._capacity .+ 1]
-    else
-        er.buffer[(idx + er.place - 2) % er.buffer._capacity + 1]
-    end
+    er.buffer[idx]
 
 Base.view(er::EpisodicSequenceReplay, idx) =
-    if idx isa AbstractArray
-        @view er.buffer[(idx .+ (er.place - 2)) .% er.buffer._capacity .+ 1]
-    else
-        @view er.buffer[(idx + er.place - 2) % er.buffer._capacity + 1]
-    end
+    @view er.buffer[idx]
 
 function Base.push!(er::EpisodicSequenceReplay, experience)
     if er.buffer._full
@@ -137,7 +123,7 @@ function Base.push!(er::EpisodicSequenceReplay, experience)
 end
 
 function get_episode_ends(er::EpisodicSequenceReplay)
-    # TODO: n-computations. Maybe store in a chace?
+    # TODO: n-computations. Maybe store in a cache?
     findall((exp)->exp::Bool, er.buffer._stg_tuple[er.terminal_symbol])
 end
 
@@ -151,34 +137,94 @@ end
 
 
 function get_valid_indicies(er::EpisodicSequenceReplay, min_seq_length)
-    episode_ends = get_episode_ends(er)
-    if isempty(episode_ends)
-        1:(length(er) + 1 - min_seq_length)
-    else
-        vcat([get_valid_starting_range(
-            e_idx == 1 ? 1 : episode_ends[e_idx-1] + 1,
-            e,
-            min_seq_length)
-              for (e_idx, e) in enumerate(episode_ends)]...)
-    end
+    # episode_ends = get_episode_ends(er)
+
+    1:length(er)
+    
+    # if isempty(episode_ends)
+    #     1:(length(er) + 1 - min_seq_length)
+    # else
+
+    #     if er.place == 1
+    #         vcat([get_valid_starting_range(
+    #             e_idx == 1 ? 1 : episode_ends[e_idx-1] + 1,
+    #             e,
+    #             min_seq_length)
+    #               for (e_idx, e) in enumerate(episode_ends)]...)
+    #     else
+    #         idx_set = UnitRange{Int}[]
+    #         boundary_crossed = false
+    #         for (e_idx, e) in enumerate(episode_ends)
+    #             if e < er.place
+    #                 if e_idx == 1
+    #                     push!(idx_set,
+    #                           get_valid_starting_range(
+    #                               e_idx == 1 ? 1 : episode_ends[e_idx-1] + 1,
+    #                               e,
+    #                               min_seq_length))
+    #                 else
+    #                     push!(idx_set,
+    #                           get_valid_starting_range(
+    #                               e_idx == 1 ? 1 : episode_ends[e_idx-1] + 1,
+    #                               e,
+    #                               min_seq_length))
+    #                 end
+    #             elseif boundary_crossed == false
+    #                 push!(idx_set,
+    #                       get_valid_starting_range(
+    #                           episode_ends[e_idx-1],
+    #                           er.place,
+    #                           min_seq_length))
+    #                 push!(idx_set,
+    #                       get_valid_starting_range(
+    #                           er.place,
+    #                           e,
+    #                           min_seq_length))
+    #                 boundary_crossed = true
+    #             else
+    #                 push!(idx_set,
+    #                       get_valid_starting_range(
+    #                           er.place,
+    #                           e,
+    #                           min_seq_length))
+    #             end
+    #         end
+    #     end
+        
+    #     # If place boundary between episodes
+    #     # if episode spans end and beginning of the buffer.
+    #     #
+
+
+    # end
 end
 
 function get_sequence(er::EpisodicSequenceReplay, start_ind, max_seq_length)
     ret = [view(er, start_ind)]
     er_size = length(er)
+    if ((start_ind + 1 - 1) % er_size) + 1 == er.place || ret[end][er.terminal_symbol][]::Bool
+        return ret
+    end
     for i ∈ 1:(max_seq_length-1)
-        push!(ret, view(er, start_ind + i))
-        if ret[end][er.terminal_symbol][]::Bool || ((start_ind + i) >= er_size)
+        push!(ret, view(er, (((start_ind + i - 1) % er_size) + 1)))
+        if ret[end][er.terminal_symbol][]::Bool || ((start_ind + i + 1 - 1) % er_size) + 1 == er.place 
             break
         end
     end
     ret
 end
 
-sample(er::EpisodicSequenceReplay, batch_size, min_seq_length, max_seq_length=min_seq_length) =
-    sample(Random.GLOBAL_RNG, er, batch_size, max_seq_length, max_seq_length)
+sample(er::EpisodicSequenceReplay,
+       batch_size,
+       min_seq_length,
+       max_seq_length=min_seq_length) =
+           sample(Random.GLOBAL_RNG, er, batch_size, max_seq_length, max_seq_length)
 
-function sample(rng::Random.AbstractRNG, er::EpisodicSequenceReplay, batch_size, min_seq_length, max_seq_length=min_seq_length)
+function sample(rng::Random.AbstractRNG,
+                er::EpisodicSequenceReplay,
+                batch_size,
+                min_seq_length,
+                max_seq_length=min_seq_length)
     # get valid starting indicies
     valid_inx = get_valid_indicies(er, min_seq_length)
     start_inx = rand(rng, valid_inx, batch_size)
