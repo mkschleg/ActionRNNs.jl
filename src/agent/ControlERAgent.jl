@@ -58,7 +58,6 @@ function ControlERAgent(model,
 
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
 
-    
     replay = EpisodicSequenceReplay(replay_size+τ-1,
                                     (Int, Float32, Int, Float32, Float32, Bool, Bool, hs_type...),
                                     (1, feature_size, 1, feature_size, 1, 1, 1, hs_length...),
@@ -181,30 +180,8 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
                            a,
                            actual_seq_lengths)
 
-        # TODO: Make general for LSTM and for RNN in any place.
-
         if agent.hs_learnable
-            rnn_idx = find_layers_with_eq(agent.model, (l)->l isa Flux.Recur)
-            for ridx in rnn_idx
-                if tuple_hidden_state(agent.model[ridx])
-                    throw("How did you get here?")
-                else
-                    hs_symbol = ActionRNNs.hs_symbol_layer(agent.model[ridx], ridx)
-                    init_grad = zero(agent.model[ridx].init)
-                    init_grad_n = 0
-                    for (i, idx) ∈ enumerate(exp_idx)
-                        if exp[i][1].beg == true
-                            init_grad  .+= hs[agent.model[ridx]][:, i]
-                            init_grad_n += 1
-                        else
-                            getindex(agent.replay.buffer._stg_tuple, hs_symbol)[:, idx] .= hs[agent.model[ridx]][:, i]
-                        end
-                    end
-                    if init_grad_n != 0
-                        agent.model[ridx].init .= init_grad ./ init_grad_n
-                    end
-                end
-            end
+            modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, hs)
         end
     end
     # End update function

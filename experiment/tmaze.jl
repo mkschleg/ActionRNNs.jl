@@ -87,15 +87,15 @@ function construct_agent(env, parsed, rng)
         else
             if parsed["cell"] == "FacARNN"
                 # throw("You know this doesn't work yet...")
-                Flux.Chain(ActionRNNs.FacARNN(fs, 4, parsed["numhidden"], parsed["factors"]; hs_learnable = parsed["hs_learnable"], init=init_func),
+                Flux.Chain(ActionRNNs.FacARNN(fs, 4, parsed["numhidden"], parsed["factors"]; hs_learnable=parsed["hs_learnable"], init=init_func),
                            Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             elseif parsed["cell"] == "ARNN"
                 Flux.Chain(
-                    ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
+                    ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, hs_learnable=parsed["hs_learnable"]),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             elseif parsed["cell"] == "RNN"
                 Flux.Chain(
-                    ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
+                    ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, hs_learnable=parsed["hs_learnable"]),
                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
             else
                 rnntype = getproperty(Flux, Symbol(parsed["cell"]))
@@ -129,7 +129,6 @@ function main_experiment(parsed::Dict; working=false, progress=false)
                 :total_steps => (rew, steps, success, usa) -> steps
             )
         )
-        
 
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
@@ -142,21 +141,19 @@ function main_experiment(parsed::Dict; working=false, progress=false)
                     :avg_loss => (s, us) -> 0.9 * s + 0.1 * us.loss
                 ))
             max_episode_steps = min(max((num_steps - sum(logger[:total_steps])), 2), 10000)
-            total_rew, steps =
-                run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
-                    
-                    success = success || (r == 4.0)
-                    usa(a.update_state)
-                    
-                    if progress
-                        pr_suc = if length(logger[:successes]) <= 1000
-                            mean(logger[:successes])
-                        else
-                            mean(logger[:successes][end-1000:end])
-                        end
-                        next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc), (:loss, usa[:avg_loss])])
+            total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
+                success = success || (r == 4.0)
+                usa(a.update_state)
+                
+                if progress
+                    pr_suc = if length(logger[:successes]) <= 1000
+                        mean(logger[:successes])
+                    else
+                        mean(logger[:successes][end-1000:end])
                     end
+                    next!(prg_bar, showvalues=[(:episode, eps), (:successes, pr_suc), (:loss, usa[:avg_loss])])
                 end
+            end
             logger(total_rew, steps, success, usa)
             eps += 1
         end

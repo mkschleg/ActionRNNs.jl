@@ -131,14 +131,24 @@ function get_hs_from_experience(model, exp)
             throw("How did you get here?")
         else
             hs_symbol = hs_symbol_layer(model[idx], idx)
-            hs[model[idx]] = hcat([(seq[1].beg[1] ? model[idx].init : getindex(seq[1], hs_symbol)) for seq in exp]...)
+            if :beg ∈ keys(exp[1][1])
+                hs[model[idx]] = hcat([(seq[1].beg[1] ? model[idx].init : getindex(seq[1], hs_symbol)) for seq in exp]...)
+            else
+                if exp[1] isa NamedTuple
+                    hs[model[idx]] = getindex(exp[1], hs_symbol)
+                else
+                    hs[model[idx]] = hcat([(getindex(seq[1], hs_symbol)) for seq in exp]...)
+                end
+            end
         end
     end
     hs
 end
 
 
-function modify_hs_in_er!(replay, model, exp_idx, hs)
+
+
+function modify_hs_in_er!(replay, model, exp, exp_idx, hs)
     rnn_idx = find_layers_with_eq(model, (l)->l isa Flux.Recur)
     for ridx in rnn_idx
         if tuple_hidden_state(model[ridx])
@@ -152,7 +162,11 @@ function modify_hs_in_er!(replay, model, exp_idx, hs)
                     init_grad  .+= hs[model[ridx]][:, i]
                     init_grad_n += 1
                 else
-                    getindex(replay.buffer._stg_tuple, hs_symbol)[:, idx] .= hs[model[ridx]][:, i]
+                    if getindex(replay.buffer._stg_tuple, hs_symbol) isa Vector
+                        getindex(replay.buffer._stg_tuple, hs_symbol)[idx] = hs[model[ridx]][i]
+                    else
+                        getindex(replay.buffer._stg_tuple, hs_symbol)[:, idx] .= hs[model[ridx]][:, i]
+                    end
                 end
             end
             if init_grad_n != 0

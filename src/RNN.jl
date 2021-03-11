@@ -26,9 +26,9 @@ end
 hidden_learnable(rnn::RNNCell) = rnn.h_learnable
 
 RNNCell(in::Integer, out::Integer, σ = tanh;
-        init = glorot_uniform, islearnable=true) =
+        init = glorot_uniform, hs_learnable=true) =
   RNNCell(σ, init(out, in), init(out, out),
-          init(out), Flux.zeros(out), islearnable)
+          init(out), Flux.zeros(out), hs_learnable)
 
 function (m::RNNCell)(h, x)
   σ, Wi, Wh, b = m.σ, m.Wi, m.Wh, m.b
@@ -79,13 +79,13 @@ mutable struct ARNNCell{F, A, V, H} <: AbstractActionRNN
     islearnable::Bool
 end
 
-ARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh, islearnable=true) =
+ARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh, hs_learnable=true) =
     ARNNCell(σ_int,
              init(num_hidden, num_ext_features, num_actions),
              init(num_hidden, num_hidden, num_actions),
              zeros(Float32, num_hidden, num_actions),
              Flux.zeros(num_hidden),
-             islearnable)
+             hs_learnable)
 
 hidden_learnable(rnn::ARNNCell) = rnn.islearnable
 
@@ -135,10 +135,6 @@ function _contract(W::AbstractArray{<:Number, 3}, x1::AbstractArray{<:Number, 1}
     Wx1 = reshape(reshape(pdW, :, sze_W[end])*x1, sze_W[1:2]...)
     Wx1*x2
 end
-
-_contract(W::Array{<:Number, 3}, x1::AbstractArray{<:Number, 1}, x2::AbstractArray{<:Number, 1}) = throw("Not Implemented")
-    # @ein ret[i] := W[i,j,k]*x1[j]*x2[k]
-
 
 function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFloat, 2}, A}
     a = x[1]

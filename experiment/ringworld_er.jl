@@ -1,4 +1,3 @@
-
 module RingWorldExperiment
 
 import Flux
@@ -58,6 +57,10 @@ function default_arg_parse()
         "alpha" => 0.001,
         "truncation" => 3,
 
+        "replay_size"=>1000,
+        "warm_up" => 100,
+        "batch_size"=>4,
+        "update_wait"=>4,
 
         "synopsis" => false)
 
@@ -119,13 +122,18 @@ function construct_agent(parsed, rng)
     ap = ActionRNNs.RandomActingPolicy([0.5, 0.5])
     τ = parsed["truncation"]
 
-    ActionRNNs.PredOnlineAgent(out_horde,
-                               chain,
-                               opt,
-                               τ,
-                               fc,
-                               ap)
-                               # parsed)
+    ActionRNNs.PredERAgent(out_horde,
+                           chain,
+                           opt,
+                           τ,
+                           fc,
+                           fs,
+                           1,
+                           parsed["replay_size"],
+                           parsed["warm_up"],
+                           parsed["batch_size"],
+                           ap)
+
 end
 
 function main_experiment(parsed::Dict{String, Any}; working=false, progress=false)
@@ -148,13 +156,11 @@ function main_experiment(parsed::Dict{String, Any}; working=false, progress=fals
         
         results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg])
         save_results = results_synopsis(results, Val(parsed["synopsis"]))
-        # ActionRNNs.save_results(parsed, savefile, save_results)
         (save_results=save_results)
     end
 end
 
 # Creating an environment for to run in jupyter.
-
 function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
 
     out_pred_strg = zeros(Float32, num_steps, length(agent.horde))
@@ -169,7 +175,10 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
         out_preds = a.preds
         out_pred_strg[cur_step, :] .= out_preds
         out_err_strg[cur_step, :] = out_pred_strg[cur_step, :] .- RWU.oracle(env, outhorde_str);
-        out_loss_strg[cur_step] = a.loss
+        if !(a.update_state isa Nothing)
+            out_loss_strg[cur_step] = a.update_state.loss
+        end
+        
         if prgs
             ProgressMeter.next!(prg_bar)
         end
@@ -183,36 +192,3 @@ end
 
 
 end
-
-
-    # anim = Animation()
-    # visualize_callback = if parsed["visualize"]
-    #     (agent, step) -> begin
-    #         if step > num_steps - 10000
-    #             ActionRNNs.reset!(agent.model, agent.hidden_state_init)
-    #             agent.model.(agent.state_list)
-    #             hs = Flux.data(ActionRNNs.get_hidden_state(agent.model))
-    #             push!(hs_strg, hs)
-    #             ky = collect(keys(hs_strg[1]))
-    #             if length(hs_strg) > 10 && (step%4) == 0
-    #                 plot(
-    #                     heatmap(hcat(getindex.(hs_strg, ky)...)),
-    #                     plot(out_pred_strg[step-64:step, :]),
-    #                     plot(mean(out_err_strg[step-64:step, :].^2; dims=2)),
-    #                     layout=(3,1),
-    #                     legend=false)
-    #                 frame(anim)
-    #             end
-    #         end
-    #     end
-    # else
-    #     (agent, step) -> nothing
-    # end
-    # err_func! = (env, agent, (s_tp1, rew, term), (out_preds, step)) -> begin;
-    #     out_pred_strg[step, :] .= Flux.data(out_preds);
-    #     out_err_strg[step, :] = out_pred_strg[step, :] .- RWU.oracle(env, parsed["outhorde"]);
-    #     ActionRNNs.reset!(agent.model, agent.hidden_state_init)
-    #     agent.model.(agent.state_list)
-    #     size(ActionRNNs.get_hidden_state(agent.model[1]))
-    #     hidden_state[step, :] .= ActionRNNs.get_hidden_state(agent.model[1])
-    # end;

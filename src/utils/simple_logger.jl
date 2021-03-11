@@ -11,7 +11,7 @@ struct SimpleLogger{T}
 end
 
 get_data(sl::SimpleLogger) = sl.data
-getindex(sl::SimpleLogger, idx::Symbol) = sl.data[idx]
+Base.getindex(sl::SimpleLogger, idx::Symbol) = sl.data[idx]
 
 function (sl::SimpleLogger)(args...)
     for k ∈ keys(sl.f_map)

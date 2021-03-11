@@ -22,7 +22,6 @@ function PredOnlineAgent(out_horde,
                          opt,
                          τ,
                          feature_creator,
-                         feature_size,
                          acting_policy)
 
     state_list, init_state = begin

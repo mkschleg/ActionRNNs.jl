@@ -82,19 +82,24 @@ function update_batch!(chain,
     end
     
     ℒ = 0.0f0
+    ps = Flux.params(chain)
     reset!(chain, h_init)
-    grads = gradient(Flux.params(chain)) do
+    grads = gradient(ps) do
         
         preds = map(chain, state_seq)
         v_tp1 = dropgrad(preds[n])
 
-        ℒ = offpolicy_tdloss(ρ, preds[n-1], cumulants, discounts, v_tp1)
+        loss = offpolicy_tdloss(ρ, preds[n-1], cumulants, discounts, v_tp1)
+        ignore() do
+            ℒ = loss
+        end
+        loss
     end
     reset!(chain, h_init)
-    for weights in Flux.params(chain)
+    for weights in ps
         if !(grads[weights] === nothing)
             Flux.update!(opt, weights, grads[weights])
         end
     end
-    ℒ
+    UpdateState(ℒ, grads, Flux.params(chain), opt)
 end

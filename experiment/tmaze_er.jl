@@ -73,11 +73,11 @@ function construct_agent(env, parsed, rng)
                        Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
         elseif parsed["cell"] == "ARNN"
             Flux.Chain(
-                ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
+                ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, hs_learnable=parsed["hs_learnable"]),
                 Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
         elseif parsed["cell"] == "RNN"
             Flux.Chain(
-                ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, islearnable=parsed["hs_learnable"]),
+                ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, hs_learnable=parsed["hs_learnable"]),
                 Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
         else
             rnntype = getproperty(Flux, Symbol(parsed["cell"]))
@@ -132,7 +132,6 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
         
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
-        println(logger.data)
         while sum(logger.data.total_steps) <= num_steps
             usa = ActionRNNs.UpdateStateAnalysis(
                 (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
@@ -144,34 +143,31 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
             success = false
             max_episode_steps = min(max((num_steps - sum(logger[:total_steps])), 2), 10000)
             n = 0
-            total_rew, steps =
-                run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
-                    if progress
-                        pr_suc = if length(logger.data.successes) <= 1000
-                            mean(logger.data.successes)
-                        else
-                            mean(logger.data.successes[end-1000:end])
-                        end
-                        next!(prg_bar, showvalues=[(:episode, eps),
-                                                   (:successes, pr_suc),
-                                                   (:loss, usa[:avg_loss]),
-                                                   (:l1, usa[:l1]/n),
-                                                   (:action, a.action)])
+            total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
+                if progress
+                    pr_suc = if length(logger.data.successes) <= 1000
+                        mean(logger.data.successes)
+                    else
+                        mean(logger.data.successes[end-1000:end])
                     end
-                    success = success || (r == 4.0)
-                    if !(a.update_state isa Nothing)
-                        usa(a.update_state)
-                    end
-                    n+=1
+                    next!(prg_bar, showvalues=[(:episode, eps),
+                                               (:successes, pr_suc),
+                                               (:loss, usa[:avg_loss]),
+                                               (:l1, usa[:l1]/n),
+                                               (:action, a.action)])
                 end
-            # episode!(env, agent, rng, num_steps, sum(total_steps), parsed["progress"] ? prg_bar : nothing, nothing, eps)
-            
+                success = success || (r == 4.0)
+                if !(a.update_state isa Nothing)
+                    usa(a.update_state)
+                end
+                n+=1
+            end
             logger(total_rew, steps, success, usa)
             eps += 1
         end
         save_results = logger.data
-        (save_results = save_results)
-    end        
+        (;save_results = save_results)
+    end
 end
 
 

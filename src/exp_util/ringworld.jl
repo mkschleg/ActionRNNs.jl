@@ -201,7 +201,7 @@ end
 
 mutable struct StandardFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::StandardFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+(fc::StandardFeatureCreator)(s, a=nothing) = MinimalRLCore.create_features(fc, s, a)
 MinimalRLCore.create_features(fc::StandardFeatureCreator, s, a) =
     Float32[1.0, s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
 MinimalRLCore.create_features(fc::StandardFeatureCreator, s, a::Nothing) =
@@ -211,7 +211,7 @@ MinimalRLCore.feature_size(fc::StandardFeatureCreator) = 7
 
 mutable struct SansBiasFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::SansBiasFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+(fc::SansBiasFeatureCreator)(s, a=nothing) = MinimalRLCore.create_features(fc, s, a)
 MinimalRLCore.create_features(fc::SansBiasFeatureCreator, s, a) =
     Float32[s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
 MinimalRLCore.create_features(fc::SansBiasFeatureCreator, s, a::Nothing) =
@@ -220,7 +220,7 @@ MinimalRLCore.feature_size(fc::SansBiasFeatureCreator) = 6
 
 mutable struct OneHotFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::OneHotFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+(fc::OneHotFeatureCreator)(s, a=nothing) = MinimalRLCore.create_features(fc, s, a)
 MinimalRLCore.create_features(fc::OneHotFeatureCreator, s, a) =
     Float32[s[1], 1-s[1], a==1, a==2]
 MinimalRLCore.create_features(fc::OneHotFeatureCreator, s, a::Nothing) =
@@ -230,7 +230,7 @@ MinimalRLCore.feature_size(fc::OneHotFeatureCreator) = 4
 
 mutable struct SansActionFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::SansActionFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+(fc::SansActionFeatureCreator)(s, a=nothing) = MinimalRLCore.create_features(fc, s, a)
 MinimalRLCore.create_features(fc::SansActionFeatureCreator, s, a) =
     Float32[s[1], 1-s[1]]
 MinimalRLCore.create_features(fc::SansActionFeatureCreator, s, a::Nothing) =

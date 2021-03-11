@@ -91,8 +91,9 @@ end
 sample(er::SequenceReplay, batch_size, seq_length) = sample(Random.GLOBAL_RNG, er, batch_size, seq_length)
 
 function sample(rng::Random.AbstractRNG, er::SequenceReplay, batch_size, seq_length)
-    bs = rand(rng, 1:(length(er) + 1 - seq_length), batch_size)
-    [view(er, bs .+ (i-1)) for i ∈ 1:seq_length]
+    start_inx = rand(rng, 1:(length(er) + 1 - seq_length), batch_size)
+    e = [view(er, start_inx .+ (i-1)) for i ∈ 1:seq_length]
+    start_inx, e
 end
 
 mutable struct EpisodicSequenceReplay{CB} <: AbstractSequenceReplay

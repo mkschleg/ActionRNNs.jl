@@ -47,15 +47,11 @@ function PredERAgent(out_horde,
         end
     end
 
-    println(typeof(state_list))
-
-    hidden_state_init = get_initial_hidden_state(model[1])
-    println(hidden_state_init)
-    println(eltype(hidden_state_init))
+    hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
     replay = SequenceReplay(replay_size+τ-1,
-                            (Int, Float32, Int, Float32, Float32, Float32, Float32, Bool, eltype(hidden_state_init)),
-                            (1, feature_size, 1, feature_size, env_state_size, 1, 1, 1, length(hidden_state_init)),
-                            (:am1, :s, :a, :sp, :esp, :ap, :r, :t, :hs))
+                            (Int, Float32, Int, Float32, Float32, Float32, Float32, Bool, hs_type...),
+                            (1, feature_size, 1, feature_size, env_state_size, 1, 1, 1, hs_length...),
+                            (:am1, :s, :a, :sp, :esp, :ap, :r, :t, hs_symbol...))
 
 
     PredERAgent(TD(),
@@ -80,7 +76,7 @@ build_new_feat(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, state, action) whe
 build_new_feat(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, state, action) where {O, C, F, H, ER, Φ<:Tuple, Π, G} = 
     (action, agent.build_features(state, nothing))
 
-add_exp!(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, env_s_tp1, r, terminal, hs) where {O, C, F, H, ER, Φ, Π, G} = 
+add_exp!(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, env_s_tp1, r, terminal, hs...) where {O, C, F, H, ER, Φ, Π, G} = 
     push!(agent.replay,
           (agent.am1,
            agent.state_list[1],
@@ -92,7 +88,7 @@ add_exp!(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, env_s_tp1, r, terminal, 
            terminal,
            hs))
 
-add_exp!(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, env_s_tp1, r, terminal, hs) where {O, C, F, H, ER, Φ<:Tuple, Π, G}= 
+add_exp!(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, env_s_tp1, r, terminal, hs...) where {O, C, F, H, ER, Φ<:Tuple, Π, G}= 
     push!(agent.replay,
           (agent.am1,
            agent.state_list[1][2],
@@ -102,9 +98,7 @@ add_exp!(agent::PredERAgent{O, C, F, H, ER, Φ, Π, G}, env_s_tp1, r, terminal, 
            Float32(agent.action_prob),
            r,
            terminal,
-           hs))
-
-
+           hs...))
 
 
 function MinimalRLCore.start!(agent::PredERAgent, env_s_tp1, rng; kwargs...)
@@ -112,7 +106,6 @@ function MinimalRLCore.start!(agent::PredERAgent, env_s_tp1, rng; kwargs...)
     agent.action, agent.action_prob = agent.π(env_s_tp1, rng)
 
     fill!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-    # push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
     
     agent.hidden_state_init = get_initial_hidden_state(agent.model)
     agent.s_t = build_new_feat(agent, env_s_tp1, agent.action)
@@ -134,39 +127,8 @@ function MinimalRLCore.step!(agent::PredERAgent, env_s_tp1, r, terminal, rng; kw
                        terminal,
                        (agent.hidden_state_init[k] for k in keys(agent.hidden_state_init))...)
     
-    ℒ = 0.0f0
-    if length(agent.replay) >= agent.warm_up
-
-        
-        bs = rand(1:(length(agent.replay) + 1 - agent.τ), agent.batch_size)
-        exp = [view(agent.replay, bs .+ (i-1)) for i ∈ 1:agent.τ]
-
-        state_list = if eltype(agent.state_list) <: Tuple
-            sl = [(collect(exp[i].am1), collect(exp[i].s)) for i in 1:length(exp)]
-            push!(sl, (collect(exp[end].a), collect(exp[end].sp)))
-        else
-            sl = [exp[i].s for i in 1:length(exp)]
-            push!(sl, exp[end].sp)
-        end
-
-        sp1 = collect(exp[end].esp')
-
-        action = exp[end].a
-
-
-        hs = IdDict()
-        hs[agent.model[1]] = collect(exp[1].hs)
-
-        ℒ = update_batch!(agent.model,
-                          agent.horde,
-                          agent.opt,
-                          agent.lu,
-                          hs,
-                          # exp[1].hs,
-                          state_list,
-                          sp1,
-                          exp[end].a,
-                          exp[end].ap)
+    us = if length(agent.replay) >= agent.warm_up
+        update!(agent.replay, agent, rng)
     end
     # End update function
 
@@ -184,8 +146,37 @@ function MinimalRLCore.step!(agent::PredERAgent, env_s_tp1, r, terminal, rng; kw
 
     agent.action_prob = new_prob
 
-    return (preds=out_preds, h=cur_hidden_state, action=agent.action, loss=ℒ)
+    return (preds=out_preds, h=cur_hidden_state, action=agent.action, update_state=us)
 end
 
 
+function update!(er::SequenceReplay, agent::PredERAgent, rng)
+    # Sample from ER buffer.
+    start_inx, exp = sample(rng, agent.replay, agent.batch_size, agent.τ)
 
+    # Make batch.
+    state_list = if eltype(agent.state_list) <: Tuple
+        sl = [(collect(exp[i].am1), collect(exp[i].s)) for i in 1:length(exp)]
+        push!(sl, (collect(exp[end].a), collect(exp[end].sp)))
+    else
+        sl = [exp[i].s for i in 1:length(exp)]
+        push!(sl, exp[end].sp)
+    end
+
+    sp1 = collect(exp[end].esp')
+    hs = ActionRNNs.get_hs_from_experience(agent.model, exp)
+    
+    update_batch!(agent.model,
+                  agent.horde,
+                  agent.opt,
+                  agent.lu,
+                  hs,
+                  state_list,
+                  sp1,
+                  exp[end].a,
+                  exp[end].ap)
+end
+
+function update!(er::EpisodicSequenceReplay, agent::PredERAgent, rng)
+    throw("Not implemented!")
+end
