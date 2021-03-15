@@ -64,18 +64,13 @@ function update_batch!(chain,
                        reward,
                        terminal,
                        action_t,
-                       actual_seq_len,
-                       cb=nothing;
+                       actual_seq_len;
                        hs_learnable=true)
 
     ℒ = 0.0f0
     γ = lu.γ
     reset!(chain, h_init)
-    ps = if hs_learnable
-        Flux.params(chain, [h_v for (h_k, h_v) ∈ h_init]...)
-    else
-        Flux.params(chain)
-    end
+    ps = get_params(chain, h_init, hs_learnable)
 
     grads = gradient(ps) do
         preds = map(chain, state_seq)

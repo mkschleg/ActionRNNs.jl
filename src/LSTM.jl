@@ -25,7 +25,7 @@ function ActionLSTMCell(in::Integer, num_actions::Integer, out::Integer;
         [init(out, in) for l ∈ 1:num_actions],
         [init(out, out) for l in 1:num_actions],
         [init(out) for l ∈ 1:num_actions],
-        init(out*3, in),
+        init(out*3, in+num_actions),
         init(out*3, out),
         init(out*3),
         Flux.zeros(out), Flux.zeros(out), num_actions)
@@ -33,10 +33,6 @@ function ActionLSTMCell(in::Integer, num_actions::Integer, out::Integer;
     return cell
 end
 
-
-function _dont_learn_initial_state!(rnn::Flux.Recur{ActionLSTMCell})
-    rnn.init = Flux.data.(rnn.init)
-end
 
 get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:ActionLSTMCell} = deepcopy(rnn.init)
 

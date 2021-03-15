@@ -44,3 +44,11 @@ apply(::L2GradIntrospection, us::UpdateState) = begin
     l2_grad
 end
 apply(::LossIntrospection, us::UpdateState) = us.loss
+
+
+get_params(model, h_init, hs_learnable=false) = if hs_learnable
+        Flux.params(model, [h_v for (h_k, h_v) ∈ h_init]...)
+    else
+        Flux.params(model)
+    end
+
