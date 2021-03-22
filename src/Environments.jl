@@ -15,5 +15,8 @@ include("env/RingWorld.jl")
 export TMaze
 include("env/TMaze.jl")
 
+export VariableTMaze
+include("env/VariableTMaze.jl")
+
 # export ContFourRooms
 # include("env/ContFourRooms.jl")
