@@ -13,9 +13,9 @@ end
 get_data(sl::SimpleLogger) = sl.data
 Base.getindex(sl::SimpleLogger, idx::Symbol) = sl.data[idx]
 
-function (sl::SimpleLogger)(args...)
+function (sl::SimpleLogger)(args...; kwargs...)
     for k ∈ keys(sl.f_map)
-        push!(getindex(sl.data, k), sl.f_map[k](args...))
+        push!(getindex(sl.data, k), sl.f_map[k](args...; kwargs...))
     end
 end
 

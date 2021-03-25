@@ -20,10 +20,13 @@ function _reset!(m::Flux.Recur{T}, h_init) where {T<:Flux.LSTMCell}
     m.state = h_init
 end
 
-function contains_rnntype(m, rnn_type::Type)
-    is_rnn_type = Bool[]
-    foreach(x -> push!(is_rnn_type, x isa Flux.Recur && x.cell isa rnn_type), Flux.functor(m)[1])
-    return any(is_rnn_type)
+contains_rnntype(m, rnn_type) = contains_layer_type(m, rnn_type)
+
+function contains_layer_type(m::Flux.Chain, type::Type)
+    is_type = false
+    foreach(x -> is_type = is_type || (x isa Flux.Recur && x.cell isa type) || (x isa type),
+            Flux.functor(m)[1])
+    return is_type
 end
 
 function needs_action_input(m)

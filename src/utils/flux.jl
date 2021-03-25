@@ -53,16 +53,6 @@ function _init_optimizer(opt_type::Union{Type{ADAM}, Type{RADAM}, Type{NADAM}, T
 end
 
 
-
-# function construct_rnn(in::Integer, parsed::Dict, args...; kwargs...)
-#     kt = keytype(parsed)
-#     if parsed[kt("cell")] = "RNN"
-#         construct_rnn(in, parsed[kt("numhidden")], args...; islearnablekwargs...)
-#     else
-#         construct_rnn(parsed[kt("cell")], in, parsed[kt("numhidden")], args...; kwargs...)
-#     end
-# end
-
 function construct_rnn(cell::AbstractString, in::Integer, num_hidden::Integer, args...; kwargs...)
     cell_func = getproperty(Flux, Symbol(cell))
     return cell_func(in, num_hidden, args...; kwargs...)
