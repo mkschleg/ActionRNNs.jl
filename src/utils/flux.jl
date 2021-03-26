@@ -4,7 +4,6 @@ using ..Flux
 import ..ActionRNNs: ARNN
 
 
-
 function get_optimizer(parsed::Dict; opt_key="opt")
     opt_string = parsed[opt_key]
     get_optimizer(opt_string, parsed)

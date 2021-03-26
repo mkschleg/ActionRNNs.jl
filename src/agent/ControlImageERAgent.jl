@@ -1,12 +1,11 @@
 
-
 import Flux
 
 import Random
 import DataStructures
 import MinimalRLCore
 
-mutable struct ControlERAgent{O, C, F, H, ER, Φ,  Π} <: MinimalRLCore.AbstractAgent
+mutable struct ControlImageERAgent{O, C, F, H, ER, Φ,  Π} <: MinimalRLCore.AbstractAgent
     lu::LearningUpdate
     opt::O
     model::C
@@ -30,7 +29,7 @@ mutable struct ControlERAgent{O, C, F, H, ER, Φ,  Π} <: MinimalRLCore.Abstract
     cur_step::Int
 end
 
-function ControlERAgent(model,
+function ControlImageERAgent(model,
                         opt,
                         τ,
                         γ,
@@ -62,7 +61,7 @@ function ControlERAgent(model,
                                     (1, feature_size, 1, feature_size, 1, 1, 1, hs_length...),
                                     (:am1, :s, :a, :sp, :r, :t, :beg, hs_symbol...))
     
-    ControlERAgent(QLearning(γ),
+    ControlImageERAgent(QLearning(γ),
                    opt,
                    model,
                    feature_creator,
@@ -79,13 +78,13 @@ function ControlERAgent(model,
                    1, 1, 0.0, hs_learnable, true, 0)
 end
 
-build_new_feat(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, state, action) where {O, C, F, H, ER, Φ, Π} = 
+build_new_feat(agent::ControlImageERAgent{O, C, F, H, ER, Φ, Π}, state, action) where {O, C, F, H, ER, Φ, Π} = 
     agent.build_features(state, action)
 
-build_new_feat(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, state, action) where {O, C, F, H, ER, Φ<:Tuple, Π} = 
+build_new_feat(agent::ControlImageERAgent{O, C, F, H, ER, Φ, Π}, state, action) where {O, C, F, H, ER, Φ<:Tuple, Π} = 
     (action, agent.build_features(state, nothing))
 
-add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, hs...) where {O, C, F, H, ER, Φ, Π} = 
+add_exp!(agent::ControlImageERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, hs...) where {O, C, F, H, ER, Φ, Π} = 
     push!(agent.replay,
           (agent.am1,
            agent.state_list[1],
@@ -96,7 +95,7 @@ add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, 
            agent.beg,
            hs...))
 
-add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, hs...) where {O, C, F, H, ER, Φ<:Tuple, Π}= begin
+add_exp!(agent::ControlImageERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, hs...) where {O, C, F, H, ER, Φ<:Tuple, Π}= begin
     push!(agent.replay,
           (agent.am1,
            agent.state_list[1][2],
@@ -109,7 +108,7 @@ add_exp!(agent::ControlERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, 
 end
 
 
-function MinimalRLCore.start!(agent::ControlERAgent, env_s_tp1, rng; kwargs...)
+function MinimalRLCore.start!(agent::ControlImageERAgent, env_s_tp1, rng; kwargs...)
 
     agent.action = 1
     agent.am1 = 1
@@ -128,7 +127,7 @@ function MinimalRLCore.start!(agent::ControlERAgent, env_s_tp1, rng; kwargs...)
 end
 
 
-function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng; kwargs...)
+function MinimalRLCore.step!(agent::ControlImageERAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
     # new_action, new_prob = agent.π(env_s_tp1, rng)
     s = build_new_feat(agent, env_s_tp1, agent.action)
