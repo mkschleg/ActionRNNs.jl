@@ -48,6 +48,39 @@ function default_config()
     
 end
 
+function get_ann(parsed)
+
+    init_func = (dims...)->Flux.glorot_uniform(dims...)
+    
+    if parsed["cell"] == "FacARNN"
+        factors = parsed["factors"]
+        nh = parsed["numhidden"]
+        Flux.Chain(ActionRNNs.FacARNN(fs, 4, nh, factors; init=init_func),
+                   Flux.Dense(nh, length(get_actions(env)); initW=init_func))
+    elseif parsed["cell"] == "ARNN"
+        nh = parsed["numhidden"]
+        Flux.Chain(
+            ActionRNNs.ARNN(fs, 4, nh;
+                            init=init_func,
+                            hs_learnable=parsed["hs_learnable"]),
+            Flux.Dense(nh, length(get_actions(env)); initW=init_func))
+    elseif parsed["cell"] == "RNN"
+        nh = parsed["numhidden"]
+        Flux.Chain(
+            ActionRNNs.RNN(fs, nh;
+                           init=init_func,
+                           hs_learnable=parsed["hs_learnable"]),
+            Flux.Dense(nh, length(get_actions(env)); initW=init_func))
+    else
+        nh = parsed["numhidden"]
+        rnntype = getproperty(Flux, Symbol(parsed["cell"]))
+        Flux.Chain(rnntype(fs, nh; init=init_func),
+                   Flux.Dense(nh,
+                              length(get_actions(env));
+                              initW=init_func))
+    end
+end
+
 function construct_agent(env, parsed, rng)
 
     fc = if parsed["cell"] ∈ ["FacARNN", "ARNN"]
@@ -66,26 +99,7 @@ function construct_agent(env, parsed, rng)
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = begin
-        if parsed["cell"] == "FacARNN"
-            # throw("You know this doesn't work yet...")
-            Flux.Chain(ActionRNNs.FacARNN(fs, 4, parsed["numhidden"], parsed["factors"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-        elseif parsed["cell"] == "ARNN"
-            Flux.Chain(
-                ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, hs_learnable=parsed["hs_learnable"]),
-                Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-        elseif parsed["cell"] == "RNN"
-            Flux.Chain(
-                ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, hs_learnable=parsed["hs_learnable"]),
-                Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-        else
-            rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-            Flux.Chain(rnntype(fs, parsed["numhidden"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-            # end
-        end
-    end
+    chain = get_ann(parsed)
 
     ActionRNNs.ControlERAgent(chain,
                               opt,

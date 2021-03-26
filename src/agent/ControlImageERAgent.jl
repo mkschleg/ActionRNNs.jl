@@ -30,18 +30,23 @@ mutable struct ControlImageERAgent{O, C, F, H, ER, Φ,  Π} <: MinimalRLCore.Abs
 end
 
 function ControlImageERAgent(model,
-                        opt,
-                        τ,
-                        γ,
-                        feature_creator,
-                        feature_size,
-                        env_state_size,
-                        replay_size,
-                        warm_up,
-                        batch_size,
-                        update_time,
-                        acting_policy,
-                        hs_learnable)
+                             opt,
+                             τ,
+                             γ,
+                             
+                             feature_creator,
+                             feature_size,
+                             
+                             env_state_shape,
+                             env_state_type,
+                             
+                             replay_size,
+                             warm_up,
+                             batch_size,
+                             update_time,
+                             
+                             acting_policy,
+                             hs_learnable)
 
     
     state_list, init_state = begin
@@ -57,25 +62,29 @@ function ControlImageERAgent(model,
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
 
     replay = EpisodicSequenceReplay(replay_size+τ-1,
-                                    (Int, Float32, Int, Float32, Float32, Bool, Bool, hs_type...),
-                                    (1, feature_size, 1, feature_size, 1, 1, 1, hs_length...),
+                                    (Int, Int, Int, Int, Float32, Bool, Bool, hs_type...),
+                                    (1, 1, 1, 1, 1, 1, 1, hs_length...),
                                     (:am1, :s, :a, :sp, :r, :t, :beg, hs_symbol...))
+
+    sb = StateBuffer{env_state_type}(replay_size+τ*2, env_state_shape)
+    image_replay = ImageReplay(replay, sb)
+    
     
     ControlImageERAgent(QLearning(γ),
-                   opt,
-                   model,
-                   feature_creator,
-                   state_list,
-                   get_initial_hidden_state(model),
-                   replay,
-                   warm_up,
-                   batch_size,
-                   update_time,
-                   τ,
-                   init_state,
-                   acting_policy,
-                   γ,
-                   1, 1, 0.0, hs_learnable, true, 0)
+                        opt,
+                        model,
+                        feature_creator,
+                        state_list,
+                        get_initial_hidden_state(model),
+                        image_replay,
+                        warm_up,
+                        batch_size,
+                        update_time,
+                        τ,
+                        init_state,
+                        acting_policy,
+                        γ,
+                        1, 1, 0.0, hs_learnable, true, 0)
 end
 
 build_new_feat(agent::ControlImageERAgent{O, C, F, H, ER, Φ, Π}, state, action) where {O, C, F, H, ER, Φ, Π} = 
@@ -95,17 +104,21 @@ add_exp!(agent::ControlImageERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, termi
            agent.beg,
            hs...))
 
-add_exp!(agent::ControlImageERAgent{O, C, F, H, ER, Φ, Π}, env_s_tp1, r, terminal, hs...) where {O, C, F, H, ER, Φ<:Tuple, Π}= begin
-    push!(agent.replay,
-          (agent.am1,
-           agent.state_list[1][2],
-           agent.action,
-           agent.state_list[2][2],
-           r,
-           terminal,
-           agent.beg,
-           hs...))
-end
+add_exp!(agent::ControlImageERAgent{O, C, F, H, ER, Φ, Π},
+         env_s_tp1,
+         r,
+         terminal,
+         hs...) where {O, C, F, H, ER, Φ<:Tuple, Π}= 
+             push!(agent.replay,
+                   (agent.am1,
+                    agent.state_list[1][2],
+                    agent.action,
+                    agent.state_list[2][2],
+                    r,
+                    terminal,
+                    agent.beg,
+                    hs...))
+
 
 
 function MinimalRLCore.start!(agent::ControlImageERAgent, env_s_tp1, rng; kwargs...)

@@ -14,3 +14,6 @@ Flux.flatten(x::Tuple) = (x[1], Flux.flatten(x[2]))
 include("utils/device.jl")
 include("utils/replay.jl")
 include("utils/state_buffer.jl")
+
+export ImageReplay
+include("utils/image_replay.jl")

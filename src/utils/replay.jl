@@ -49,7 +49,6 @@ ExperienceReplayDef(size, obs_size, obs_type) =
 
 Base.length(er::ExperienceReplay) = length(er.buffer)
 Base.getindex(er::ExperienceReplay, idx) = er.buffer[idx]
-# Base.getindex(er::ExperienceReplay, idx::Symbol) = getindex(er.buffer, idx)
 Base.view(er::ExperienceReplay, idx) = @view er.buffer[idx]
 
 Base.push!(er::ExperienceReplay, experience) = push!(er.buffer, experience)
@@ -233,6 +232,9 @@ function sample(rng::Random.AbstractRNG,
     start_inx, exp
     # padding and batching handled by agent.
 end
+
+
+
 
 # mutable struct OnlineReplay{CB<:DataStructures.CircularBuffer, T<:Tuple} <: AbstractReplay
 #     buffer::CB
