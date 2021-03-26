@@ -11,7 +11,7 @@ glorot_normal(rng::Random.AbstractRNG, dims...) = randn(rng, Float32, dims...) .
 
 (l::Flux.Dense)(x::Tuple) = (x[1], l(x[2]))
 (l::Flux.Conv)(x::Tuple) = (x[1], l(x[2]))
+Flux.flatten(x::Tuple) = (x[1], Flux.flatten(x[2]))
 
-include("utils/flux.jl")
 include("utils/replay.jl")
 include("utils/state_buffer.jl")

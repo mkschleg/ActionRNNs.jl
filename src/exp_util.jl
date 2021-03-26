@@ -11,3 +11,4 @@ include("exp_util/tmaze.jl")
 include("exp_util/experiment.jl")
 
 include("utils/simple_logger.jl")
+include("utils/flux.jl")
