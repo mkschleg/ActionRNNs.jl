@@ -1,8 +1,6 @@
 module FluxUtils
 
 using ..Flux
-import ..ActionRNNs: ARNN
-
 
 function get_optimizer(parsed::Dict; opt_key="opt")
     opt_string = parsed[opt_key]
@@ -49,16 +47,6 @@ function _init_optimizer(opt_type::Union{Type{ADAM}, Type{RADAM}, Type{NADAM}, T
     catch
         throw("$(opt_type) needs: eta (float), and beta ((float, float)), or (beta_m, beta_v))")
     end
-end
-
-
-function construct_rnn(cell::AbstractString, in::Integer, num_hidden::Integer, args...; kwargs...)
-    cell_func = getproperty(Flux, Symbol(cell))
-    return cell_func(in, num_hidden, args...; kwargs...)
-end
-
-function construct_action_rnn(in::Integer, num_actions, num_hidden, args...; kwargs...)
-    return ARNN(in, num_actions, num_hidden, args...; kwargs...)
 end
 
 function get_activation(act::AbstractString)

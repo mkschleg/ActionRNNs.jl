@@ -98,7 +98,7 @@ else
     (Wx = m.Wx, Wh = m.Wh, b = m.b)
 end
 
-function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A<:AbstractArray{<:AbstractFloat, 1}}
+function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A<:AbstractArray{<:AbstractFloat}}
 
     @inbounds new_h =
         m.σ.((@view m.Wx[:, :, x[1]])*x[2] + (@view m.Wh[:, :, x[1]])*h + (@view m.b[:, x[1]]))
@@ -172,12 +172,11 @@ end
 
 
 function Base.show(io::IO, l::ARNNCell)
-  print(io, "ARNNCell(", size(l.Wx, 2), ", ", size(l.Wx, 1))
+  print(io, "ARNNCell(", size(l.Wx, 2), ", ", size(l.Wx, 3), ", ", size(l.Wx, 1))
   l.σ == identity || print(io, ", ", l.σ)
   print(io, ")")
 end
 
-(l::Flux.Dense)(x::T) where {T<:Tuple} = (x[2], l(x[1]))
 
 
 @doc raw"""
