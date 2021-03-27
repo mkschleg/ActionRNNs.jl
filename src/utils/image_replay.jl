@@ -23,6 +23,10 @@ function get_raw_image(er::ImageReplay, s)
     er.state_buffer[s]
 end
 
+function proc_state(er::ImageReplay, s)
+    s |> er.image_preproc |> er.image_postproc
+end
+
 Base.length(er::ImageReplay) = length(er.replay)
 function Base.getindex(er::ImageReplay, idx)
     experience = er.replay[idx]
@@ -45,7 +49,6 @@ function start_statebuffer!(er::ImageReplay, s)
 end
 
 function Base.push!(er::ImageReplay, experience)
-
     s_idx = laststate(er.state_buffer)
     push!(er.state_buffer, er.image_preproc(experience.sp))
     sp_idx = laststate(er.state_buffer)
@@ -72,23 +75,18 @@ function make_experience(er::ImageReplay{<:AbstractSequenceReplay}, expr)
         elseif k == :sp
             [get_raw_image(er, seq[end].sp) for seq ∈ expr]
         elseif k == :a
-            l = maximum(length.(expr))
-            [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], l, one(expr[1][1].a[])) for seq in expr]
+            l = maximum(length.(expr)) + 1
+            temp = [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], l, one(expr[1][1].a[])) for seq in expr]
+            [[temp[b][t] for b ∈ 1:length(temp)] for t ∈ 1:length(temp[1])]
+        elseif length(expr[1][1][k]) > 1
+            temp = [[seqi_j[k] for seqi_j ∈ seq] for seq in expr]
         else
-            l = maximum(length.(expr))
-            [rpad([seqi_j[k][] for seqi_j ∈ seq], l, one(expr[1][1][k][])) for seq in expr]
+            temp = [[seqi_j[k][] for seqi_j ∈ seq] for seq in expr]
         end
     end
 
-
-    
-    # do batching.
-    # get_state(seq) = get_image(er, seq.s)
-    # s_1 = Flux.batchseq([[get_state.(seq); [seq[end].sp]] for seq in expr], zero(expr[1][1].s))
-    # a_1 = [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], length(s_1), 1) for seq in expr]
-    # [([a_1[b][t] for b ∈ 1:length(a_1)], st) for (t, st) ∈ enumerate(s_1)]
     ks = keys(expr[1][1])
-    (; zip(ks, [get_expr(k, expr) for k ∈ ks])...)
+    length.(expr), (; zip(ks, [get_expr(k, expr) for k ∈ ks])...)
 end
 
 function make_experience(er::ImageReplay, experience)
@@ -98,6 +96,6 @@ end
 sample(er::ImageReplay, batch_size, args...) = sample(Random.GLOBAL_RNG, er, batch_size, args...)
 function sample(rng::Random.AbstractRNG, er::ImageReplay, batch_size, args...)
     exp_s_idx, experience = sample(rng, er.replay, batch_size, args...)
-    make_experience(er, experience)
+    exp_s_idx, make_experience(er, experience)
 end
 

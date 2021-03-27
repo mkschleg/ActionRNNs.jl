@@ -40,6 +40,7 @@ _get_data_row_view(x::Array{T, 5}, idx) where {T} = @view x[:, :, :, :, idx]
 _set_data_row!(x::Array{T, 1}, d::T, idx) where {T} = x[idx] = d
 _set_data_row!(x::Array{T, 1}, d::Array{T, 1}, idx) where {T} = x[idx] = d[1]
 _set_data_row!(x::Array{T, 2}, d::Array{T, 1}, idx) where {T} = x[:, idx] .= d
+_set_data_row!(x::Array{T, 2}, d::Array{T, 2}, idx) where {T} = x[:, idx] .= reshape(d, :)
 _set_data_row!(x::Array{T, 3}, d::Array{T, 2}, idx) where {T} = x[:, :, idx] .= d
 _set_data_row!(x::Array{T, 4}, d::Array{T, 3}, idx) where {T} = x[:, :, :, idx] .= d
 _set_data_row!(x::Array{T, 5}, d::Array{T, 4}, idx) where {T} = x[:, :, :, :, idx] .= d

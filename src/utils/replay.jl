@@ -223,10 +223,9 @@ sample(er::EpisodicSequenceReplay,
 function sample(rng::Random.AbstractRNG,
                 er::EpisodicSequenceReplay,
                 batch_size,
-                min_seq_length,
-                max_seq_length=min_seq_length)
+                max_seq_length)
     # get valid starting indicies
-    valid_inx = get_valid_indicies(er, min_seq_length)
+    valid_inx = get_valid_indicies(er, 1)
     start_inx = rand(rng, valid_inx, batch_size)
     exp = [get_sequence(er, si, max_seq_length) for si ∈ start_inx]
     start_inx, exp

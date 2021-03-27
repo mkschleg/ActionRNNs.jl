@@ -1,9 +1,9 @@
 using Colors
 
-mutable struct ImageTMaze{TM, RS, D, L} <: AbstractEnvironment
+mutable struct ImageTMaze{TM, L} <: AbstractEnvironment
     env::TM
-    r_state::RS
-    data::D
+    r_state::Array{UInt8, 3}
+    data::Vector{Array{UInt8, 3}}
     labels::L
     l_idx::Int
 end
@@ -17,21 +17,23 @@ end
 
 function ImageTMaze(size)
     d = Flux.Data.MNIST.images()
+    d_r = [collect(reshape(reinterpret(UInt8, d[i]), 28, 28, 1)) for i ∈ 1:length(d)]
     l = Flux.Data.MNIST.labels()
     ImageTMaze(
         TMaze(size),
-        zero(d[1]),
-        d, l, 0
+        zero(d_r[1]),
+        d_r, l, 0
     )
 end
 
 function ImageVariableTMaze(size)
     d = Flux.Data.MNIST.images()
+    d_r = [collect(reshape(reinterpret(UInt8, d[i]), 28, 28, 1)) for i ∈ 1:length(d)]
     l = Flux.Data.MNIST.labels()
     ImageTMaze(
         VariableTMaze(size),
-        zero(d[1]),
-        d, l, 0
+        zero(d_r[1]),
+        d_r, l, 0
     )
 end
    
@@ -49,11 +51,11 @@ end
 
 function MinimalRLCore.environment_step!(env::ImageTMaze, action::Int, rng=Random.GLOBAL_RNG)
     MinimalRLCore.environment_step!(env.env, action, rng)
-    env.r_state .= Gray{Colors.N0f8}.(reinterpret.(Colors.N0f8, (rand(Random.GLOBAL_RNG, UInt8, 28, 28))))
+    env.r_state .= rand(Random.GLOBAL_RNG, UInt8, 28, 28, 1)
 end
 
 
-obs_dims(env::ImageTMaze) = (28, 28)
+obs_dims(env::ImageTMaze) = (28, 28, 1)
 
 function MinimalRLCore.get_state(env::ImageTMaze) # -> get state of agent
     state = env.env.state
@@ -61,7 +63,7 @@ function MinimalRLCore.get_state(env::ImageTMaze) # -> get state of agent
     if state.x == 1
         env.data[env.l_idx]
     elseif state.x == sze
-        ones(Colors.Gray{Colors.N0f8}, obs_dims(env)...)
+        fill(0xff, obs_dims(env)...)
     else
         env.r_state
     end
