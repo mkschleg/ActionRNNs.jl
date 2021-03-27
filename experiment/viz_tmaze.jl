@@ -50,7 +50,7 @@ function get_ann(parsed, image_dims, rng)
 
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
 
-    cl = Flux.Conv((2,2), 1 => 4, relu)
+    cl = Flux.Conv((4, 4), 1 => 4, relu; stride=2)
     fs = prod(Flux.outdims(cl, image_dims))*4
     nh = parsed["numhidden"]
     
