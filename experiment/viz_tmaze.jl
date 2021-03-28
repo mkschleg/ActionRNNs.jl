@@ -78,7 +78,7 @@ function get_ann(parsed, image_dims, rng)
         Flux.Chain(
             cl,
             Flux.flatten,
-            ActionRNNs.RNN(fs, nh;
+            Flux.RNN(fs, nh;
                      init=init_func),
                            # hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, 4; initW=init_func))
