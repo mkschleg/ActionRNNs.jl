@@ -150,7 +150,7 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
         τ = agent.τ
         batch_size = agent.batch_size
 
-        exp_idx, exp = sample(rng, agent.replay, batch_size, 2, τ)
+        exp_idx, exp = sample(rng, agent.replay, batch_size, τ)
 
         s = if eltype(agent.state_list) <: Tuple
             get_state(seq) = seq.s

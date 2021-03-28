@@ -216,9 +216,8 @@ end
 
 sample(er::EpisodicSequenceReplay,
        batch_size,
-       min_seq_length,
-       max_seq_length=min_seq_length) =
-           sample(Random.GLOBAL_RNG, er, batch_size, max_seq_length, max_seq_length)
+       max_seq_length) =
+           sample(Random.GLOBAL_RNG, er, batch_size, max_seq_length)
 
 function sample(rng::Random.AbstractRNG,
                 er::EpisodicSequenceReplay,
