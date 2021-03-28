@@ -9,11 +9,11 @@ using Tullio
 hidden_learnable(rnn) = true
 hidden_learnable(rnn::Flux.Recur) = hidden_learnable(rnn.cell)
 
-Flux.trainable(m::Flux.Recur) = if hidden_learnable(m)
-    (cell = m.cell, init=m.init)
-else
-    (cell = m.cell,)
-end
+# Flux.trainable(m::Flux.Recur) = if hidden_learnable(m)
+#     (cell = m.cell, init=m.init)
+# else
+#     (cell = m.cell,)
+# end
 
 mutable struct AC_RNNCell{F,A,V}
     σ::F
@@ -37,7 +37,7 @@ function (m::AC_RNNCell)(h, x)
   return h, h
 end
 
-Flux.hidden(m::AC_RNNCell) = m.h
+# Flux.hidden(m::AC_RNNCell) = m.h
 Flux.@functor AC_RNNCell
 
 function Base.show(io::IO, l::AC_RNNCell)
@@ -90,7 +90,7 @@ ARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ
 
 hidden_learnable(rnn::ARNNCell) = rnn.islearnable
 
-Flux.hidden(m::ARNNCell) = m.h
+# Flux.hidden(m::ARNNCell) = m.h
 Flux.@functor ARNNCell
 ARNN(args...; kwargs...) = Flux.Recur(ARNNCell(args...; kwargs...))
 Flux.trainable(m::ARNNCell) = if  hidden_learnable(m)
@@ -199,7 +199,7 @@ function (m::FacARNNCell)(h, x::Tuple{A, O}) where {A, O}
     return new_h, new_h
 end
 
-Flux.hidden(m::FacARNNCell) = m.h
+# Flux.hidden(m::FacARNNCell) = m.h
 Flux.@functor FacARNNCell
 
 Flux.trainable(m::FacARNNCell) = if  hidden_learnable(m)

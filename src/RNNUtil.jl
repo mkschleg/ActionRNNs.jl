@@ -71,8 +71,8 @@ function get_initial_hidden_state(c)
     h_state
 end
 
-get_initial_hidden_state(rnn::Flux.Recur{T}) where {T} = rnn.init
-get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = rnn.init
+get_initial_hidden_state(rnn::Flux.Recur{T}) where {T} = rnn.cell.state0
+get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = rnn.cell.state0
 
 function find_layers_with_eq(m, eq)
     layer_indecies = Union{Int, Tuple}[]
@@ -89,7 +89,7 @@ function find_layers_with_eq(m, eq)
     return layer_indecies
 end
 
-tuple_hidden_state(rnn::Flux.Recur) = Flux.hidden(rnn.cell) isa Tuple
+tuple_hidden_state(rnn::Flux.Recur) = rnn.state isa Tuple
 
 
 hs_symbol_layer(l, idx) = if tuple_hidden_state(l)
@@ -130,12 +130,13 @@ function get_hs_from_experience(model, exp::NamedTuple, device=CPU())
 
     rnn_idx = find_layers_with_eq(model, (l)->l isa Flux.Recur)
     for idx in rnn_idx
+        init_hs = get_initial_hidden_state(model[idx])
         if tuple_hidden_state(model[idx])
             throw("How did you get here?")
         else
             hs_symbol = hs_symbol_layer(model[idx], idx)
             if :beg ∈ keys(exp)
-                hs[model[idx]] = device(hcat([(exp.beg[b][1] ? model[idx].init : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...))
+                hs[model[idx]] = device(hcat([(exp.beg[b][1] ? init_hs : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...))
             else
             end
         end
@@ -152,8 +153,9 @@ function get_hs_from_experience(model, exp)
             throw("How did you get here?")
         else
             hs_symbol = hs_symbol_layer(model[idx], idx)
+            init_hs = get_initial_hidden_state(model[idx])
             if :beg ∈ keys(exp[1][1])
-                hs[model[idx]] = hcat([(seq[1].beg[1] ? model[idx].init : getindex(seq[1], hs_symbol)) for seq in exp]...)
+                hs[model[idx]] = hcat([(seq[1].beg[1] ? init_hs : getindex(seq[1], hs_symbol)) for seq in exp]...)
             else
                 if exp[1] isa NamedTuple
                     hs[model[idx]] = getindex(exp[1], hs_symbol)
@@ -176,7 +178,7 @@ function modify_hs_in_er!(replay::ImageReplay, model, exp, exp_idx, hs)
             throw("How did you get here?")
         else
             hs_symbol = ActionRNNs.hs_symbol_layer(model[ridx], ridx)
-            init_grad = zero(model[ridx].init)
+            init_grad = zero(get_initial_hidden_state(model[ridx]))
             init_grad_n = 0
             for (i, idx) ∈ enumerate(exp_idx)
                 if exp.beg[i][1] == true
@@ -191,7 +193,7 @@ function modify_hs_in_er!(replay::ImageReplay, model, exp, exp_idx, hs)
                 end
             end
             if init_grad_n != 0
-                model[ridx].init .= init_grad ./ init_grad_n
+                model[ridx].cell.state0 .= init_grad ./ init_grad_n
             end
         end
     end
@@ -207,7 +209,7 @@ function modify_hs_in_er!(replay, model, exp, exp_idx, hs)
             throw("How did you get here?")
         else
             hs_symbol = ActionRNNs.hs_symbol_layer(model[ridx], ridx)
-            init_grad = zero(model[ridx].init)
+            init_grad = zero(get_initial_hidden_state(model[ridx]))
             init_grad_n = 0
             for (i, idx) ∈ enumerate(exp_idx)
                 if exp[i][1].beg == true
@@ -222,7 +224,7 @@ function modify_hs_in_er!(replay, model, exp, exp_idx, hs)
                 end
             end
             if init_grad_n != 0
-                model[ridx].init .= init_grad ./ init_grad_n
+                model[ridx].cell.state0 .= init_grad ./ init_grad_n
             end
         end
     end

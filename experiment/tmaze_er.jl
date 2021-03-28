@@ -48,7 +48,7 @@ function default_config()
     
 end
 
-function get_ann(parsed)
+function get_ann(parsed, fs, env)
 
     init_func = (dims...)->Flux.glorot_uniform(dims...)
     
@@ -67,9 +67,9 @@ function get_ann(parsed)
     elseif parsed["cell"] == "RNN"
         nh = parsed["numhidden"]
         Flux.Chain(
-            ActionRNNs.RNN(fs, nh;
-                           init=init_func,
-                           hs_learnable=parsed["hs_learnable"]),
+            Flux.RNN(fs, nh;
+                           init=init_func),
+                           # hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, length(get_actions(env)); initW=init_func))
     else
         nh = parsed["numhidden"]
@@ -99,7 +99,7 @@ function construct_agent(env, parsed, rng)
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed)
+    chain = get_ann(parsed, fs, env)
 
     ActionRNNs.ControlERAgent(chain,
                               opt,
