@@ -5,7 +5,8 @@ import Random
 import DataStructures
 import MinimalRLCore
 
-mutable struct ControlImageERAgent{O, C, H, ER, Φ, Φ2,  Π} <: MinimalRLCore.AbstractAgent
+mutable struct ControlImageERAgent{DEV, O, C, H, ER, Φ, Φ2,  Π} <: MinimalRLCore.AbstractAgent
+    device::DEV
     lu::LearningUpdate
     opt::O
     model::C
@@ -33,27 +34,34 @@ function ControlImageERAgent(model,
                              opt,
                              τ,
                              γ,
-                             
-                             # feature_creator,
-                             # feature_size,
-                             
+                                  
                              env_state_shape,
                              env_state_type,
-                             
+                                  
                              replay_size,
                              warm_up,
                              batch_size,
                              update_time,
-                             
+                                  
                              acting_policy,
                              hs_learnable)
 
+    dev = Device(model)
+    @info dev
     
     state_list, init_state = begin
-        if contains_rnntype(model, ActionRNNs.AbstractActionRNN)
-            (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 4}}}(2), (0, zeros(Float32, 1, 1)))
+        if dev isa CPU
+            if contains_rnntype(model, ActionRNNs.AbstractActionRNN)
+                (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 4}}}(2), (0, zeros(Float32, 1, 1, 1, 1)))
+            else
+                (DataStructures.CircularBuffer{Array{Float32, 4}}(2), zeros(Float32, 1, 1, 1, 1))
+            end
         else
-            (DataStructures.CircularBuffer{Array{Float32, 4}}(2), zeros(Float32, 1, 1))
+            if contains_rnntype(model, ActionRNNs.AbstractActionRNN)
+                (DataStructures.CircularBuffer{Tuple{Int64, Flux.CUDA.CuArray{Float32, 4}}}(2), (0, zeros(Float32, 1, 1, 1, 1) |> gpu))
+            else
+                (DataStructures.CircularBuffer{Flux.CUDA.CuArray{Float32, 4}}(2), zeros(Float32, 1, 1, 1, 1) |> gpu)
+            end
         end
     end
 
@@ -69,8 +77,11 @@ function ControlImageERAgent(model,
     sb = StateBuffer{env_state_type}(replay_size+τ*2, env_state_shape)
     
     image_replay = ImageReplay(replay, sb, identity, (img) -> Float32.(img .// 255))
+
+    dev = Device(model)
     
-    ControlImageERAgent(QLearning(γ),
+    ControlImageERAgent(dev,
+                        QLearning(γ),
                         opt,
                         model,
                         state_list,
@@ -115,7 +126,7 @@ function MinimalRLCore.start!(agent::ControlImageERAgent, env_s_tp1, rng; kwargs
     agent.action = 1
     agent.am1 = 1
     agent.beg = true
-    s_t = build_new_feat(agent, env_s_tp1, agent.action)
+    s_t = agent.device(build_new_feat(agent, env_s_tp1, agent.action))
     Flux.reset!(agent.model)
     values = agent.model(s_t)
     agent.action = sample(agent.π, values, rng)
@@ -135,7 +146,7 @@ end
 function MinimalRLCore.step!(agent::ControlImageERAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
     # new_action, new_prob = agent.π(env_s_tp1, rng)
-    s = build_new_feat(agent, env_s_tp1, agent.action)
+    s = build_new_feat(agent, env_s_tp1, agent.action) |> gpu
     push!(agent.state_list, s)
     is_full = DataStructures.isfull(agent.state_list)
 
@@ -144,7 +155,7 @@ function MinimalRLCore.step!(agent::ControlImageERAgent, env_s_tp1, r, terminal,
                        env_s_tp1,
                        r,
                        terminal,
-                       (agent.hidden_state_init[k] for k in keys(agent.hidden_state_init))...)
+                       (agent.hidden_state_init[k] |> cpu for k in keys(agent.hidden_state_init))...)
 
     agent.beg = false
     
@@ -161,12 +172,12 @@ function MinimalRLCore.step!(agent::ControlImageERAgent, env_s_tp1, r, terminal,
         a = [exp.a[i][end] for i in 1:batch_size]
 
         s = if eltype(agent.state_list) <: Tuple
-            [(exp.am1[i], exp.s[i]) for i in 1:length(exp.s)]
+            [(exp.am1[i], agent.device(exp.s[i])) for i in 1:length(exp.s)]
         else
-            exp.s
+            agent.device(exp.s)
         end
 
-        hs = ActionRNNs.get_hs_from_experience(agent.model, exp)
+        hs = ActionRNNs.get_hs_from_experience(agent.model, exp, agent.device)
 
         us = update_batch!(agent.model,
                            agent.opt,

@@ -2,6 +2,7 @@
 # Sepcifying a action-conditional RNN Cell
 using Flux
 # using OMEinsum
+using OMEinsum
 using Tullio
 
 
@@ -14,7 +15,7 @@ else
     (cell = m.cell,)
 end
 
-mutable struct RNNCell{F,A,V}
+mutable struct AC_RNNCell{F,A,V}
     σ::F
     Wi::A
     Wh::A
@@ -23,24 +24,24 @@ mutable struct RNNCell{F,A,V}
     h_learnable::Bool
 end
 
-hidden_learnable(rnn::RNNCell) = rnn.h_learnable
+hidden_learnable(rnn::AC_RNNCell) = rnn.h_learnable
 
-RNNCell(in::Integer, out::Integer, σ = tanh;
+AC_RNNCell(in::Integer, out::Integer, σ = tanh;
         init = glorot_uniform, hs_learnable=true) =
-  RNNCell(σ, init(out, in), init(out, out),
+  AC_RNNCell(σ, init(out, in), init(out, out),
           init(out), Flux.zeros(out), hs_learnable)
 
-function (m::RNNCell)(h, x)
+function (m::AC_RNNCell)(h, x)
   σ, Wi, Wh, b = m.σ, m.Wi, m.Wh, m.b
   h = σ.(Wi*x .+ Wh*h .+ b)
   return h, h
 end
 
-Flux.hidden(m::RNNCell) = m.h
-Flux.@functor RNNCell
+Flux.hidden(m::AC_RNNCell) = m.h
+Flux.@functor AC_RNNCell
 
-function Base.show(io::IO, l::RNNCell)
-  print(io, "RNNCell(", size(l.Wi, 2), ", ", size(l.Wi, 1))
+function Base.show(io::IO, l::AC_RNNCell)
+  print(io, "AC_RNNCell(", size(l.Wi, 2), ", ", size(l.Wi, 1))
   l.σ == identity || print(io, ", ", l.σ)
   print(io, ")")
 end
@@ -50,9 +51,9 @@ end
 The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
 output fed back into the input each time step.
 """
-RNN(a...; ka...) = Flux.Recur(RNNCell(a...; ka...))
+RNN(a...; ka...) = Flux.Recur(AC_RNNCell(a...; ka...))
 
-Flux.trainable(m::RNNCell) = if hidden_learnable(m)
+Flux.trainable(m::AC_RNNCell) = if hidden_learnable(m)
     (Wx = m.Wi, Wh = m.Wh, b = m.b, h = m.h)
 else
     (Wx = m.Wi, Wh = m.Wh, b = m.b)
@@ -106,7 +107,7 @@ function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A<:AbstractArray{<:
     return new_h, new_h
 end
 
-function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Array{<:Integer, 1}, A<:Array{<:AbstractFloat, 2}}
+function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Array{<:Integer, 1}, A<:AbstractArray{<:AbstractFloat, 2}}
     # @info "Here"
     wx = ein_mul((@view m.Wx[:, :, x[1]]), x[2])
     wh = ein_mul((@view m.Wh[:, :, x[1]]), h)
@@ -118,23 +119,9 @@ function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Array{<:Integer, 1}, A<:Arra
 end
 
 function ein_mul(x::AbstractArray{<:Number, 3}, y::AbstractArray{<:Number, 2})
-    @tullio ret[i, k] := x[i, j, k]*y[j,k]
+    @ein ret[i, k] := x[i, j, k] * y[j, k]
 end
 
-
-function _contract(W::AbstractArray{<:Number, 3}, x1::AbstractArray{<:Number, 2}, x2::AbstractArray{<:Number, 2})
-    sze_W = size(W)
-    Wx2 = reshape(reshape(W, :, sze_W[end])*x2, sze_W[1:2]..., :)
-    throw("Not Implemented")
-    # @ein ret[i, l] := Wx2[i, j, l]*x1[j, l]
-end
-
-function _contract(W::AbstractArray{<:Number, 3}, x1::AbstractArray{<:Number, 1}, x2::AbstractArray{<:Number, 2})
-    pdW = permutedims(W, (1, 3, 2))
-    sze_W = size(pdW)
-    Wx1 = reshape(reshape(pdW, :, sze_W[end])*x1, sze_W[1:2]...)
-    Wx1*x2
-end
 
 function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFloat, 2}, A}
     a = x[1]
@@ -147,29 +134,10 @@ function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFl
     new_h, new_h
 end
 
-function (m::ARNNCell)(h, x::Tuple{Array{<:Integer, 1}, A}) where {A}
-    if length(size(h)) == 1
-        @inbounds new_h = m.σ.(
-            hcat((((@view m.Wx[:, :, x[1][i]])*x[2][:, i]) +
-                  ((@view m.Wh[:, :, x[1][i]])*h) +
-                  (@view m.b[:, x[1][i]]) for i in 1:length(x[1]))...))
-        return new_h, new_h
-    else
-        @inbounds new_h = m.σ.(
-            hcat((((@view m.Wx[:, :, x[1][i]])*x[2][:, i]) +
-                  ((@view m.Wh[:, :, x[1][i]])*h[:, i]) +
-                  (@view m.b[:, x[1][i]]) for i in 1:length(x[1]))...))
-
-        return new_h, new_h
-    end
-end
-
-
 function reduce_func(m::ARNNCell, x, h, i)
     @inbounds x[1][i]*view(m.Wx, :, :, i)*x[2] +
         x[1][i]*view(m.Wh, :, :, i)*h
 end
-
 
 function Base.show(io::IO, l::ARNNCell)
   print(io, "ARNNCell(", size(l.Wx, 2), ", ", size(l.Wx, 3), ", ", size(l.Wx, 1))

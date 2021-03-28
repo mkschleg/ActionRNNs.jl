@@ -79,8 +79,8 @@ function get_ann(parsed, image_dims, rng)
             cl,
             Flux.flatten,
             ActionRNNs.RNN(fs, nh;
-                           init=init_func,
-                           hs_learnable=parsed["hs_learnable"]),
+                     init=init_func),
+                           # hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, 4; initW=init_func))
         
     else
@@ -112,7 +112,7 @@ function construct_agent(env, parsed, rng)
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
-    chain = get_ann(parsed, (28,28), rng)
+    chain = get_ann(parsed, (28,28), rng) |> gpu
 
     ActionRNNs.ControlImageERAgent(chain,
                                    opt,

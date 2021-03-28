@@ -125,45 +125,46 @@ function get_hs_details_for_er(model)
 end
 
 
-function get_hs_from_experience(model, exp)
+function get_hs_from_experience(model, exp::NamedTuple, device=CPU())
     hs = IdDict()
 
-    if exp isa NamedTuple
-        rnn_idx = find_layers_with_eq(model, (l)->l isa Flux.Recur)
-        for idx in rnn_idx
-            if tuple_hidden_state(model[idx])
-                throw("How did you get here?")
+    rnn_idx = find_layers_with_eq(model, (l)->l isa Flux.Recur)
+    for idx in rnn_idx
+        if tuple_hidden_state(model[idx])
+            throw("How did you get here?")
+        else
+            hs_symbol = hs_symbol_layer(model[idx], idx)
+            if :beg ∈ keys(exp)
+                hs[model[idx]] = device(hcat([(exp.beg[b][1] ? model[idx].init : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...))
             else
-                hs_symbol = hs_symbol_layer(model[idx], idx)
-                if :beg ∈ keys(exp)
-                    hs[model[idx]] = hcat([(exp.beg[b][1] ? model[idx].init : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...)
-                else
-                end
             end
         end
-        hs
-    else
-        rnn_idx = find_layers_with_eq(model, (l)->l isa Flux.Recur)
-        for idx in rnn_idx
-            if tuple_hidden_state(model[idx])
-                throw("How did you get here?")
-            else
-                hs_symbol = hs_symbol_layer(model[idx], idx)
-                if :beg ∈ keys(exp[1][1])
-                    hs[model[idx]] = hcat([(seq[1].beg[1] ? model[idx].init : getindex(seq[1], hs_symbol)) for seq in exp]...)
-                else
-                    if exp[1] isa NamedTuple
-                        hs[model[idx]] = getindex(exp[1], hs_symbol)
-                    else
-                        hs[model[idx]] = hcat([(getindex(seq[1], hs_symbol)) for seq in exp]...)
-                    end
-                end
-            end
-        end
-        hs
     end
+    hs
+
 end
 
+function get_hs_from_experience(model, exp)
+    hs = IdDict()
+    rnn_idx = find_layers_with_eq(model, (l)->l isa Flux.Recur)
+    for idx in rnn_idx
+        if tuple_hidden_state(model[idx])
+            throw("How did you get here?")
+        else
+            hs_symbol = hs_symbol_layer(model[idx], idx)
+            if :beg ∈ keys(exp[1][1])
+                hs[model[idx]] = hcat([(seq[1].beg[1] ? model[idx].init : getindex(seq[1], hs_symbol)) for seq in exp]...)
+            else
+                if exp[1] isa NamedTuple
+                    hs[model[idx]] = getindex(exp[1], hs_symbol)
+                else
+                    hs[model[idx]] = hcat([(getindex(seq[1], hs_symbol)) for seq in exp]...)
+                end
+            end
+        end
+    end
+    hs
+end
 
 
 function modify_hs_in_er!(replay::ImageReplay, model, exp, exp_idx, hs)

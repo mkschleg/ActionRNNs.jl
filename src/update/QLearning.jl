@@ -71,7 +71,7 @@ function update_batch!(chain,
     γ = lu.γ
     reset!(chain, h_init)
     ps = get_params(chain, h_init, hs_learnable)
-    
+
     grads = gradient(ps) do
         preds = map(chain, state_seq)
         loss = qloss(preds, action_t, reward, γ, terminal, actual_seq_len)
