@@ -68,7 +68,7 @@ function get_ann(parsed, fs, env)
         nh = parsed["numhidden"]
         Flux.Chain(
             Flux.RNN(fs, nh;
-                           init=init_func),
+                     init=init_func, initb=init_func),
                            # hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, length(get_actions(env)); initW=init_func))
     else
