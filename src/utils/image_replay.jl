@@ -74,7 +74,7 @@ function make_experience(er::ImageReplay{<:AbstractSequenceReplay}, expr)
             Flux.batchseq([[get_state.(seq); [get_image(er, seq[end].sp)]] for seq in expr], zero(get_state(expr[1][1])))
         elseif k == :sp
             [get_raw_image(er, seq[end].sp) for seq ∈ expr]
-        elseif k == :a
+        elseif k == :am1
             l = maximum(length.(expr)) + 1
             temp = [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], l, one(expr[1][1].a[])) for seq in expr]
             [[temp[b][t] for b ∈ 1:length(temp)] for t ∈ 1:length(temp[1])]

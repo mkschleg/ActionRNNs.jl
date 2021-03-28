@@ -38,12 +38,14 @@ end
 function _init_optimizer(opt_type::Union{Type{ADAM}, Type{RADAM}, Type{NADAM}, Type{AdaMax}, Type{OADAM}, Type{AMSGrad}, Type{AdaBelief}}, parsed::Dict)
     try
         η = parsed["eta"]
-        β = if "beta" ∈ keys(parsed)
-            parsed["beta"]
-        else
-            (parsed["beta_m"], parsed["beta_v"])
+        if "beta" ∈ keys(parsed)
+            β = parsed["beta"]
+            opt_type(η, β)
+        elseif "beta_m" ∈ keys(parsed)
+            β = (parsed["beta_m"], parsed["beta_v"])
+            opt_type(η, β)
         end
-        opt_type(η, β)
+        opt_type(η)
     catch
         throw("$(opt_type) needs: eta (float), and beta ((float, float)), or (beta_m, beta_v))")
     end

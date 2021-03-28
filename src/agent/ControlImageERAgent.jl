@@ -161,7 +161,7 @@ function MinimalRLCore.step!(agent::ControlImageERAgent, env_s_tp1, r, terminal,
         a = [exp.a[i][end] for i in 1:batch_size]
 
         s = if eltype(agent.state_list) <: Tuple
-            [(exp.a[i], exp.s[i]) for i in 1:length(exp.s)]
+            [(exp.am1[i], exp.s[i]) for i in 1:length(exp.s)]
         else
             exp.s
         end
