@@ -200,13 +200,14 @@ function get_valid_indicies(er::EpisodicSequenceReplay, min_seq_length)
 end
 
 function get_sequence(er::EpisodicSequenceReplay, start_ind, max_seq_length)
-    ret = [view(er, start_ind)]
+    # ret = [view(er, start_ind)]
+    ret = [er[start_ind]]
     er_size = length(er)
     if ((start_ind + 1 - 1) % er_size) + 1 == er.place || ret[end][er.terminal_symbol][]::Bool
         return ret
     end
     for i ∈ 1:(max_seq_length-1)
-        push!(ret, view(er, (((start_ind + i - 1) % er_size) + 1)))
+        push!(ret, er[(((start_ind + i - 1) % er_size) + 1)])
         if ret[end][er.terminal_symbol][]::Bool || ((start_ind + i + 1 - 1) % er_size) + 1 == er.place 
             break
         end

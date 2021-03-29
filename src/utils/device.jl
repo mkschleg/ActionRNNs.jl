@@ -12,7 +12,9 @@ is_gpu(x) = false
 is_gpu(x::Flux.CUDA.CuArray) = true
 is_gpu(x::Dense) = is_gpu(x.W)
 is_gpu(x::Conv) = is_gpu(x.weight)
-is_gpu(x::Flux.Recur) = is_gpu(x.init)
+is_gpu(x::Tuple) = is_gpu(x[1])
+is_gpu(x::Flux.Recur) = is_gpu(x.state)
+
 is_gpu(model::Flux.Chain) = begin
     ig = false
     foreach(x -> ig = ig || is_gpu(x),

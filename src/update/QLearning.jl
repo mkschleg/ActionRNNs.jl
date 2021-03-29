@@ -56,6 +56,19 @@ qloss(preds, action_t, reward, γ, terminal, actual_seq_len) = begin
     s
 end
 
+qtargets(preds, action_t, r, γ, terminal, actual_seq_len) = begin
+    bs = length(actual_seq_len)
+    trgts = zeros(Float32, bs)
+    for i ∈ 1:bs
+        trgts[i] = r[i] + γ * (1-terminal[i]) * maximum(preds[actual_seq_len[i] + 1][:, i])
+    end
+    trgts
+end
+
+function get_pred_at_correct_time(preds, action, actual_seq_len, i)
+    preds[actual_seq_len][action, i]
+end
+
 function update_batch!(chain,
                        opt,
                        lu::QLearning,
@@ -64,17 +77,41 @@ function update_batch!(chain,
                        reward,
                        terminal,
                        action_t,
-                       actual_seq_len;
+                       actual_seq_len,
+                       target_network=nothing;
                        hs_learnable=true)
 
     ℒ = 0.0f0
     γ = lu.γ
+
     reset!(chain, h_init)
     ps = get_params(chain, h_init, hs_learnable)
 
+    trgt_preds = if target_network isa Nothing
+        nothing
+    else
+        reset!(target_network, h_init)
+    end
+
+    # get targets
+    
     grads = gradient(ps) do
         preds = map(chain, state_seq)
-        loss = qloss(preds, action_t, reward, γ, terminal, actual_seq_len)
+
+        get_pred = (action, actual_seq_len, i) -> get_pred_at_correct_time(preds, action, actual_seq_len, i)
+        q_t = get_pred.(action_t, actual_seq_len, 1:length(action_t))
+
+        qtrgts = zero(q_t)
+        ignore() do
+            if target_network isa Nothing
+                qtrgts .= dropgrad(qtargets(preds, action_t, reward, γ, terminal, actual_seq_len))
+            else
+                trgt_preds = dropgrad(map(target_network, state_seq))
+                qtrgts .= dropgrad(qtargets(trgt_preds, action_t, reward, γ, terminal, actual_seq_len))
+            end
+        end
+        loss = sum((q_t .- dropgrad(qtrgts)).^2)
+        # loss = sum(preds[end])
         ignore() do
             ℒ = loss
         end

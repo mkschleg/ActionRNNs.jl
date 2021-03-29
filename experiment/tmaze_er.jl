@@ -25,7 +25,7 @@ function default_config()
         "save_dir" => "tmaze",
 
         "seed" => 1,
-        "steps" => 200000,
+        "steps" => 80000,
         "size" => 6,
 
         "cell" => "ARNN",
@@ -35,10 +35,11 @@ function default_config()
         "eta" => 0.0005,
         "rho" =>0.99,
 
-        "replay_size"=>10000,
+        "replay_size"=>1000,
         "warm_up" => 1000,
         "batch_size"=>4,
         "update_wait"=>4,
+        "target_update_wait"=>1000,
         "truncation" => 8,
 
         "hs_learnable" => true,
@@ -48,27 +49,31 @@ function default_config()
     
 end
 
-function get_ann(parsed, fs, env)
+function get_ann(parsed, fs, env, rng)
 
-    init_func = (dims...)->Flux.glorot_uniform(dims...)
+    init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
     
     if parsed["cell"] == "FacARNN"
         factors = parsed["factors"]
         nh = parsed["numhidden"]
-        Flux.Chain(ActionRNNs.FacARNN(fs, 4, nh, factors; init=init_func),
+        Flux.Chain(ActionRNNs.FacARNN(fs, 4, nh, factors; init=init_func, initb=init_func),
                    Flux.Dense(nh, length(get_actions(env)); initW=init_func))
     elseif parsed["cell"] == "ARNN"
         nh = parsed["numhidden"]
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         Flux.Chain(
             ActionRNNs.ARNN(fs, 4, nh;
-                            init=init_func,
+                            init=init_func, initb=initb,
                             hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, length(get_actions(env)); initW=init_func))
     elseif parsed["cell"] == "RNN"
         nh = parsed["numhidden"]
         Flux.Chain(
             Flux.RNN(fs, nh;
-                     init=init_func, initb=init_func),
+                     init=init_func),
                            # hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, length(get_actions(env)); initW=init_func))
     else
@@ -95,11 +100,10 @@ function construct_agent(env, parsed, rng)
 
 
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
-    init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed, fs, env)
+    chain = get_ann(parsed, fs, env, rng)
 
     ActionRNNs.ControlERAgent(chain,
                               opt,
@@ -112,6 +116,7 @@ function construct_agent(env, parsed, rng)
                               parsed["warm_up"],
                               parsed["batch_size"],
                               parsed["update_wait"],
+                              parsed["target_update_wait"],
                               ap,
                               parsed["hs_learnable"])
 end
@@ -126,7 +131,7 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = TMaze(parsed["size"])
+        env = ActionRNNs.TMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
 
 
@@ -168,7 +173,9 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
                                                (:successes, pr_suc),
                                                (:loss, usa[:avg_loss]),
                                                (:l1, usa[:l1]/n),
-                                               (:action, a.action)])
+                                               (:action, a.action),
+                                               (:preds, a.preds),
+                                               (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
                 end
                 success = success || (r == 4.0)
                 if !(a.update_state isa Nothing)
