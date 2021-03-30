@@ -217,12 +217,13 @@ function get_hs_from_experience!(model, exp::NamedTuple, d::Dict, device)
 
     rnn_idx = find_layers_with_eq(model, (l)->l isa Flux.Recur)
     for idx in rnn_idx
-        init_hs = get_initial_hidden_state(model[idx])
+        init_hs = get_initial_hidden_state(model[idx]) |> cpu
         if tuple_hidden_state(model[idx])
             throw("How did you get here?")
         else
             hs_symbol = hs_symbol_layer(model[idx], idx)
             h = if :beg ∈ keys(exp)
+                # @show typeof(exp.beg), typeof(exp[hs_symbol]), typeof(init_hs)
                 device(hcat([(exp.beg[b][1] ? init_hs : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...))
             else
                 device(hcat([(exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...))
@@ -292,18 +293,17 @@ function modify_hs_in_er!(replay::ImageReplay, model, exp, exp_idx, hs)
             throw("How did you get here?")
         else
             hs_symbol = ActionRNNs.hs_symbol_layer(model[ridx], ridx)
-            init_grad = zero(get_initial_hidden_state(model[ridx]))
+            init_grad = zero(get_initial_hidden_state(model[ridx])) |> cpu
             init_grad_n = 0
             h = if hs isa IdDict
-                hs[model[ridx]]
+                hs[model[ridx]] |> cpu
             else
-                hs[hs_symbol]
+                hs[hs_symbol] |> cpu
             end
             for (i, idx) ∈ enumerate(exp_idx)
 
-                
                 if exp.beg[i][1] == true
-                    init_grad  .+= h[:, i]
+                    init_grad .+= h[:, i]
                     init_grad_n += 1
                 else
                     if getindex(replay.replay.buffer._stg_tuple, hs_symbol) isa Vector
@@ -314,7 +314,7 @@ function modify_hs_in_er!(replay::ImageReplay, model, exp, exp_idx, hs)
                 end
             end
             if init_grad_n != 0
-                model[ridx].cell.state0 .= init_grad ./ init_grad_n
+                model[ridx].cell.state0 .= (init_grad ./ init_grad_n) |> gpu
             end
         end
     end

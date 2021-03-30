@@ -114,7 +114,7 @@ function construct_agent(env, parsed, rng)
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
-    chain = get_ann(parsed, (28,28, 1,1), rng) |> gpu
+    chain = get_ann(parsed, (28,28, 1,1), rng) # |> gpu
 
     ActionRNNs.ControlImageERAgent(chain,
                                    opt,

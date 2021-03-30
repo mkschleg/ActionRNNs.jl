@@ -2,6 +2,7 @@
 # Sepcifying a action-conditional RNN Cell
 using Flux
 # using OMEinsum
+using KernelAbstractions
 using OMEinsum
 using Tullio
 using TensorOperations

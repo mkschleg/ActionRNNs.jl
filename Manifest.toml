@@ -108,6 +108,11 @@ git-tree-sha1 = "6ccc73b2d8b671f7a65c92b5f08f81422ebb7547"
 uuid = "052768ef-5323-5732-b1bb-66c8b64840ba"
 version = "2.4.1"
 
+[[Cassette]]
+git-tree-sha1 = "742fbff99a2798f02bd37d25087efb5615b5a207"
+uuid = "7057c7e9-c182-5462-911a-8362d720325c"
+version = "0.3.5"
+
 [[CatIndices]]
 deps = ["CustomUnitRanges", "OffsetArrays"]
 git-tree-sha1 = "a0f80a09780eed9b1d106a1bf62041c2efc995bc"
@@ -449,6 +454,12 @@ deps = ["Base64", "Logging", "Media", "Profile"]
 git-tree-sha1 = "07cb43290a840908a771552911a6274bc6c072c7"
 uuid = "e5e0dc1b-0480-54bc-9374-aad01c23163d"
 version = "0.8.4"
+
+[[KernelAbstractions]]
+deps = ["Adapt", "CUDA", "Cassette", "InteractiveUtils", "MacroTools", "SpecialFunctions", "StaticArrays", "UUIDs"]
+git-tree-sha1 = "f16c8dfdd75ae4fa927fcf3aa71e1dbbd195befb"
+uuid = "63c18a36-062a-441e-b654-da1e3ab1ce7c"
+version = "0.5.5"
 
 [[LLVM]]
 deps = ["CEnum", "Libdl", "Printf", "Unicode"]

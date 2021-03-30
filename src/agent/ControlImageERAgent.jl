@@ -236,7 +236,8 @@ function update!(agent::ControlImageERAgent, replay::ImageReplay, rng)
                            t,
                            a,
                            actual_seq_lengths,
-                           agent.target_network)
+                           agent.target_network,
+                           device=agent.device)
         
         if agent.hs_learnable
             modify_hs_in_er!(replay, agent.model, exp, exp_s_idx, agent.hs_tr_init)
