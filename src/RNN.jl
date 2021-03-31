@@ -2,67 +2,27 @@
 # Sepcifying a action-conditional RNN Cell
 using Flux
 # using OMEinsum
+using KernelAbstractions
+using OMEinsum
 using Tullio
-
-
-hidden_learnable(rnn) = true
-hidden_learnable(rnn::Flux.Recur) = hidden_learnable(rnn.cell)
-
-Flux.trainable(m::Flux.Recur) = if hidden_learnable(m)
-    (cell = m.cell, init=m.init)
-else
-    (cell = m.cell,)
-end
-
-mutable struct RNNCell{F,A,V}
-    σ::F
-    Wi::A
-    Wh::A
-    b::V
-    h::V
-    h_learnable::Bool
-end
-
-hidden_learnable(rnn::RNNCell) = rnn.h_learnable
-
-RNNCell(in::Integer, out::Integer, σ = tanh;
-        init = glorot_uniform, hs_learnable=true) =
-  RNNCell(σ, init(out, in), init(out, out),
-          init(out), Flux.zeros(out), hs_learnable)
-
-function (m::RNNCell)(h, x)
-  σ, Wi, Wh, b = m.σ, m.Wi, m.Wh, m.b
-  h = σ.(Wi*x .+ Wh*h .+ b)
-  return h, h
-end
-
-Flux.hidden(m::RNNCell) = m.h
-Flux.@functor RNNCell
-
-function Base.show(io::IO, l::RNNCell)
-  print(io, "RNNCell(", size(l.Wi, 2), ", ", size(l.Wi, 1))
-  l.σ == identity || print(io, ", ", l.σ)
-  print(io, ")")
-end
+using TensorOperations
 
 """
     RNN(in::Integer, out::Integer, σ = tanh)
 The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
 output fed back into the input each time step.
 """
-RNN(a...; ka...) = Flux.Recur(RNNCell(a...; ka...))
+# RNN(a...; ka...) = Flux.Recur(AC_RNNCell(a...; ka...))
+# Flux.Recur(m::AC_RNNCell) = Flux.Recur(m, m.state0)
 
-Flux.trainable(m::RNNCell) = if hidden_learnable(m)
-    (Wx = m.Wi, Wh = m.Wh, b = m.b, h = m.h)
-else
-    (Wx = m.Wi, Wh = m.Wh, b = m.b)
-end
-
+# Flux.trainable(m::AC_RNNCell) = if hidden_learnable(m)
+#     (Wx = m.Wi, Wh = m.Wh, b = m.b, state0 = m.state0)
+# else
+#     (Wx = m.Wi, Wh = m.Wh, b = m.b)
+# end
 
 abstract type AbstractActionRNN end
-
 _needs_action_input(m::M) where {M<:AbstractActionRNN} = true
-
 
 """
     ARNNCell
@@ -75,65 +35,70 @@ mutable struct ARNNCell{F, A, V, H} <: AbstractActionRNN
     Wx::A
     Wh::A
     b::V
-    h::H
-    islearnable::Bool
+    state0::H
 end
 
-ARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh, hs_learnable=true) =
+ARNNCell(num_ext_features, num_actions, num_hidden;
+         init=Flux.glorot_uniform,
+         initb=(args...;kwargs...) -> Flux.zeros(args...),
+         init_state=Flux.zeros,
+         σ_int=tanh,
+         hs_learnable=true) =
     ARNNCell(σ_int,
-             init(num_hidden, num_ext_features, num_actions),
-             init(num_hidden, num_hidden, num_actions),
-             zeros(Float32, num_hidden, num_actions),
-             Flux.zeros(num_hidden),
-             hs_learnable)
+             init(num_actions, num_hidden, num_ext_features; ignore_dims=1),
+             init(num_actions, num_hidden, num_hidden; ignore_dims=1),
+             initb(num_hidden, num_actions),
+             init_state(num_hidden, 1))
 
-hidden_learnable(rnn::ARNNCell) = rnn.islearnable
-
-Flux.hidden(m::ARNNCell) = m.h
+# Flux.hidden(m::ARNNCell) = m.h
 Flux.@functor ARNNCell
 ARNN(args...; kwargs...) = Flux.Recur(ARNNCell(args...; kwargs...))
-Flux.trainable(m::ARNNCell) = if  hidden_learnable(m)
-    (Wx = m.Wx, Wh = m.Wh, b = m.b, h = m.h)
-else
-    (Wx = m.Wx, Wh = m.Wh, b = m.b)
-end
+Flux.Recur(m::ARNNCell) = Flux.Recur(m, m.state0)
+
 
 function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A<:AbstractArray{<:AbstractFloat}}
 
     @inbounds new_h =
-        m.σ.((@view m.Wx[:, :, x[1]])*x[2] + (@view m.Wh[:, :, x[1]])*h + (@view m.b[:, x[1]]))
+        m.σ.((@view m.Wx[x[1], :, :])*x[2] + (@view m.Wh[x[1], :, :])*h + m.b[:, x[1]])
 
     return new_h, new_h
 end
 
-function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Array{<:Integer, 1}, A<:Array{<:AbstractFloat, 2}}
-    # @info "Here"
-    wx = ein_mul((@view m.Wx[:, :, x[1]]), x[2])
-    wh = ein_mul((@view m.Wh[:, :, x[1]]), h)
+function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Array{<:Integer, 1}, A<:AbstractArray{<:AbstractFloat, 2}}
+
+
+    # @show typeof(h), typeof(x)
     
-    @inbounds new_h =
-        m.σ.(wx + wh + (m.b[:, x[1]]))
+    a = x[1]
+    o = x[2]
+
+    # wx = zeros(Float32, size(m.Wx, 2), size(o, 2))
+    # wh = zeros(Float32, size(m.Wh, 2), size(h, 2))
+
+    Wx = m.Wx[a, :, :]
+    Wh = m.Wh[a, :, :]
+    # # Wx = m.Wx
+    # # Wh = m.Wh
+    # # @show size(Wx), size(Wh), size(o), size(h)
+    # Wx = m.Wx
+    # Wh = m.Wh
+    # @tullio wx[i, k] := Wx[a[k], i, j] * o[j, k]
+    # @tullio wh[i, k] := Wh[a[k], i, j] * h[j, k]
+    @ein wx[i, k] := Wx[k, i, j] * o[j, k]
+    @ein wh[i, k] := Wh[k, i, j] * h[j, k]
+    
+    # @show sum(wx)
+    # z = hcat([m.Wx[a[b_idx], :, :] * o[:, b_idx] .+ m.Wh[a[b_idx], :, :]*h[:, b_idx] .+ m.b[:, a] for b_idx ∈ 1:length(a)]...)
+    # wh = hcat([m.Wh[a[b_idx]] * h[:, b_idx] for b_idx ∈ 1:length(a)]...)
+
+    new_h = m.σ.(wx .+ wh .+ m.b[:, a])
+    # new_h = m.σ.(z)
 
     return new_h, new_h
 end
 
 function ein_mul(x::AbstractArray{<:Number, 3}, y::AbstractArray{<:Number, 2})
-    @tullio ret[i, k] := x[i, j, k]*y[j,k]
-end
-
-
-function _contract(W::AbstractArray{<:Number, 3}, x1::AbstractArray{<:Number, 2}, x2::AbstractArray{<:Number, 2})
-    sze_W = size(W)
-    Wx2 = reshape(reshape(W, :, sze_W[end])*x2, sze_W[1:2]..., :)
-    throw("Not Implemented")
-    # @ein ret[i, l] := Wx2[i, j, l]*x1[j, l]
-end
-
-function _contract(W::AbstractArray{<:Number, 3}, x1::AbstractArray{<:Number, 1}, x2::AbstractArray{<:Number, 2})
-    pdW = permutedims(W, (1, 3, 2))
-    sze_W = size(pdW)
-    Wx1 = reshape(reshape(pdW, :, sze_W[end])*x1, sze_W[1:2]...)
-    Wx1*x2
+    @ein ret[i, k] := x[i, j, k] * y[j, k]
 end
 
 function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFloat, 2}, A}
@@ -147,29 +112,10 @@ function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFl
     new_h, new_h
 end
 
-function (m::ARNNCell)(h, x::Tuple{Array{<:Integer, 1}, A}) where {A}
-    if length(size(h)) == 1
-        @inbounds new_h = m.σ.(
-            hcat((((@view m.Wx[:, :, x[1][i]])*x[2][:, i]) +
-                  ((@view m.Wh[:, :, x[1][i]])*h) +
-                  (@view m.b[:, x[1][i]]) for i in 1:length(x[1]))...))
-        return new_h, new_h
-    else
-        @inbounds new_h = m.σ.(
-            hcat((((@view m.Wx[:, :, x[1][i]])*x[2][:, i]) +
-                  ((@view m.Wh[:, :, x[1][i]])*h[:, i]) +
-                  (@view m.b[:, x[1][i]]) for i in 1:length(x[1]))...))
-
-        return new_h, new_h
-    end
-end
-
-
 function reduce_func(m::ARNNCell, x, h, i)
     @inbounds x[1][i]*view(m.Wx, :, :, i)*x[2] +
         x[1][i]*view(m.Wh, :, :, i)*h
 end
-
 
 function Base.show(io::IO, l::ARNNCell)
   print(io, "ARNNCell(", size(l.Wx, 2), ", ", size(l.Wx, 3), ", ", size(l.Wx, 1))
@@ -196,24 +142,21 @@ mutable struct FacARNNCell{F, A, V, H} <: AbstractActionRNN
     Wh::A
     Wa::A
     b::V
-    h::H
-    hs_learnable::Bool
+    state0::H
 end
 
 # FacARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
-FacARNNCell(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform) = 
+FacARNNCell(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
     FacARNNCell(activation,
                 init(out, factors),
                 init(factors, in),
                 init(factors, out),
                 init(factors, actions),
-                Flux.zeros(out, actions),
-                Flux.zeros(out),
-                hs_learnable)
+                initb(out, actions),
+                init_state(out, 1))
 
 FacARNN(args...; kwargs...) = Flux.Recur(FacARNNCell(args...; kwargs...))
-
-hidden_learnable(m::FacARNNCell) = m.hs_learnable
+Flux.Recur(cell::FacARNNCell) = Flux.Recur(cell, cell.state0)
 
 function get_Wabya(Wa, a)
     if a isa Int
@@ -227,15 +170,15 @@ end
 
 function (m::FacARNNCell)(h, x::Tuple{A, O}) where {A, O}
     W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-    new_h = m.σ.(W*((Wx*o + Wh*h) .* get_Wabya(Wa, a)) + b[:, a])
+    new_h = m.σ.(W*((Wx*o .+ Wh*h) .* get_Wabya(Wa, a)) .+ b[:, a])
     return new_h, new_h
 end
 
-Flux.hidden(m::FacARNNCell) = m.h
+# Flux.hidden(m::FacARNNCell) = m.h
 Flux.@functor FacARNNCell
 
-Flux.trainable(m::FacARNNCell) = if  hidden_learnable(m)
-    (W = m.W, Wx = m.Wx, Wh = m.Wh, Wa = m.Wa, b = m.b, h = m.h)
-else
-    (W = m.W, Wx = m.Wx, Wh = m.Wh, Wa = m.Wa, b = m.b)
-end
+# Flux.trainable(m::FacARNNCell) = if  hidden_learnable(m)
+#     (W = m.W, Wx = m.Wx, Wh = m.Wh, Wa = m.Wa, b = m.b, h = m.h)
+# else
+#     (W = m.W, Wx = m.Wx, Wh = m.Wh, Wa = m.Wa, b = m.b)
+# end

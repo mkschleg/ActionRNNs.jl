@@ -1,6 +1,7 @@
 module FluxUtils
 
 using ..Flux
+include("../optimizers/rmsprop.jl")
 
 function get_optimizer(parsed::Dict; opt_key="opt")
     opt_string = parsed[opt_key]
@@ -8,7 +9,7 @@ function get_optimizer(parsed::Dict; opt_key="opt")
 end
 
 function get_optimizer(opt_string, parsed)
-    opt_type = getproperty(Flux, Symbol(opt_string))
+    opt_type = getproperty(FluxUtils, Symbol(opt_string))
     _init_optimizer(opt_type, parsed)
 end
 
@@ -25,7 +26,7 @@ function _init_optimizer(opt_type::Union{Type{Descent}, Type{ADAGrad}, Type{ADAD
     end
 end
 
-function _init_optimizer(opt_type::Union{Type{RMSProp}, Type{Momentum}, Type{Nesterov}}, parsed::Dict)
+function _init_optimizer(opt_type::Union{Type{RMSProp}, Type{Momentum}, Type{Nesterov}, Type{RMSPropTFCentered}}, parsed::Dict)
     try
         η = parsed["eta"]
         ρ = parsed["rho"]
@@ -38,12 +39,14 @@ end
 function _init_optimizer(opt_type::Union{Type{ADAM}, Type{RADAM}, Type{NADAM}, Type{AdaMax}, Type{OADAM}, Type{AMSGrad}, Type{AdaBelief}}, parsed::Dict)
     try
         η = parsed["eta"]
-        β = if "beta" ∈ keys(parsed)
-            parsed["beta"]
-        else
-            (parsed["beta_m"], parsed["beta_v"])
+        if "beta" ∈ keys(parsed)
+            β = parsed["beta"]
+            opt_type(η, β)
+        elseif "beta_m" ∈ keys(parsed)
+            β = (parsed["beta_m"], parsed["beta_v"])
+            opt_type(η, β)
         end
-        opt_type(η, β)
+        opt_type(η)
     catch
         throw("$(opt_type) needs: eta (float), and beta ((float, float)), or (beta_m, beta_v))")
     end

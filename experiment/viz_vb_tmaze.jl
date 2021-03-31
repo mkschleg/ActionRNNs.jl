@@ -1,15 +1,13 @@
-module TMazeERExperiment
+module ImageTMazeERExperiment
 
-# include("../src/ActionRNNs.jl")
-
-import Flux
+using Flux
 import JLD2
 import LinearAlgebra.Diagonal
 import MinimalRLCore
 using MinimalRLCore: run_episode!, get_actions
 import ActionRNNs
 
-using ActionRNNs: TMaze
+using ActionRNNs: ImageTMaze
 
 using Statistics
 using Random
@@ -25,21 +23,21 @@ function default_config()
         "save_dir" => "tmaze",
 
         "seed" => 1,
-        "steps" => 80000,
+        "steps" => 200000,
         "size" => 6,
 
         "cell" => "ARNN",
         "numhidden" => 6,
 
-        "opt" => "RMSProp",
+        "opt" => "ADAM",
         "eta" => 0.0005,
-        "rho" =>0.99,
+        # "rho" =>0.99,
 
-        "replay_size"=>1000,
+        "replay_size"=>10000,
         "warm_up" => 1000,
-        "batch_size"=>4,
+        "batch_size"=>16,
         "update_wait"=>4,
-        "target_update_wait"=>1000,
+        "tn_update_freq"=>1000,
         "truncation" => 8,
 
         "hs_learnable" => true,
@@ -49,43 +47,63 @@ function default_config()
     
 end
 
-function get_ann(parsed, fs, env, rng)
+function get_ann(parsed, image_dims, rng)
 
+    init_func = (dims...; kwargs...)->ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
 
-    init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
+    latent_size = 64
     
-    if parsed["cell"] == "FacARNN"
-        factors = parsed["factors"]
-        nh = parsed["numhidden"]
-        Flux.Chain(ActionRNNs.FacARNN(fs, 4, nh, factors; init=init_func, initb=init_func),
-                   Flux.Dense(nh, length(get_actions(env)); initW=init_func))
-    elseif parsed["cell"] == "ARNN"
-        nh = parsed["numhidden"]
-        
-        init_func = (dims...; kwargs...)->
-            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-        Flux.Chain(
-            ActionRNNs.ARNN(fs, 4, nh;
-                            init=init_func, initb=initb,
-                            hs_learnable=parsed["hs_learnable"]),
-            Flux.Dense(nh, length(get_actions(env)); initW=init_func))
-    elseif parsed["cell"] == "RNN"
-        nh = parsed["numhidden"]
-        Flux.Chain(
-            Flux.RNN(fs, nh;
-                     init=init_func),
+    cl = Flux.Conv((4, 4), 1 => 4, relu; stride=2, init=init_func)
+    fs_1 = prod(Flux.outdims(cl, image_dims))
+    @show fs_1, Flux.outdims(cl, image_dims)
+    od = outdims(cl, image_dims)
+    encoder = Flux.Chain(cl,
+                         Flux.flatten,
+                         Flux.Dense(fs_1, latent_size, relu))
+    decoder = Flux.Chain(Flux.Dense(latent_size, latent_size, relu),
+                         Flux.Dense(latent_size, fs_1, relu),
+                         (x)->reshape(x, od[1:3]..., size(x, 2)),
+                         Flux.ConvTranspose((4,4), 4=>1, relu; stride=2, init=init_func))
 
+    fs = prod(Flux.outdims(cl, image_dims))
+    println(fs)
+    nh = parsed["numhidden"]
+    
+    rnn = if parsed["cell"] == "FacARNN"
+
+        factors = parsed["factors"]
+        Flux.Chain(
+            ActionRNNs.FacARNN(latent_size, 4, nh, factors; init=init_func),
+            Flux.Dense(nh, 4; initW=init_func))
+        
+    elseif parsed["cell"] == "ARNN"
+        
+        Flux.Chain(
+            ActionRNNs.ARNN(latent_size, 4, nh;
+                            init=init_func,
+                            hs_learnable=parsed["hs_learnable"]),
+            Flux.Dense(nh, 4; initW=init_func))
+        
+    elseif parsed["cell"] == "RNN"
+        
+        Flux.Chain(
+            Flux.RNN(latent_size, nh;
+                     init=init_func),
                            # hs_learnable=parsed["hs_learnable"]),
-            Flux.Dense(nh, length(get_actions(env)); initW=init_func))
+            Flux.Dense(nh, 4; initW=init_func))
+        
     else
-        nh = parsed["numhidden"]
+        
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-        Flux.Chain(rnntype(fs, nh; init=init_func),
-                   Flux.Dense(nh,
-                              length(get_actions(env));
-                              initW=init_func))
+        Flux.Chain(
+            rnntype(latent_size, nh; init=init_func),
+            Flux.Dense(nh,
+                       4;
+                       initW=init_func))
+        
     end
+    
+    ActionRNNs.VizBackbone(encoder, decoder, rnn)
 end
 
 function construct_agent(env, parsed, rng)
@@ -104,27 +122,27 @@ function construct_agent(env, parsed, rng)
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
+    chain = get_ann(parsed, (28,28, 1, 1), rng) |> gpu
 
-
-    chain = get_ann(parsed, fs, env, rng)
-
-    ActionRNNs.ControlERAgent(chain,
-                              opt,
-                              τ,
-                              γ,
-                              fc,
-                              fs,
-                              3,
-                              parsed["replay_size"],
-                              parsed["warm_up"],
-                              parsed["batch_size"],
-                              parsed["update_wait"],
-                              parsed["target_update_wait"],
-                              ap,
-                              parsed["hs_learnable"])
+    ActionRNNs.ControlImageERAgent(chain,
+                                   opt,
+                                   τ,
+                                   γ,
+                                   
+                                   (28, 28, 1),
+                                   UInt8,
+                                   
+                                   parsed["replay_size"],
+                                   parsed["warm_up"],
+                                   parsed["batch_size"],
+                                   parsed["update_wait"],
+                                   parsed["tn_update_freq"],
+                                   
+                                   ap,
+                                   parsed["hs_learnable"])
 end
 
-function main_experiment(parsed::Dict; working=false, progress=false, verbose=false)
+function main_experiment(parsed::Dict=default_config(); working=false, progress=false, verbose=false)
 
 
     ActionRNNs.experiment_wrapper(parsed, working) do parsed
@@ -134,7 +152,7 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = ActionRNNs.TMaze(parsed["size"])
+        env = ImageTMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
 
 
@@ -177,8 +195,7 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
                                                (:loss, usa[:avg_loss]),
                                                (:l1, usa[:l1]/n),
                                                (:action, a.action),
-                                               (:preds, a.preds),
-                                               (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
+                                               (:preds, a.preds)])
                 end
                 success = success || (r == 4.0)
                 if !(a.update_state isa Nothing)
@@ -190,7 +207,7 @@ function main_experiment(parsed::Dict; working=false, progress=false, verbose=fa
             eps += 1
         end
         save_results = logger.data
-        (;save_results = save_results)
+        (;save_results = save_results, agent = agent)
     end
 end
 

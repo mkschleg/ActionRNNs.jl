@@ -29,14 +29,15 @@ function default_config()
         "cell" => "ARNN",
         "numhidden" => 6,
 
-        "opt" => "RMSProp",
+        "opt" => "ADAM",
         "eta" => 0.0005,
-        "rho" =>0.99,
+        # "rho" =>0.99,
 
-        "replay_size"=>10000,
+        "replay_size"=>4000,
         "warm_up" => 1000,
-        "batch_size"=>4,
+        "batch_size"=>16,
         "update_wait"=>4,
+        "tn_update_freq"=>1000,
         "truncation" => 8,
 
         "hs_learnable" => true,
@@ -48,10 +49,11 @@ end
 
 function get_ann(parsed, image_dims, rng)
 
-    init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
+    init_func = (dims...; kwargs...)->ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
 
-    cl = Flux.Conv((4, 4), 1 => 4, relu; stride=2)
-    fs = prod(Flux.outdims(cl, image_dims))*4
+    cl = Flux.Conv((4, 4), 1 => 4, relu; stride=2, init=init_func)
+    fs = prod(Flux.outdims(cl, image_dims))
+    println(fs)
     nh = parsed["numhidden"]
     
     if parsed["cell"] == "FacARNN"
@@ -78,9 +80,9 @@ function get_ann(parsed, image_dims, rng)
         Flux.Chain(
             cl,
             Flux.flatten,
-            ActionRNNs.RNN(fs, nh;
-                           init=init_func,
-                           hs_learnable=parsed["hs_learnable"]),
+            Flux.RNN(fs, nh;
+                     init=init_func),
+                           # hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, 4; initW=init_func))
         
     else
@@ -109,18 +111,17 @@ function construct_agent(env, parsed, rng)
     τ = parsed["truncation"]
 
 
-    ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+    # ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+    ap = ActionRNNs.ϵGreedyDecay((1.0, 0.1), 10000, 1000, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
-    chain = get_ann(parsed, (28,28), rng)
+    chain = get_ann(parsed, (28,28, 1, 1), rng) |> gpu
 
     ActionRNNs.ControlImageERAgent(chain,
                                    opt,
                                    τ,
                                    γ,
                                    
-                                   # fc,
-                                   # fs,
                                    (28, 28, 1),
                                    UInt8,
                                    
@@ -128,6 +129,7 @@ function construct_agent(env, parsed, rng)
                                    parsed["warm_up"],
                                    parsed["batch_size"],
                                    parsed["update_wait"],
+                                   parsed["tn_update_freq"],
                                    
                                    ap,
                                    parsed["hs_learnable"])
@@ -185,7 +187,8 @@ function main_experiment(parsed::Dict=default_config(); working=false, progress=
                                                (:successes, pr_suc),
                                                (:loss, usa[:avg_loss]),
                                                (:l1, usa[:l1]/n),
-                                               (:action, a.action)])
+                                               (:action, a.action),
+                                               (:preds, a.preds)])
                 end
                 success = success || (r == 4.0)
                 if !(a.update_state isa Nothing)
