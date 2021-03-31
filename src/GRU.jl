@@ -38,7 +38,7 @@ function (m::ActionGRUCell)((h, c), ax::Tuple{I, A}) where {I<:Integer, A<:Abstr
     return h′, h′
 end
 
-Flux.hidden(m::ActionGRUCell) = m.h
+# Flux.hidden(m::ActionGRUCell) = m.h
 
 Flux.@functor ActionGRUCell
 

@@ -1,6 +1,7 @@
 module FluxUtils
 
 using ..Flux
+include("../optimizers/rmsprop.jl")
 
 function get_optimizer(parsed::Dict; opt_key="opt")
     opt_string = parsed[opt_key]
@@ -8,7 +9,7 @@ function get_optimizer(parsed::Dict; opt_key="opt")
 end
 
 function get_optimizer(opt_string, parsed)
-    opt_type = getproperty(Flux, Symbol(opt_string))
+    opt_type = getproperty(FluxUtils, Symbol(opt_string))
     _init_optimizer(opt_type, parsed)
 end
 
@@ -25,7 +26,7 @@ function _init_optimizer(opt_type::Union{Type{Descent}, Type{ADAGrad}, Type{ADAD
     end
 end
 
-function _init_optimizer(opt_type::Union{Type{RMSProp}, Type{Momentum}, Type{Nesterov}}, parsed::Dict)
+function _init_optimizer(opt_type::Union{Type{RMSProp}, Type{Momentum}, Type{Nesterov}, Type{RMSPropTFCentered}}, parsed::Dict)
     try
         η = parsed["eta"]
         ρ = parsed["rho"]

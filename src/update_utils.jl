@@ -52,3 +52,21 @@ get_params(model, h_init, hs_learnable=false) = if hs_learnable
         Flux.params(model)
     end
 
+
+get_batch_idx(x::AbstractArray{Float32, 1}, i) = x[i]
+get_batch_idx(x::AbstractArray{Float32, 2}, i) = x[:, i]
+get_batch_idx(x::AbstractArray{Float32, 3}, i) = x[:, :, i]
+get_batch_idx(x::AbstractArray{Float32, 4}, i) = x[:, :, :, i]
+
+
+set_batch_idx!(x::Array{F, 1}, y::F, i) where F = x[i] .= y
+set_batch_idx!(x::Array{F, 2}, y::AbstractArray{F, 1}, i) where F = x[:, i] .= y
+set_batch_idx!(x::Array{F, 3}, y::AbstractArray{F, 2}, i) where F = x[:, :, i] .= y
+set_batch_idx!(x::Array{F, 4}, y::AbstractArray{F, 3}, i) where F = x[:, :, :, i] .= y
+
+set_batch_idx!(x::CuArray{F, 1}, y::F, i) where F = x[i] = y
+set_batch_idx!(x::CuArray{F, 2}, y::AbstractArray{F, 1}, i) where F = copyto!(view(x, :, i), y)
+set_batch_idx!(x::CuArray{F, 3}, y::AbstractArray{F, 2}, i) where F = copyto!(view(x, :, :, i), y)
+set_batch_idx!(x::CuArray{F, 4}, y::AbstractArray{F, 3}, i) where F = copyto!(view(x, :, :, :, i), y)
+
+

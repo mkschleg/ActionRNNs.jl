@@ -80,7 +80,7 @@ function (m::ActionLSTMCell)((h, c), ax::Tuple{Action, Obs}) where {Action<:Inte
     return (h′, c), h′
 end
 
-Flux.hidden(m::ActionLSTMCell) = (m.h, m.c)
+# Flux.hidden(m::ActionLSTMCell) = (m.h, m.c)
 
 Flux.@functor ActionLSTMCell
 

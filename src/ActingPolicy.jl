@@ -28,26 +28,6 @@ function (π::RandomActingPolicy)(state_t, rng::Random.AbstractRNG=Random.GLOBAL
 end
 
 
-# mutable struct FunctionalPolicy{A, P} <: AbstractPolicy
-#     action_func::A
-#     prob_func::P
-# end
-
-# get_prob(π::FunctionalPolicy, state_t, action_t) =
-#     π.prob_func(π, state_t, action_t)
-
-# StatsBase.sample(π::FunctionalPolicy, state_t) =
-#     sample(Random.GLOBAL_RNG, π)
-
-# StatsBase.sample(rng::Random.AbstractRNG, π::FunctionalPolicy, state_t) =
-#     π.action_func(π, state_t, rng)
-
-# function (π::FunctionalPolicy)(state_t, rng::Random.AbstractRNG=Random.GLOBAL_RNG)
-#     action = sample(rng, π, state_t)
-#     return action, get_prob(π, state_t, action)
-# end
-
-
 abstract type AbstractValuePolicy <: AbstractPolicy end
 
 action_set(ap::AbstractValuePolicy) = nothing

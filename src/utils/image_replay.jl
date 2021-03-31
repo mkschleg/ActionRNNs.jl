@@ -16,7 +16,7 @@ end
 
 
 function get_image(er::ImageReplay, s)
-    er.image_postproc(er.state_buffer[s])
+    er.state_buffer[s] |> er.image_postproc
 end
 
 function get_raw_image(er::ImageReplay, s)
@@ -66,27 +66,30 @@ function Base.push!(er::ImageReplay, experience)
     push!(er.replay, nt_exp)
 end
 
+
+function get_expr(er::ImageReplay{<:AbstractSequenceReplay}, k, expr)
+    if k == :s
+        get_state(e) = get_image(er, e.s)
+        Flux.batchseq([[get_state.(seq); [get_image(er, seq[end].sp)]] for seq in expr], zero(get_state(expr[1][1])))
+    elseif k == :sp
+        [get_raw_image(er, seq[end].sp) for seq ∈ expr]
+    elseif k == :am1
+        l = maximum(length.(expr)) + 1
+        temp = [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], l, one(expr[1][1].a[])) for seq in expr]
+        [[temp[b][t] for b ∈ 1:length(temp)] for t ∈ 1:length(temp[1])]
+    elseif length(expr[1][1][k]) > 1
+        temp = [[seqi_j[k] for seqi_j ∈ seq] for seq in expr]
+    else
+        temp = [[seqi_j[k][] for seqi_j ∈ seq] for seq in expr]
+    end
+end
+
+
 # lets just go ahead and deal w/ batching here.
 function make_experience(er::ImageReplay{<:AbstractSequenceReplay}, expr)
-    get_expr = (k, expr) -> begin
-        if k == :s
-            get_state(e) = get_image(er, e.s)
-            Flux.batchseq([[get_state.(seq); [get_image(er, seq[end].sp)]] for seq in expr], zero(get_state(expr[1][1])))
-        elseif k == :sp
-            [get_raw_image(er, seq[end].sp) for seq ∈ expr]
-        elseif k == :am1
-            l = maximum(length.(expr)) + 1
-            temp = [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], l, one(expr[1][1].a[])) for seq in expr]
-            [[temp[b][t] for b ∈ 1:length(temp)] for t ∈ 1:length(temp[1])]
-        elseif length(expr[1][1][k]) > 1
-            temp = [[seqi_j[k] for seqi_j ∈ seq] for seq in expr]
-        else
-            temp = [[seqi_j[k][] for seqi_j ∈ seq] for seq in expr]
-        end
-    end
-
     ks = keys(expr[1][1])
-    length.(expr), (; zip(ks, [get_expr(k, expr) for k ∈ ks])...)
+    data = [get_expr(er, k, expr) for k ∈ ks]
+    length.(expr), (; zip(ks, data)...)
 end
 
 function make_experience(er::ImageReplay, experience)
