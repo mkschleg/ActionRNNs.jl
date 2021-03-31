@@ -31,11 +31,11 @@ function default_config()
 
         "opt" => "ADAM",
         "eta" => 0.0005,
-        "rho" =>0.99,
+        # "rho" =>0.99,
 
-        "replay_size"=>1000,
+        "replay_size"=>4000,
         "warm_up" => 1000,
-        "batch_size"=>4,
+        "batch_size"=>16,
         "update_wait"=>4,
         "tn_update_freq"=>1000,
         "truncation" => 8,
@@ -111,7 +111,8 @@ function construct_agent(env, parsed, rng)
     τ = parsed["truncation"]
 
 
-    ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+    # ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+    ap = ActionRNNs.ϵGreedyDecay((1.0, 0.1), 10000, 1000, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
     chain = get_ann(parsed, (28,28, 1, 1), rng) |> gpu

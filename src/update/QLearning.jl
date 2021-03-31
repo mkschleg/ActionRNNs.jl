@@ -121,7 +121,9 @@ function update_batch!(chain,
                 qtrgts = device(x, :qtargets)
             end
         end
-        loss = sum((q_t - qtrgts).^2)
+        loss = Flux.huber_loss(q_t, qtrgts; agg=sum)
+        # loss = Flux.mse(q_t, qtrgts; agg=sum)
+        # loss = sum((q_t .- qtrgts).^2)
 
         ignore() do
             ℒ = loss
@@ -205,9 +207,10 @@ function update_batch!(model::VizBackbone,
                 qtrgts = device(x, :qtargets)
             end
         end
-        q_loss = sum((q_t - qtrgts).^2)
+        q_loss = sum((q_t .- qtrgts).^2)
+        # q_loss = Flux.huber_loss(q_t, qtrgts)
 
-        r_loss = sum((reconstruct(model, state_recon) .- state_recon).^2)
+        r_loss = Flux.mse(reconstruct(model, state_recon), state_recon)
         loss = q_loss + r_loss
         ignore() do
             ℒ = loss

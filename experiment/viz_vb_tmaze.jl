@@ -31,11 +31,11 @@ function default_config()
 
         "opt" => "ADAM",
         "eta" => 0.0005,
-        "rho" =>0.99,
+        # "rho" =>0.99,
 
-        "replay_size"=>1000,
+        "replay_size"=>10000,
         "warm_up" => 1000,
-        "batch_size"=>4,
+        "batch_size"=>16,
         "update_wait"=>4,
         "tn_update_freq"=>1000,
         "truncation" => 8,
