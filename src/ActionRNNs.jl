@@ -15,6 +15,7 @@ export
     sigmoid′
 
 include("Layers.jl")
+include("models/viz_backbone.jl")
 
 include("RNNUtil.jl")
 

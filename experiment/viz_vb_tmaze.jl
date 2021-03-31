@@ -51,26 +51,35 @@ function get_ann(parsed, image_dims, rng)
 
     init_func = (dims...; kwargs...)->ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
 
+    latent_size = 64
+    
     cl = Flux.Conv((4, 4), 1 => 4, relu; stride=2, init=init_func)
+    fs_1 = prod(Flux.outdims(cl, image_dims))
+    @show fs_1, Flux.outdims(cl, image_dims)
+    od = outdims(cl, image_dims)
+    encoder = Flux.Chain(cl,
+                         Flux.flatten,
+                         Flux.Dense(fs_1, latent_size, relu))
+    decoder = Flux.Chain(Flux.Dense(latent_size, latent_size, relu),
+                         Flux.Dense(latent_size, fs_1, relu),
+                         (x)->reshape(x, od[1:3]..., size(x, 2)),
+                         Flux.ConvTranspose((4,4), 4=>1, relu; stride=2, init=init_func))
+
     fs = prod(Flux.outdims(cl, image_dims))
     println(fs)
     nh = parsed["numhidden"]
     
-    if parsed["cell"] == "FacARNN"
+    rnn = if parsed["cell"] == "FacARNN"
 
         factors = parsed["factors"]
         Flux.Chain(
-            cl,
-            Flux.flatten,
-            ActionRNNs.FacARNN(fs, 4, nh, factors; init=init_func),
+            ActionRNNs.FacARNN(latent_size, 4, nh, factors; init=init_func),
             Flux.Dense(nh, 4; initW=init_func))
         
     elseif parsed["cell"] == "ARNN"
         
         Flux.Chain(
-            cl,
-            Flux.flatten,
-            ActionRNNs.ARNN(fs, 4, nh;
+            ActionRNNs.ARNN(latent_size, 4, nh;
                             init=init_func,
                             hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, 4; initW=init_func))
@@ -78,9 +87,7 @@ function get_ann(parsed, image_dims, rng)
     elseif parsed["cell"] == "RNN"
         
         Flux.Chain(
-            cl,
-            Flux.flatten,
-            Flux.RNN(fs, nh;
+            Flux.RNN(latent_size, nh;
                      init=init_func),
                            # hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, 4; initW=init_func))
@@ -89,13 +96,14 @@ function get_ann(parsed, image_dims, rng)
         
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
         Flux.Chain(
-            cl, Flux.flatten,
-            rnntype(fs, nh; init=init_func),
+            rnntype(latent_size, nh; init=init_func),
             Flux.Dense(nh,
                        4;
                        initW=init_func))
         
     end
+    
+    ActionRNNs.VizBackbone(encoder, decoder, rnn)
 end
 
 function construct_agent(env, parsed, rng)
@@ -199,7 +207,7 @@ function main_experiment(parsed::Dict=default_config(); working=false, progress=
             eps += 1
         end
         save_results = logger.data
-        (;save_results = save_results)
+        (;save_results = save_results, agent = agent)
     end
 end
 

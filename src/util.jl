@@ -4,6 +4,8 @@ using Flux
 import Random
 
 
+glorot_uniform(args...; kwargs...) = glorot_uniform(Random.GLOBAL_RNG, args...; kwargs...)
+glorot_normal(args...; kwargs...) = glorot_normal(Random.GLOBAL_RNG, args...; kwargs...)
 
 function glorot_uniform(rng::Random.AbstractRNG, dims...; ignore_dims=0)
     if ignore_dims == 0

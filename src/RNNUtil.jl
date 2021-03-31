@@ -32,11 +32,19 @@ function contains_layer_type(m::Flux.Chain, type::Type)
     return is_type
 end
 
+function contains_layer_type(m, type::Type)
+    is_type = false
+    foreach(x -> is_type = is_type || (x isa Flux.Recur && x.cell isa type) || (x isa type),
+            Flux.functor(m)[1])
+    return is_type
+end
+
 function needs_action_input(m)
     needs_action = Bool[]
     foreach(x -> push!(needs_action, _needs_action_input(x)), Flux.functor(m)[1])
     return any(needs_action)
 end
+
 
 _needs_action_input(m) = false
 _needs_action_input(m::Flux.Recur{T}) where {T} = _needs_action_input(m.cell)
@@ -168,17 +176,18 @@ function get_hs_details_for_er(model)
     rnn_idx = find_layers_with_eq(model, (l)->l isa Flux.Recur)
 
     # get hidden state archetype from model
-    hidden_state_init = get_initial_hidden_state(model)
+    hidden_state_init = get_initial_hidden_state(model, 1)
     
     hs_type = DataType[]
     hs_length = Int[]
     hs_symbol = Symbol[]
     for idx ∈ rnn_idx
-        if hidden_state_init[model[idx]] isa Tuple
+        hs_sym = hs_symbol_layer(model[idx], idx)
+        if hidden_state_init[hs_sym] isa Tuple
             # push!(hs_type, hidden_state_init[model[idx]])
             throw("LSTMs not supported yet")
         else
-            hs_archtype = hidden_state_init[model[idx]]
+            hs_archtype = hidden_state_init[hs_sym]
             push!(hs_type, eltype(hs_archtype))
             push!(hs_length, length(hs_archtype))
             push!(hs_symbol, hs_symbol_layer(model[idx], idx))
@@ -217,19 +226,19 @@ function get_hs_from_experience!(model, exp::NamedTuple, d::Dict, device)
 
     rnn_idx = find_layers_with_eq(model, (l)->l isa Flux.Recur)
     for idx in rnn_idx
-        init_hs = get_initial_hidden_state(model[idx]) |> cpu
+        init_hs = CPU()(get_initial_hidden_state(model[idx]))
         if tuple_hidden_state(model[idx])
             throw("How did you get here?")
         else
             hs_symbol = hs_symbol_layer(model[idx], idx)
             h = if :beg ∈ keys(exp)
                 # @show typeof(exp.beg), typeof(exp[hs_symbol]), typeof(init_hs)
-                device(hcat([(exp.beg[b][1] ? init_hs : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...))
+                device(hcat([(exp.beg[b][1] ? init_hs : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...), hs_symbol)
             else
-                device(hcat([(exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...))
+                device(hcat([(exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...), hs_symbol)
             end
-            int_h = get!(()->zero(h), hs, hs_symbol)
-            int_h .= h 
+            int_h = get!(()->h, hs, hs_symbol)
+            copyto!(int_h, h)
         end
     end
     hs

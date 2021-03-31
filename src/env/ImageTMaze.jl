@@ -51,7 +51,7 @@ end
 
 function MinimalRLCore.environment_step!(env::ImageTMaze, action::Int, rng=Random.GLOBAL_RNG)
     MinimalRLCore.environment_step!(env.env, action, rng)
-    # env.r_state .= rand(Random.GLOBAL_RNG, UInt8, 28, 28, 1)
+    env.r_state .= rand(Random.GLOBAL_RNG, UInt8, 28, 28, 1)
 end
 
 

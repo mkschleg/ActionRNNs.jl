@@ -58,19 +58,20 @@ function ControlImageERAgent(model,
     
     state_list, init_state = begin
         if dev isa CPU
-            if contains_rnntype(model, ActionRNNs.AbstractActionRNN)
+            if needs_action_input(model)
                 (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 4}}}(2), (0, zeros(Float32, 1, 1, 1, 1)))
             else
                 (DataStructures.CircularBuffer{Array{Float32, 4}}(2), zeros(Float32, 1, 1, 1, 1))
             end
         else
-            if contains_rnntype(model, ActionRNNs.AbstractActionRNN)
+            if needs_action_input(model)
                 (DataStructures.CircularBuffer{Tuple{Int64, Flux.CUDA.CuArray{Float32, 4}}}(2), (0, zeros(Float32, 1, 1, 1, 1) |> gpu))
             else
                 (DataStructures.CircularBuffer{Flux.CUDA.CuArray{Float32, 4}}(2), zeros(Float32, 1, 1, 1, 1) |> gpu)
             end
         end
     end
+    @show typeof(state_list)
 
     hidden_state_init = get_initial_hidden_state(model, 1)
 
@@ -171,13 +172,14 @@ function MinimalRLCore.step!(agent::ControlImageERAgent, env_s_tp1, r, terminal,
 
     
     us = update!(agent, rng)
+
     out_preds, cur_hidden_state = get_preds!(agent)
     update_hidden_state_init!(agent)
 
     agent.raw_s_t = env_s_tp1
     agent.am1 = copy(agent.action)
     agent.action = get_action(agent, out_preds, rng) #sample(agent.π, out_preds, rng)
-    agent.update_wait += 1
+    agent.cur_step += 1
     return (preds=out_preds, h=cur_hidden_state, action=agent.action, update_state=us)
 end
 
@@ -218,15 +220,17 @@ function update!(agent::ControlImageERAgent, replay::ImageReplay, rng)
         t = [exp.t[i][end] for i in 1:batch_size]
         r = [exp.r[i][end] for i in 1:batch_size]
         a = [exp.a[i][end] for i in 1:batch_size]
-        
+
+        # make sure exp.s is copied to the gpu, not created a new device.
         s = if eltype(agent.state_list) <: Tuple
-            [(exp.am1[i], agent.device(exp.s[i])) for i in 1:length(exp.s)]
+            [(exp.am1[i], agent.device(exp.s[i]), Symbol("s$(i)")) for i in 1:length(exp.s)]
         else
-            agent.device(exp.s)
+            agent.device.(exp.s, [Symbol("s$(i)") for i ∈ 1:length(exp.s)])
         end
 
         ActionRNNs.get_hs_from_experience!(agent.model, exp, agent.hs_tr_init, agent.device)
-        
+
+        # us = nothing
         us = update_batch!(agent.model,
                            agent.opt,
                            agent.lu,
@@ -244,7 +248,7 @@ function update!(agent::ControlImageERAgent, replay::ImageReplay, rng)
         end
 
         if !(agent.target_network isa Nothing)
-            if agent.cur_step%agent.tn_update_freq == 0
+            if agent.cur_step % agent.tn_update_freq == 0
                 update_target_network!(agent.model, agent.target_network)
             end
         end
