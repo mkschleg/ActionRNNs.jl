@@ -55,6 +55,7 @@ function get_ann(parsed, image_dims, rng)
     fs = prod(Flux.outdims(cl, image_dims))
     println(fs)
     nh = parsed["numhidden"]
+    latent_size=128
     
     if parsed["cell"] == "FacARNN"
 
@@ -62,7 +63,8 @@ function get_ann(parsed, image_dims, rng)
         Flux.Chain(
             cl,
             Flux.flatten,
-            ActionRNNs.FacARNN(fs, 4, nh, factors; init=init_func),
+            Dense(fs, latent_size, relu; initW=init_func),
+            ActionRNNs.FacARNN(latent_size, 4, nh, factors; init=init_func),
             Flux.Dense(nh, 4; initW=init_func))
         
     elseif parsed["cell"] == "ARNN"
@@ -70,7 +72,8 @@ function get_ann(parsed, image_dims, rng)
         Flux.Chain(
             cl,
             Flux.flatten,
-            ActionRNNs.ARNN(fs, 4, nh;
+            Dense(fs, latent_size, relu; initW=init_func),
+            ActionRNNs.ARNN(latent_size, 4, nh;
                             init=init_func,
                             hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, 4; initW=init_func))
@@ -80,9 +83,9 @@ function get_ann(parsed, image_dims, rng)
         Flux.Chain(
             cl,
             Flux.flatten,
-            Flux.RNN(fs, nh;
+            Dense(fs, latent_size, relu; initW=init_func),
+            Flux.RNN(latent_size, nh;
                      init=init_func),
-                           # hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, 4; initW=init_func))
         
     else
@@ -90,7 +93,8 @@ function get_ann(parsed, image_dims, rng)
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
         Flux.Chain(
             cl, Flux.flatten,
-            rnntype(fs, nh; init=init_func),
+            Dense(fs, latent_size, relu; initW=init_func),
+            rnntype(latent_size, nh; init=init_func),
             Flux.Dense(nh,
                        4;
                        initW=init_func))
@@ -111,11 +115,11 @@ function construct_agent(env, parsed, rng)
     τ = parsed["truncation"]
 
 
-    # ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
-    ap = ActionRNNs.ϵGreedyDecay((1.0, 0.1), 10000, 1000, MinimalRLCore.get_actions(env))
+    ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+    # ap = ActionRNNs.ϵGreedyDecay((1.0, 0.1), 50000, 1000, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
-    chain = get_ann(parsed, (28,28, 1, 1), rng) |> gpu
+    chain = get_ann(parsed, (28,28, 1, 1), rng) #|> gpu
 
     ActionRNNs.ControlImageERAgent(chain,
                                    opt,

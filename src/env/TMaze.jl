@@ -14,6 +14,7 @@ const DOWN = 4
 
 const GOOD_REW = 4.0f0
 const BAD_REW = -1.0f0
+const STEP_REW = -0.1f0
 end
 
 const TMC = TMazeConst
@@ -69,14 +70,14 @@ end
 MinimalRLCore.get_reward(env::TMaze) = begin
     if env.state.x == env.size
         if env.state.y == 0
-            -0.1f0
+            TMazeConst.STEP_REW
         elseif env.state.y == 1
             env.goal_dir == TMC.UP ? TMC.GOOD_REW : TMC.BAD_REW
         elseif env.state.y == -1
             env.goal_dir == TMC.DOWN ? TMC.GOOD_REW : TMC.BAD_REW
         end
     else
-        -0.1f0
+        TMazeConst.STEP_REW
     end
 end
     
