@@ -71,12 +71,13 @@ function get_ann(parsed, fs, env, rng)
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
-        Flux.Chain(
+        m = Flux.Chain(
             rnn(fs, 4, nh;
                 init=init_func,
                 initb=initb),
             Flux.Dense(nh, length(get_actions(env)); initW=init_func))
-        
+
+
     else
         
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))

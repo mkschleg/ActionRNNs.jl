@@ -39,7 +39,7 @@ include("RNNUtil.jl")
 
 
 # export ARNN, ALSTM, AGRU, reset!, get
-export AARNN, MARNN, FacARNN, reset!, get
+export AARNN, MARNN, AAGRU, MAGRU, FacARNN, reset!, get
 include("rnns/RNN.jl")
 include("rnns/GRU.jl")
 

@@ -1,11 +1,6 @@
 using Flux
 using Flux: gate
 
-# gate(h, n) = (1:h) .+ h*(n-1)
-# gate(x::AbstractVector, h, n) = @view x[gate(h,n)]
-# gate(x::AbstractMatrix, h, n) = x[gate(h,n),:]
-
-
 struct AAGRUCell{A,V,S}  <: AbstractActionRNN
     Wi::A
     Wa::A
@@ -14,7 +9,7 @@ struct AAGRUCell{A,V,S}  <: AbstractActionRNN
     state0::S
 end
 
-AAGRUCell(in, na, out; init = glorot_uniform, initb = zeros, init_state = zeros) =
+AAGRUCell(in, na, out; init = Flux.glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
     AAGRUCell(init(out * 3, in),
               init(out * 3, na),
               init(out * 3, out),
@@ -61,7 +56,7 @@ struct MAGRUCell{A,V,S}  <: AbstractActionRNN
     state0::S
 end
 
-MAGRUCell(in, na, out; init = glorot_uniform, initb = zeros, init_state = zeros) =
+MAGRUCell(in, na, out; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
     MAGRUCell(init(na, out * 3, in; ignore_dims=1),
               init(na, out * 3, out; ignore_dims=1),
               initb(out * 3, na),

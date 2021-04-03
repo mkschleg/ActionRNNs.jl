@@ -98,17 +98,16 @@ function update_batch!(chain,
         reset!(target_network, h_init)
     end
 
-    # one_hot_vecs = [Flux.OneHotMatrix(Flux.OneHotVector(action_t[i], num_actions), length(terminal)) for i in 1:length(state_seq)] |> gpu
-
     m = fill(false, length(terminal), length(terminal))
     m[CartesianIndex.(1:length(terminal), 1:length(terminal))] .= true
     m_dev = device(m)
 
-    # return nothing
+    reset!(chain, h_init)
+
     grads = gradient(ps) do
 
         preds = map(chain, state_seq)
-        pred_view = hcat([@view preds[actual_seq_len[i]][action_t[i], :] for i ∈ 1:length(actual_seq_len)]...)
+        pred_view = hcat([preds[actual_seq_len[i]][action_t[i], :] for i ∈ 1:length(actual_seq_len)]...)
         q_t = sum(pred_view .* m_dev; dims=2)[:, 1]
 
         qtrgts = typeof(q_t)()
@@ -122,15 +121,13 @@ function update_batch!(chain,
             end
         end
         loss = Flux.huber_loss(q_t, qtrgts; agg=sum)
-        # loss = Flux.mse(q_t, qtrgts; agg=sum)
-        # loss = sum((q_t .- qtrgts).^2)
 
         ignore() do
             ℒ = loss
         end
         loss
     end
-    reset!(chain, h_init)
+
     Flux.update!(opt, ps, grads)
     UpdateState(ℒ, grads, Flux.params(chain), opt)
 end

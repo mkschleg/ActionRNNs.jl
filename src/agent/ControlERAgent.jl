@@ -198,7 +198,7 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
                            agent.target_network)
 
         if agent.hs_learnable
-            modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init)
+            modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt)
         end
         
 
