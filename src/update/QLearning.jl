@@ -61,10 +61,23 @@ qloss(preds, action_t, reward, γ, terminal, actual_seq_len) = begin
 end
 
 
+qloss_2(preds, action_t, reward, γ, terminal, actual_seq_len) = begin
+    s = 0.0f0
+    for i ∈ 1:length(actual_seq_len)
+        s += q_learning_loss_batch_single(
+            preds[i],
+            reward[i],
+            γ,
+            terminal[i],
+            preds[actual_seq_len[i] + 1][:, i])
+    end
+    s
+end
+
+
 qtargets(preds, action_t, r, γ, terminal, actual_seq_len) = begin
     @tullio q_tp1[i] := maximum(preds[actual_seq_len[i] + 1][:, i])
-    trgts = (r) .+ γ * (1 .- (terminal)) .* q_tp1
-    trgts
+    (r) .+ γ * (1 .- (terminal)) .* q_tp1
 end
 
 function get_pred_at_correct_time(preds, action, actual_seq_len, i)
@@ -121,10 +134,10 @@ function update_batch!(chain,
                 qtrgts = device(x, :qtargets)
             end
         end
-        loss = Flux.huber_loss(q_t, qtrgts; agg=sum)
+        # loss = Flux.huber_loss(q_t, qtrgts; agg=sum)
         # loss = Flux.mse(q_t, qtrgts; agg=sum)
-        # loss = sum((q_t .- qtrgts).^2)
-
+        loss = sum((q_t .- qtrgts).^2)
+        # loss = qloss(preds, action_t, reward, γ, terminal, actual_seq_len)
         ignore() do
             ℒ = loss
         end
