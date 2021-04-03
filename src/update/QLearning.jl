@@ -78,8 +78,6 @@ end
 qtargets(preds, action_t, r, γ, terminal, actual_seq_len) = begin
     @tullio q_tp1[i] := maximum(preds[actual_seq_len[i] + 1][:, i])
     (r) .+ γ * (1 .- (terminal)) .* q_tp1
-    # p = preds[actual_seq_len]
-    # @tullio trgts[i] := r[i] + γ * (1 - terminal[i]) * maximum(p[i][:, i])
 end
 
 function get_pred_at_correct_time(preds, action, actual_seq_len, i)

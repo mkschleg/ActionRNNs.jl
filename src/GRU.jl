@@ -2,7 +2,6 @@
 using Flux
 using Flux: gate
 
-
 mutable struct ActionGRUCell{A1,A2, V1, V2, H} <: AbstractActionRNN
     Wi_input::A1
     Wh_input::A1
