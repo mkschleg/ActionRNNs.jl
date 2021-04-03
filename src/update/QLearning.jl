@@ -62,7 +62,7 @@ end
 
 
 qtargets(preds, action_t, r, γ, terminal, actual_seq_len) = begin
-    @tullio q_tp1[i] := maximum(preds[actual_seq_len[i]][:, i])
+    @tullio q_tp1[i] := maximum(preds[actual_seq_len[i] + 1][:, i])
     trgts = (r) .+ γ * (1 .- (terminal)) .* q_tp1
     trgts
 end

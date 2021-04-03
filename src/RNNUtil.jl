@@ -3,11 +3,15 @@ using Flux
 # using Flux: reset!
 # Utilities for using RNNs and Action RNNs online and in chains.
 
-
 ######## Information Functions ############
 
 tuple_hidden_state(rnn::Flux.Recur) = rnn.state isa Tuple
 
+```
+    find_layers_with_eq(m, eq)
+
+A function which takes a model and a function and returns the locations where the function returns true.
+```
 function find_layers_with_eq(m, eq)
     layer_indecies = Union{Int, Tuple}[]
     for (idx, l) in enumerate(m)
@@ -44,10 +48,6 @@ function needs_action_input(m)
     foreach(x -> push!(needs_action, _needs_action_input(x)), Flux.functor(m)[1])
     return any(needs_action)
 end
-
-
-_needs_action_input(m) = false
-_needs_action_input(m::Flux.Recur{T}) where {T} = _needs_action_input(m.cell)
 
 hs_symbol_layer(l, idx) = if tuple_hidden_state(l)
     throw("You Shouldn't Be here")
@@ -141,6 +141,32 @@ end
 
 get_hidden_state(rnn::Flux.Recur{T}) where {T} = copy(rnn.state)
 get_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = deepcopy(rnn.state)
+
+
+function get_hidden_state_inplace(c, d=nothing)
+    # h_state = IdDict{Any, Array{Float32, 1}}()
+    if d isa Nothing
+        h_state = IdDict()
+        foreach(x -> x isa Flux.Recur && get!(h_state, x, get_hidden_state_inplace(x)), Flux.functor(c)[1])
+        h_state
+    else
+        h_state = Dict{Symbol, AbstractArray{Float32}}()
+        rnn_idx = find_layers_with_eq(c, (l)->l isa Flux.Recur)
+        for idx ∈ rnn_idx
+            if tuple_hidden_state(c[idx])
+                throw("Not implemented yet....")
+            else
+                h_sym = hs_symbol_layer(c[idx], idx)
+                h_state[h_sym] = get_hidden_state_inplace(c[idx])
+            end
+        end
+        h_state
+    end
+end
+
+
+get_hidden_state_inplace(rnn::Flux.Recur{T}) where {T} = rnn.state
+get_hidden_state_inplace(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = rnn.state
 
 
 function get_initial_hidden_state(c, d=nothing)
