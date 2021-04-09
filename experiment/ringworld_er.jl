@@ -7,6 +7,7 @@ import LinearAlgebra.Diagonal
 
 # include("../src/ActionRNNs.jl")
 import ActionRNNs
+import MinimalRLCore
 
 using DataStructures: CircularBuffer
 using ActionRNNs: RingWorld, step!, start!, glorot_uniform
@@ -17,7 +18,7 @@ using Random
 using ProgressMeter
 using Reproduce
 using Random
-using MinimalRLCore
+
 
 # using Plots
 
@@ -36,8 +37,10 @@ function results_synopsis(res, ::Val{true})
 end
 results_synopsis(res, ::Val{false}) = res
 
-function default_arg_parse()
+function default_args()
     Dict{String,Any}(
+
+        "agent"=>"new",
         "save_dir" => "ringworld",
 
         "seed" => 1,
@@ -46,81 +49,86 @@ function default_arg_parse()
 
         # "features" => "OneHot",
         # "cell" => "ARNN",
-        "rnn_config" => "ARNN_OneHot",
+        "cell" => "MARNN",
         "numhidden" => 6,
         "hs_learnable" => true,
         
-        "outhorde" => "gammas_term",
+        "outhorde" => "onestep",
         "outgamma" => 0.9,
         
         "opt" => "RMSProp",
-        "alpha" => 0.001,
+        "eta" => 0.001,
+        "rho" => 0.9,
         "truncation" => 3,
+
+        "action_features"=>false,
 
         "replay_size"=>1000,
         "warm_up" => 100,
         "batch_size"=>4,
-        "update_wait"=>4,
+        "update_freq"=>1,
+        "target_update_freq"=>1,
 
         "synopsis" => false)
 
 end
 
-function get_rnn_config(parsed, out_horde, rng)
+function get_model(parsed, out_horde, fc, rng)
 
-    rnn_config_str = parsed["rnn_config"]
-    
-    cell_str, fc_str = split(rnn_config_str, "_")
-
-    fc = if fc_str == "OneHot"
-        RWU.OneHotFeatureCreator()
-    elseif fc_str == "SansAction"
-        RWU.SansActionFeatureCreator()
-    else
-        throw(fc_str * " not a feature creator.")
-    end
-    
-    fs = MinimalRLCore.feature_size(fc)
-    
+    nh = parsed["numhidden"]
     init_func = (dims...)->glorot_uniform(rng, dims...)
-
+    fs = size(fc)
+    num_gvfs = length(out_horde)
+    @info fs
+    
     chain = begin
-        if cell_str == "FacARNN"
-            Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"], hs_learnable=parsed["hs_learnable"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
-        elseif cell_str == "ARNN"
-            Flux.Chain(ActionRNNs.ARNN(fs, 2, parsed["numhidden"], hs_learnable=parsed["hs_learnable"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
-        elseif cell_str == "RNN"
-            Flux.Chain(ActionRNNs.RNN(fs, parsed["numhidden"], hs_learnable=parsed["hs_learnable"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
-        elseif cell_str == "ALSTM"
-            Flux.Chain(ActionRNNs.ALSTM(fs, 2, parsed["numhidden"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
-        elseif cell_str == "LSTM"
-            Flux.Chain(Flux.LSTM(fs, parsed["numhidden"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
+        if parsed["cell"] == "FacARNN"
+            
+            factors = parsed["factors"]
+            Flux.Chain(ActionRNNs.FacARNN(fs, 2, nh, factors; init=init_func),
+                       Flux.Dense(nh, num_gvfs; initW=init_func))
+            
+        elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
+
+            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+            
+            init_func = (dims...; kwargs...)->
+                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+            
+            m = Flux.Chain(
+                rnn(fs, 4, nh;
+                    init=init_func,
+                    initb=initb),
+                Flux.Dense(nh, num_gvfs; initW=init_func))
+            
+            
         else
-            throw("Unknown Cell type " * cell_str)
+            
+            rnntype = getproperty(Flux, Symbol(parsed["cell"]))
+            Flux.Chain(rnntype(fs, nh; init=init_func),
+                       Flux.Dense(nh,
+                                  num_gvfs;
+                                  initW=init_func))
         end
     end
 
-    fc, fs, chain
+    chain
 end
 
 function construct_agent(parsed, rng)
 
+    fc = RWU.StandardFeatureCreator{parsed["action_features"]}()
+    fs = size(fc)
 
-    # out_horde = RWU.gammas_term(collect(0.0:0.1:0.9))
     out_horde = RWU.get_horde(parsed, "out")
 
-    fc, fs, chain = get_rnn_config(parsed, out_horde, rng)
-    opt_func = getproperty(Flux, Symbol(parsed["opt"]))
-    opt = opt_func(parsed["alpha"])
+    chain = get_model(parsed, out_horde, fc, rng)
+    opt = FLU.get_optimizer(parsed)
 
-    
     ap = ActionRNNs.RandomActingPolicy([0.5, 0.5])
     τ = parsed["truncation"]
+
 
     ActionRNNs.PredERAgent(out_horde,
                            chain,
@@ -136,20 +144,52 @@ function construct_agent(parsed, rng)
 
 end
 
-function main_experiment(parsed::Dict{String, Any}; working=false, progress=false)
+function construct_new_agent(parsed, rng)
+
+    fc = RWU.StandardFeatureCreator{parsed["action_features"]}()
+    fs = size(fc)
+
+    out_horde = RWU.get_horde(parsed, "out")
+
+    chain = get_model(parsed, out_horde, fc, rng)
+    opt = FLU.get_optimizer(parsed)
+
+    ap = ActionRNNs.RandomActingPolicy([0.5, 0.5])
+    τ = parsed["truncation"]
+    
+    ActionRNNs.DRTDNAgent(out_horde,
+                          chain,
+                          opt,
+                          τ,
+                          fc,
+                          fs,
+                          1,
+                          parsed["replay_size"],
+                          parsed["warm_up"],
+                          parsed["batch_size"],
+                          parsed["update_freq"],
+                          parsed["target_update_freq"],
+                          ap,
+                          parsed["hs_learnable"])
+
+end
+
+function main_experiment(parsed=default_args(); working=false, progress=false)
 
     ActionRNNs.experiment_wrapper(parsed, working) do (parsed)
-        # savefile = ActionRNNs.save_setup(parsed)
-        # if isnothing(savefile)
-        #     return
-        # end
         
         num_steps = parsed["steps"]
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
         env = RingWorld(parsed)
-        agent = construct_agent(parsed, rng)
+        agent = if parsed["agent"] == "new"
+            construct_new_agent(parsed, rng)
+        else
+            construct_agent(parsed, rng)
+        end
+
+        @show typeof(agent)
         
         out_pred_strg, out_err_strg =
             experiment_loop(env, agent, parsed["outhorde"], num_steps, rng; prgs=progress)
@@ -170,10 +210,11 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
     prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
     
     cur_step = 1
-    run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
+    MinimalRLCore.run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
         
         out_preds = a.preds
-        out_pred_strg[cur_step, :] .= out_preds
+        
+        out_pred_strg[cur_step, :] .= out_preds[:,1]
         out_err_strg[cur_step, :] = out_pred_strg[cur_step, :] .- RWU.oracle(env, outhorde_str);
         if !(a.update_state isa Nothing)
             out_loss_strg[cur_step] = a.update_state.loss

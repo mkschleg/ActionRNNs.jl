@@ -131,6 +131,11 @@ git-tree-sha1 = "44e9f638aa9ed1ad58885defc568c133010140aa"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
 version = "0.9.37"
 
+[[CircularArrayBuffers]]
+git-tree-sha1 = "a5f5b84ecff2f9822e0eda78418d1b15f13a10a0"
+uuid = "9de3a189-e0c0-4e15-ba3b-b14b9fb0aec1"
+version = "0.1.2"
+
 [[CodeTracking]]
 deps = ["InteractiveUtils", "UUIDs"]
 git-tree-sha1 = "8ad457cfeb0bca98732c97958ef81000a543e73e"

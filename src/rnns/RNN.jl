@@ -15,8 +15,19 @@ struct AARNNCell{F,A,V,S} <: AbstractActionRNN
     state0::S
 end
 
-AARNNCell(in::Integer, na::Integer, out::Integer, σ=tanh; init=Flux.glorot_uniform, initb=zeros, init_state=zeros) = 
-  AARNNCell(σ, init(out, in), init(out, na), init(out, out), initb(out), init_state(out, 1))
+AARNNCell(in::Integer,
+          na::Integer,
+          out::Integer,
+          σ=tanh;
+          init=Flux.glorot_uniform,
+          initb=Flux.zeros,
+          init_state=Flux.zeros) = 
+              AARNNCell(σ,
+                        init(out, in),
+                        init(out, na),
+                        init(out, out),
+                        initb(out),
+                        init_state(out, 1))
 
 function (m::AARNNCell)(h, x::Tuple{A, X}) where {A, X}
     σ, Wi, Wa, Wh, b = m.σ, m.Wi, m.Wa, m.Wh, m.b
@@ -24,9 +35,9 @@ function (m::AARNNCell)(h, x::Tuple{A, X}) where {A, X}
     o = x[2]
     a = x[1]
     
-    h = σ.(Wi*o .+ get_waa(Wa, a) .+ Wh*h .+ b)
+    new_h = σ.(Wi*o .+ get_waa(Wa, a) .+ Wh*h .+ b)
     sz = size(o)
-    return h, reshape(h, :, sz[2:end]...)
+    return new_h, new_h#reshape(h, :, sz[2:end]...)
 end
 
 Flux.@functor AARNNCell
@@ -42,8 +53,8 @@ end
 The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
 output fed back into the input each time step.
 """
-AARNN(a...; ka...) = Recur(AARNNCell(a...; ka...))
-Recur(m::AARNNCell) = Flux.Recur(m, m.state0)
+AARNN(a...; ka...) = Flux.Recur(AARNNCell(a...; ka...))
+Flux.Recur(m::AARNNCell) = Flux.Recur(m, m.state0)
 
 
 
@@ -62,11 +73,10 @@ struct MARNNCell{F, A, V, H} <: AbstractActionRNN
 end
 
 MARNNCell(num_ext_features, num_actions, num_hidden;
-         init=Flux.glorot_uniform,
+         init=glorot_uniform,
          initb=(args...;kwargs...) -> Flux.zeros(args...),
          init_state=Flux.zeros,
-         σ_int=tanh,
-         hs_learnable=true) =
+         σ_int=tanh) =
     MARNNCell(σ_int,
              init(num_actions, num_hidden, num_ext_features; ignore_dims=1),
              init(num_actions, num_hidden, num_hidden; ignore_dims=1),
@@ -91,12 +101,6 @@ function (m::MARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{<:Inte
     new_h = m.σ.(wx .+ wh .+ ba)
 
     return new_h, new_h
-end
-
-
-function reduce_func(m::MARNNCell, x, h, i)
-    @inbounds x[1][i]*view(m.Wx, :, :, i)*x[2] +
-        x[1][i]*view(m.Wh, :, :, i)*h
 end
 
 function Base.show(io::IO, l::MARNNCell)

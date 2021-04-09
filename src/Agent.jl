@@ -1,14 +1,23 @@
 
+import MinimalRLCore
 
 
-# include("agent/RNNAgent.jl")
-# include("agent/RNNActionAgent.jl")
 
-include("agent/PredOnlineAgent.jl")
-include("agent/ControlFluxAgent.jl")
-include("agent/PredERAgent.jl")
-include("agent/ControlERAgent.jl")
-include("agent/ControlImageERAgent.jl")
+
+
+
+include("agent/AbstractERAgent.jl")
+include("agent/agent_util.jl")
+
+include("agent/DRQNAgent.jl")
+include("agent/DRTDNAgent.jl")
+
+
+# include("agent/PredOnlineAgent.jl")
+# include("agent/ControlFluxAgent.jl")
+include("agent/old_agents/PredERAgent.jl")
+# include("agent/ControlERAgent.jl")
+# include("agent/ControlImageERAgent.jl")
 
 
 

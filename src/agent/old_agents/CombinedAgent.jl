@@ -6,28 +6,35 @@ import Random
 import DataStructures
 import MinimalRLCore
 
+
+
 mutable struct ControlERAgent{O, C, CT, F, H, ER, Φ,  Π} <: MinimalRLCore.AbstractAgent
+    
     lu::LearningUpdate
     opt::O
     model::C
     target_network::CT
     build_features::F
+    
     state_list::DataStructures.CircularBuffer{Φ}
     hidden_state_init::H
+    
     replay::ER
     warm_up::Int
     batch_size::Int
     update_wait::Int
     target_update_wait::Int
     τ::Int
+    
     s_t::Φ
     π::Π
     γ::Float32
+    
     action::Int
     am1::Int
     action_prob::Float64
+    
     hs_learnable::Bool
-
     beg::Bool
     cur_step::Int
 
@@ -58,12 +65,9 @@ function ControlERAgent(model,
         end
     end
 
-
     hidden_state_init = get_initial_hidden_state(model, 1)
-    # @show typeof(hidden_state_init)
 
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
-
     replay = EpisodicSequenceReplay(replay_size+τ-1,
                                     (Int, Float32, Int, Float32, Float32, Bool, Bool, hs_type...),
                                     (1, feature_size, 1, feature_size, 1, 1, 1, hs_length...),
@@ -198,7 +202,7 @@ function MinimalRLCore.step!(agent::ControlERAgent, env_s_tp1, r, terminal, rng;
                            agent.target_network)
 
         if agent.hs_learnable
-            modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init)
+            modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt)
         end
         
 

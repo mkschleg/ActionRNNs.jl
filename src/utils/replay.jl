@@ -8,6 +8,8 @@ import MacroTools: @forward
 
 abstract type AbstractReplay end
 
+proc_state(er::AbstractReplay, x) = identity(x)
+
 Base.keys(er::AbstractReplay) = 1:length(er)
 
 function Base.iterate(asr::AbstractReplay)
@@ -136,67 +138,11 @@ function get_valid_starting_range(s, e, seq_length)
 end
 
 
-function get_valid_indicies(er::EpisodicSequenceReplay, min_seq_length)
+function get_valid_indicies(er::EpisodicSequenceReplay, seq_length)
     # episode_ends = get_episode_ends(er)
 
-    1:length(er)
+    1:(length(er) + 1 - seq_length)
     
-    # if isempty(episode_ends)
-    #     1:(length(er) + 1 - min_seq_length)
-    # else
-
-    #     if er.place == 1
-    #         vcat([get_valid_starting_range(
-    #             e_idx == 1 ? 1 : episode_ends[e_idx-1] + 1,
-    #             e,
-    #             min_seq_length)
-    #               for (e_idx, e) in enumerate(episode_ends)]...)
-    #     else
-    #         idx_set = UnitRange{Int}[]
-    #         boundary_crossed = false
-    #         for (e_idx, e) in enumerate(episode_ends)
-    #             if e < er.place
-    #                 if e_idx == 1
-    #                     push!(idx_set,
-    #                           get_valid_starting_range(
-    #                               e_idx == 1 ? 1 : episode_ends[e_idx-1] + 1,
-    #                               e,
-    #                               min_seq_length))
-    #                 else
-    #                     push!(idx_set,
-    #                           get_valid_starting_range(
-    #                               e_idx == 1 ? 1 : episode_ends[e_idx-1] + 1,
-    #                               e,
-    #                               min_seq_length))
-    #                 end
-    #             elseif boundary_crossed == false
-    #                 push!(idx_set,
-    #                       get_valid_starting_range(
-    #                           episode_ends[e_idx-1],
-    #                           er.place,
-    #                           min_seq_length))
-    #                 push!(idx_set,
-    #                       get_valid_starting_range(
-    #                           er.place,
-    #                           e,
-    #                           min_seq_length))
-    #                 boundary_crossed = true
-    #             else
-    #                 push!(idx_set,
-    #                       get_valid_starting_range(
-    #                           er.place,
-    #                           e,
-    #                           min_seq_length))
-    #             end
-    #         end
-    #     end
-        
-    #     # If place boundary between episodes
-    #     # if episode spans end and beginning of the buffer.
-    #     #
-
-
-    # end
 end
 
 function get_sequence(er::EpisodicSequenceReplay, start_ind, max_seq_length)
