@@ -1,26 +1,26 @@
 [config]
-save_dir="tmaze_er_rnn_rmsprop_10"
+save_dir="tmaze_er_rnn_rmsprop_20"
 exp_file="experiment/tmaze_er.jl"
 exp_module_name = "TMazeERExperiment"
 exp_func_name = "main_experiment"
 arg_iter_type = "iter"
 
 [static_args]
-"steps" = 300000
+"steps" = 500000
 "opt" = "RMSProp"
 "rho" = 0.99
-"size" = 10
+"size" = 20
 "gamma" = 0.99
 "batch_size" = 4
 "replay_size" = 1000
 "warm_up" = 1000
 
 [sweep_args]
-"cell" = ["MARNN", "AARNN", "RNN", "MAGRU", "AAGRU", "GRU"]
+"cell" = ["MAGRU", "AAGRU", "GRU"]
 "hs_learnable" = [false, true]
 "update_wait" = [4, 16]
 # "eta" = "clamp.(0.01*1.5.^(-10:2:0), 0.0, 1.0)"
 "eta" = [0.0001, 0.0005, 0.005, 0.001]
-"truncation" = [1, 2, 4, 6, 8, 10, 12, 16]
-"numhidden" = [3, 6, 9, 12, 16]
+"truncation" = [1, 5, 10, 15, 20, 25, 30]
+"numhidden" = [3, 6, 9, 12, 16, 20]
 "seed" = "1:5"

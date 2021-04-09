@@ -62,12 +62,13 @@ function get_hs_symbol_list(model)
     hs_symbol = Symbol[]
     rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
     for idx ∈ rnn_idx
-        if tuple_hidden_state(model[rnn_idx])
+        if tuple_hidden_state(model[idx])
             throw("LSTMs not supported yet")
         else
             push!(hs_symbol, hs_symbol_layer(model[idx], idx))
         end
     end
+    hs_symbol
 end
 
 
@@ -98,20 +99,13 @@ reset!(m, h_init::IdDict) =
     foreach(x -> x isa Flux.Recur && reset!(x, h_init[x]), Flux.functor(m)[1])
 
 function reset!(m, h_init::Dict)
-    # println("Hello")
     rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, m)
     for idx ∈ rnn_idx
         if tuple_hidden_state(m[idx])
             throw("Not implemented yet.")
         else
             h_sym = hs_symbol_layer(m[idx], idx)
-
-            # @show pointer_from_objref(h_init[h_sym])
             reset!(m[idx], h_init[h_sym])
-            # @show pointer_from_objref(h_init[h_sym])
-            # @show pointer_from_objref(m[idx].state)
-            
-            # @show all(h_init[h_sym] .== m[idx].state)
         end
     end
 end
@@ -139,10 +133,10 @@ function get_next_hidden_state(rnn::Flux.Recur{T}, h_init, input) where {T<:Flux
     return deepcopy(rnn.cell(h_init, input)[1])
 end
 
-function get_next_hidden_state(c, h_init, input)
+function get_next_hidden_state(c, h_init, input, d=nothing)
     reset!(c, h_init)
     c(input)
-    get_hidden_state(c, 1)
+    get_hidden_state(c, d)
 end
 
 ### TODO there may be extra copies here than what is actually needed. Test in the future if there is slowdown from allocations here.
@@ -153,7 +147,7 @@ function get_hidden_state(c, d=nothing)
         foreach(x -> x isa Flux.Recur && get!(h_state, x, get_hidden_state(x)), Flux.functor(c)[1])
         h_state
     else
-        h_state = Dict{Symbol, AbstractArray{Float32}}()
+        h_state = Dict{Symbol, AbstractMatrix{Float32}}()
         rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, c)
         for idx ∈ rnn_idx
             if tuple_hidden_state(c[idx])
@@ -178,7 +172,7 @@ function get_hidden_state_inplace(c, d=nothing)
         foreach(x -> x isa Flux.Recur && get!(h_state, x, get_hidden_state_inplace(x)), Flux.functor(c)[1])
         h_state
     else
-        h_state = Dict{Symbol, AbstractArray{Float32}}()
+        h_state = Dict{Symbol, AbstractMatrix{Float32}}()
         rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, c)
         for idx ∈ rnn_idx
             if tuple_hidden_state(c[idx])
@@ -203,7 +197,8 @@ function get_initial_hidden_state(c, d=nothing)
         foreach(x -> x isa Flux.Recur && get!(h_state, x, get_initial_hidden_state(x)), Flux.functor(c)[1])
         h_state
     else
-        h_state = Dict{Symbol, AbstractArray{Float32}}()
+        
+        h_state = Dict{Symbol, AbstractMatrix{Float32}}()
         rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, c)
         for idx ∈ rnn_idx
             if tuple_hidden_state(c[idx])
@@ -299,6 +294,34 @@ function get_hs_from_experience!(model, exp::NamedTuple, d::Dict, device)
 
 end
 
+function get_hs_from_experience!(model, exp::Vector, d::Dict, device)
+
+    hs = d
+
+    rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
+    for idx in rnn_idx
+        init_hs = CPU()(get_initial_hidden_state(model[idx]))
+        if tuple_hidden_state(model[idx])
+            throw("How did you get here?")
+        else
+            hs_symbol = hs_symbol_layer(model[idx], idx)
+            init_hs = get_initial_hidden_state(model[idx])
+            h = if :beg ∈ keys(exp[1][1])
+                hcat([(seq[1].beg[1] ? init_hs : getindex(seq[1], hs_symbol)) for seq in exp]...)
+            else
+                if exp[1] isa NamedTuple
+                    getindex(exp[1], hs_symbol)
+                else
+                    hcat([(getindex(seq[1], hs_symbol)) for seq in exp]...)
+                end
+            end
+            int_h = get!(()->h, hs, hs_symbol)
+            copyto!(int_h, h)
+        end
+    end
+    hs
+end
+
 function get_hs_from_experience(model, exp, d=nothing)
     if d isa Nothing
         hs = IdDict()
@@ -347,9 +370,10 @@ end
 
 
 
-function modify_hs_in_er!(replay::ImageReplay, model, exp, exp_idx, hs, grads=nothing, opt=nothing, device=CPU())
+function modify_hs_in_er!(replay::ImageReplay, model, act_exp, exp_idx, hs, grads=nothing, opt=nothing, device=CPU())
     
     rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
+    exp = act_exp[2]
     
     for ridx in rnn_idx
         if tuple_hidden_state(model[ridx])
@@ -383,7 +407,7 @@ function modify_hs_in_er!(replay::ImageReplay, model, exp, exp_idx, hs, grads=no
             end
             if init_grad_n != 0
                 g = init_grad ./ init_grad_n
-                if grads isa nothing
+                if grads isa Nothing
                     model[ridx].cell.state0 .= device(g)
                 else
                     Flux.update!(opt, model[ridx].cell.state0, device(g))
@@ -438,5 +462,49 @@ function modify_hs_in_er!(replay, model, exp, exp_idx, hs, grads = nothing, opt 
     end
 end
 
+
+function modify_hs_in_er!(replay::SequenceReplay, model, exp, exp_idx, hs, grads = nothing, opt = nothing)
+    
+    # rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
+    
+    # for ridx in rnn_idx
+    #     if tuple_hidden_state(model[ridx])
+    #         throw("How did you get here?")
+    #     else
+    #         hs_symbol = ActionRNNs.hs_symbol_layer(model[ridx], ridx)
+    #         init_grad = zero(get_initial_hidden_state(model[ridx]))
+    #         init_grad_n = 0
+    #         h = if hs isa IdDict
+    #             hs[model[ridx]]
+    #         else
+    #             hs[hs_symbol]
+    #         end
+    #         for (i, idx) ∈ enumerate(exp_idx)
+    #             if exp[i][1].beg[] == true
+    #                 if grads isa Nothing
+    #                     init_grad  .+= h[:, i]
+    #                 else
+    #                     init_grad .+= grads[h][:, i]
+    #                 end
+    #                 init_grad_n += 1
+    #             else
+    #                 if getindex(replay.buffer._stg_tuple, hs_symbol) isa Vector
+    #                     getindex(replay.buffer._stg_tuple, hs_symbol)[idx] = h[i]
+    #                 else
+    #                     getindex(replay.buffer._stg_tuple, hs_symbol)[:, idx] .= h[:, i]
+    #                 end
+    #             end
+    #         end
+    #         if init_grad_n != 0
+    #             g = init_grad ./ init_grad_n
+    #             if grads isa Nothing
+    #                 model[ridx].cell.state0 .= g
+    #             else
+    #                 Flux.update!(opt, model[ridx].cell.state0, g)
+    #             end
+    #         end
+    #     end
+    # end
+end
 
 

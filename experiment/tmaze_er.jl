@@ -103,20 +103,20 @@ function construct_agent(env, parsed, rng)
 
     chain = get_ann(parsed, fs, env, rng)
 
-    ActionRNNs.ControlERAgent(chain,
-                              opt,
-                              τ,
-                              γ,
-                              fc,
-                              fs,
-                              3,
-                              parsed["replay_size"],
-                              parsed["warm_up"],
-                              parsed["batch_size"],
-                              parsed["update_wait"],
-                              parsed["target_update_wait"],
-                              ap,
-                              parsed["hs_learnable"])
+    ActionRNNs.DRQNAgent(chain,
+                         opt,
+                         τ,
+                         γ,
+                         fc,
+                         fs,
+                         3,
+                         parsed["replay_size"],
+                         parsed["warm_up"],
+                         parsed["batch_size"],
+                         parsed["update_wait"],
+                         parsed["target_update_wait"],
+                         ap,
+                         parsed["hs_learnable"])
 end
 
 function main_experiment(parsed = default_config(); working=false, progress=false, verbose=false)

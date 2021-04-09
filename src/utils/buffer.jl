@@ -65,6 +65,21 @@ function Base.push!(buffer::CB, data) where {CB<:CircularBuffer}
     return ret
 end
 
+function Base.push!(buffer::CB, data::NamedTuple) where {CB<:CircularBuffer}
+    ret = buffer._current_row
+    # for (idx, dat) in enumerate(data)
+    for k ∈ keys(buffer._stg_tuple)
+        _set_data_row!(buffer._stg_tuple[k], data[k], buffer._current_row)
+    end
+    
+    buffer._current_row += 1
+    if buffer._current_row > buffer._capacity
+        buffer._current_row = 1
+        buffer._full = true
+    end
+    return ret
+end
+
 """
     size(buffer)
     Returns the current amount of data in the circular buffer.

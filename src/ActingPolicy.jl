@@ -13,18 +13,18 @@ mutable struct RandomActingPolicy{T<:AbstractFloat} <: AbstractPolicy
         new{T}(probabilities, Weights(probabilities))
 end
 
-get_prob(π::RandomActingPolicy, state_t, action_t) =
+get_prob(π::RandomActingPolicy, action_t) =
     π.probabilities[action_t]
 
-StatsBase.sample(π::RandomActingPolicy) =
-    StatsBase.sample(Random.GLOBAL_RNG, π)
+sample(π::RandomActingPolicy) =
+    sample(Random.GLOBAL_RNG, π)
 
-StatsBase.sample(rng::Random.AbstractRNG, π::RandomActingPolicy) =
+sample(rng::Random.AbstractRNG, π::RandomActingPolicy) =
     StatsBase.sample(rng, π.weight_vec)
 
 function (π::RandomActingPolicy)(state_t, rng::Random.AbstractRNG=Random.GLOBAL_RNG)
-    action = StatsBase.sample(rng, π)
-    return action, get_prob(π, state_t, action)
+    action = sample(rng, π)
+    return action, get_prob(π, action)
 end
 
 
@@ -58,7 +58,8 @@ action_set(ap::ϵGreedy) = ap.action_set
 
 Select an action according to the values.
 """
-function sample(ap::ϵGreedy, values, rng)
+sample(ap::ϵGreedy, values) = StatsBase.sample(Random.GLOBAL_RNG, ap, values)
+function sample(rng::Random.AbstractRNG, ap::ϵGreedy, values)
     if rand(rng) > ap.ϵ
         return ap.action_set[findmax(values)[2]]
     else
@@ -73,9 +74,9 @@ Get probabiliyt of action according to values.
 """
 function get_prob(ap::ϵGreedy, values, action)
     if action == findmax(values)[2]
-        return 1 - ap.ϵ + (ap.ϵ / length(action_set))
+        return 1 - ap.ϵ + (ap.ϵ / length(ap.action_set))
     else
-        return ap.ϵ / length(action_set)
+        return ap.ϵ / length(ap.action_set)
     end
 end
 
@@ -115,7 +116,8 @@ function _get_eps_for_step(ap::ϵGreedyDecay, step=ap.cur_step)
     ϵ_min + bonus
 end
 
-function sample(ap::ϵGreedyDecay, values, rng, step=ap.cur_step)
+sample(ap::ϵGreedyDecay, values) = StatsBase.sample(Random.GLOBAL_RNG, ap, values)
+function sample(rng::Random.AbstractRNG, ap::ϵGreedyDecay, values, step=ap.cur_step)
     ϵ = _get_eps_for_step(ap::ϵGreedyDecay, step)
     if rand(rng) > ϵ
         return _get_max_action(ap, values)
@@ -127,9 +129,9 @@ end
 function get_prob(ap::ϵGreedyDecay, values, action, step=ap.cur_step)
     ϵ = _get_eps_for_step(ap, step)
     if ap.action_set[action] == _get_max_action(ap, values)
-        return 1 - ϵ + (ap.ϵ / length(action_set))
+        return 1 - ϵ + (ϵ / length(ap.action_set))
     else
-        return ϵ / length(action_set)
+        return ϵ / length(ap.action_set)
     end
 end
 

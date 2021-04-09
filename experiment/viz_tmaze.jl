@@ -36,7 +36,7 @@ function default_config()
         "replay_size"=>4000,
         "warm_up" => 1000,
         "batch_size"=>16,
-        "update_wait"=>4,
+        "update_freq"=>4,
         "tn_update_freq"=>1000,
         "truncation" => 8,
 
@@ -70,9 +70,8 @@ function get_ann(parsed, image_dims, rng)
         Flux.Chain(
             cl,
             Flux.flatten,
-            ActionRNNs.ARNN(fs, 4, nh;
-                            init=init_func,
-                            hs_learnable=parsed["hs_learnable"]),
+            ActionRNNs.MARNN(fs, 4, nh;
+                            init=init_func),
             Flux.Dense(nh, 4; initW=init_func))
         
     elseif parsed["cell"] == "RNN"
@@ -117,22 +116,19 @@ function construct_agent(env, parsed, rng)
     opt = FLU.get_optimizer(parsed)
     chain = get_ann(parsed, (28,28, 1, 1), rng) |> gpu
 
-    ActionRNNs.ControlImageERAgent(chain,
-                                   opt,
-                                   τ,
-                                   γ,
-                                   
-                                   (28, 28, 1),
-                                   UInt8,
-                                   
-                                   parsed["replay_size"],
-                                   parsed["warm_up"],
-                                   parsed["batch_size"],
-                                   parsed["update_wait"],
-                                   parsed["tn_update_freq"],
-                                   
-                                   ap,
-                                   parsed["hs_learnable"])
+    ActionRNNs.ImageDRQNAgent(chain,
+                              opt,
+                              τ,
+                              γ,
+                              (28, 28, 1),
+                              UInt8,
+                              parsed["replay_size"],
+                              parsed["warm_up"],
+                              parsed["batch_size"],
+                              parsed["update_freq"],
+                              parsed["tn_update_freq"],
+                              ap,
+                              parsed["hs_learnable"])
 end
 
 function main_experiment(parsed::Dict=default_config(); working=false, progress=false, verbose=false)
