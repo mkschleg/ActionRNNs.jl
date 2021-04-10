@@ -64,7 +64,7 @@ function get_state_from_experience(::Tuple, exp)
 end
 
 function get_state_from_experience(type, exp)
-    Flux.batchseq([[getindex.(exp[i], :s); [exp[i][end].sp]] for i in 1:batch_size], zero(exp[1][1].s))
+    Flux.batchseq([[getindex.(exp[i], :s); [exp[i][end].sp]] for i in 1:length(exp)], zero(exp[1][1].s))
 end
 
 get_information_from_experience(agent::AbstractERAgent, exp) = 
