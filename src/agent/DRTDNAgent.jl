@@ -53,7 +53,7 @@ function DRTDNAgent(horde,
                     hs_learnable)
 
     dev = Device(model)
-    @info dev
+    # @info dev
     
     state_list, init_state = begin
         if dev isa CPU

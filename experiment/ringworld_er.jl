@@ -64,10 +64,10 @@ function default_args()
         "action_features"=>false,
 
         "replay_size"=>1000,
-        "warm_up" => 100,
+        "warm_up" => 1000,
         "batch_size"=>4,
-        "update_freq"=>1,
-        "target_update_freq"=>1,
+        "update_freq"=>4,
+        "target_update_freq"=>1000,
 
         "synopsis" => false)
 
@@ -79,7 +79,6 @@ function get_model(parsed, out_horde, fc, rng)
     init_func = (dims...)->glorot_uniform(rng, dims...)
     fs = size(fc)
     num_gvfs = length(out_horde)
-    @info fs
     
     chain = begin
         if parsed["cell"] == "FacARNN"
@@ -183,14 +182,13 @@ function main_experiment(parsed=default_args(); working=false, progress=false)
         rng = Random.MersenneTwister(seed)
         
         env = RingWorld(parsed)
-        agent = if parsed["agent"] == "new"
-            construct_new_agent(parsed, rng)
-        else
-            construct_agent(parsed, rng)
-        end
+        agent = construct_new_agent(parsed, rng)
+        # if parsed["agent"] == "new"
+        #     construct_new_agent(parsed, rng)
+        # else
+        #     construct_agent(parsed, rng)
+        # end
 
-        @show typeof(agent)
-        
         out_pred_strg, out_err_strg =
             experiment_loop(env, agent, parsed["outhorde"], num_steps, rng; prgs=progress)
         
