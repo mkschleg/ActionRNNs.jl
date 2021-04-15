@@ -17,12 +17,12 @@ export
 include("Layers.jl")
 include("models/viz_backbone.jl")
 
-include("RNNUtil.jl")
 
-export ARNN, ALSTM, AGRU, reset!, get
-include("RNN.jl")
-include("LSTM.jl")
-include("GRU.jl")
+export AARNN, MARNN, FacARNN, reset!, get
+include("rnns.jl")
+# # include("RNN.jl")
+# # include("LSTM.jl")
+# # include("GRU.jl")
 
 export QLearning, TD, update!
 include("Loss.jl")
@@ -31,8 +31,8 @@ include("Update.jl")
 include("ActingPolicy.jl")
 
 include("Environments.jl")
+# include("Agent_old.jl")
 include("Agent.jl")
-
 
 include("exp_util.jl")
 

@@ -6,30 +6,65 @@ using KernelAbstractions
 using OMEinsum
 using Tullio
 
+struct AARNNCell{F,A,V,S} <: AbstractActionRNN
+    σ::F
+    Wi::A
+    Wa::A
+    Wh::A
+    b::V
+    state0::S
+end
+
+AARNNCell(in::Integer,
+          na::Integer,
+          out::Integer,
+          σ=tanh;
+          init=Flux.glorot_uniform,
+          initb=Flux.zeros,
+          init_state=Flux.zeros) = 
+              AARNNCell(σ,
+                        init(out, in),
+                        init(out, na),
+                        init(out, out),
+                        initb(out),
+                        init_state(out, 1))
+
+function (m::AARNNCell)(h, x::Tuple{A, X}) where {A, X}
+    σ, Wi, Wa, Wh, b = m.σ, m.Wi, m.Wa, m.Wh, m.b
+
+    o = x[2]
+    a = x[1]
+    
+    new_h = σ.(Wi*o .+ get_waa(Wa, a) .+ Wh*h .+ b)
+    sz = size(o)
+    return new_h, new_h#reshape(h, :, sz[2:end]...)
+end
+
+Flux.@functor AARNNCell
+
+function Base.show(io::IO, l::AARNNCell)
+  print(io, "AARNNCell(", size(l.Wi, 2), ", ", size(l.Wa), ", ", size(l.Wi, 1))
+  l.σ == identity || print(io, ", ", l.σ)
+  print(io, ")")
+end
+
 """
-    RNN(in::Integer, out::Integer, σ = tanh)
+    AARNN(in::Integer, out::Integer, σ = tanh)
 The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
 output fed back into the input each time step.
 """
-# RNN(a...; ka...) = Flux.Recur(AC_RNNCell(a...; ka...))
-# Flux.Recur(m::AC_RNNCell) = Flux.Recur(m, m.state0)
+AARNN(a...; ka...) = Flux.Recur(AARNNCell(a...; ka...))
+Flux.Recur(m::AARNNCell) = Flux.Recur(m, m.state0)
 
-# Flux.trainable(m::AC_RNNCell) = if hidden_learnable(m)
-#     (Wx = m.Wi, Wh = m.Wh, b = m.b, state0 = m.state0)
-# else
-#     (Wx = m.Wi, Wh = m.Wh, b = m.b)
-# end
 
-abstract type AbstractActionRNN end
-_needs_action_input(m::M) where {M<:AbstractActionRNN} = true
 
 """
-    ARNNCell
+    MARNNCell
 
-    An RNN cell which explicitily transforms the hidden state of the recurrent neural network according to action.
+    An RNN cell which explicitily transforms the hidden state of the recurrent neural network according to action using multiplicative updates.
 
 """
-struct ARNNCell{F, A, V, H} <: AbstractActionRNN
+struct MARNNCell{F, A, V, H} <: AbstractActionRNN
     σ::F
     Wx::A
     Wh::A
@@ -37,69 +72,39 @@ struct ARNNCell{F, A, V, H} <: AbstractActionRNN
     state0::H
 end
 
-ARNNCell(num_ext_features, num_actions, num_hidden;
-         init=Flux.glorot_uniform,
+MARNNCell(num_ext_features, num_actions, num_hidden;
+         init=glorot_uniform,
          initb=(args...;kwargs...) -> Flux.zeros(args...),
          init_state=Flux.zeros,
-         σ_int=tanh,
-         hs_learnable=true) =
-    ARNNCell(σ_int,
+         σ_int=tanh) =
+    MARNNCell(σ_int,
              init(num_actions, num_hidden, num_ext_features; ignore_dims=1),
              init(num_actions, num_hidden, num_hidden; ignore_dims=1),
              initb(num_hidden, num_actions),
              init_state(num_hidden, 1))
 
-# Flux.hidden(m::ARNNCell) = m.h
-Flux.@functor ARNNCell
-ARNN(args...; kwargs...) = Flux.Recur(ARNNCell(args...; kwargs...))
-Flux.Recur(m::ARNNCell) = Flux.Recur(m, m.state0)
+Flux.@functor MARNNCell
+MARNN(args...; kwargs...) = Flux.Recur(MARNNCell(args...; kwargs...))
+Flux.Recur(m::MARNNCell) = Flux.Recur(m, m.state0)
 
 
-function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Integer, A<:AbstractArray{<:AbstractFloat}}
+function (m::MARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{<:Integer, 1}, A<:AbstractArray{<:AbstractFloat, 2}}
+    Wx, Wh, b, σ = m.Wx, m.Wh, m.b, m.σ
 
-    @inbounds new_h =
-        m.σ.((@view m.Wx[x[1], :, :])*x[2] + (@view m.Wh[x[1], :, :])*h + m.b[:, x[1]])
+    a = x[1]
+    o = x[2]
+
+    wx = contract_WA(m.Wx, a, o)
+    wh = contract_WA(m.Wh, a, h)
+    ba = get_waa(m.b, a)
+
+    new_h = m.σ.(wx .+ wh .+ ba)
 
     return new_h, new_h
 end
 
-function (m::ARNNCell)(h, x::Tuple{I, A}) where {I<:Array{<:Integer, 1}, A<:AbstractArray{<:AbstractFloat, 2}}
-
-
-    # @show typeof(h), typeof(x)
-    
-    a = x[1]
-    o = x[2]
-
-    Wx = m.Wx[a, :, :]
-    Wh = m.Wh[a, :, :]
-
-    @ein wx[i, k] := Wx[k, i, j] * o[j, k]
-    @ein wh[i, k] := Wh[k, i, j] * h[j, k]
-
-    new_h = m.σ.(wx .+ wh .+ m.b[:, a])
-
-    return new_h, new_h
-end
-
-function (m::ARNNCell)(h, x::Tuple{TA, A}) where {TA<:AbstractArray{<:AbstractFloat, 2}, A}
-    a = x[1]
-    o = x[2]
-
-    @show size(h)
-    out_h = _contract(m.Wh, h, a)
-
-    new_h = m.σ.(out_h + m.b*a)
-    new_h, new_h
-end
-
-function reduce_func(m::ARNNCell, x, h, i)
-    @inbounds x[1][i]*view(m.Wx, :, :, i)*x[2] +
-        x[1][i]*view(m.Wh, :, :, i)*h
-end
-
-function Base.show(io::IO, l::ARNNCell)
-  print(io, "ARNNCell(", size(l.Wx, 2), ", ", size(l.Wx, 3), ", ", size(l.Wx, 1))
+function Base.show(io::IO, l::MARNNCell)
+  print(io, "MARNNCell(", size(l.Wx, 2), ", ", size(l.Wx, 3), ", ", size(l.Wx, 1))
   l.σ == identity || print(io, ", ", l.σ)
   print(io, ")")
 end
@@ -158,8 +163,3 @@ end
 # Flux.hidden(m::FacARNNCell) = m.h
 Flux.@functor FacARNNCell
 
-# Flux.trainable(m::FacARNNCell) = if  hidden_learnable(m)
-#     (W = m.W, Wx = m.Wx, Wh = m.Wh, Wa = m.Wa, b = m.b, h = m.h)
-# else
-#     (W = m.W, Wx = m.Wx, Wh = m.Wh, Wa = m.Wa, b = m.b)
-# end

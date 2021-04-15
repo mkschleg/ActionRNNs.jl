@@ -131,7 +131,8 @@ function MinimalRLCore.step!(agent::PredERAgent, env_s_tp1, r, terminal, rng; kw
         update!(agent.replay, agent, rng)
     end
     # End update function
-
+    # @show typeof(agent.hidden_state_init)
+    # @show keys(agent.hidden_state_init)
     reset!(agent.model, agent.hidden_state_init)
     out_preds = agent.model.(agent.state_list)[end]
 

@@ -85,20 +85,25 @@ function get_rnn_config(parsed, out_horde, rng)
         if cell_str == "FacARNN"
             Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"], hs_learnable=parsed["hs_learnable"]; init=init_func),
                        Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
-        elseif cell_str == "ARNN"
-            Flux.Chain(ActionRNNs.ARNN(fs, 2, parsed["numhidden"], hs_learnable=parsed["hs_learnable"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
-        elseif cell_str == "RNN"
-            Flux.Chain(ActionRNNs.RNN(fs, parsed["numhidden"], hs_learnable=parsed["hs_learnable"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
-        elseif cell_str == "ALSTM"
-            Flux.Chain(ActionRNNs.ALSTM(fs, 2, parsed["numhidden"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
-        elseif cell_str == "LSTM"
-            Flux.Chain(Flux.LSTM(fs, parsed["numhidden"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
+        elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
+
+            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+            init_func = (dims...; kwargs...)->
+                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+        
+            m = Flux.Chain(
+                rnn(fs, 4, nh;
+                    init=init_func,
+                    initb=initb),
+                Flux.Dense(nh, length(get_actions(env)); initW=init_func))
         else
-            throw("Unknown Cell type " * cell_str)
+            rnntype = getproperty(Flux, Symbol(parsed["cell"]))
+            Flux.Chain(rnntype(fs, nh; init=init_func),
+                       Flux.Dense(nh,
+                                  length(get_actions(env));
+                                  initW=init_func))
         end
     end
 

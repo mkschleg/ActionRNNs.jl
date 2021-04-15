@@ -3,12 +3,6 @@ module RingWorldUtils
 
 using ..ActionRNNs
 using ..MinimalRLCore
-
-# using ..RLCore.GVFParamFuncs
-
-# const GVF = RLCore.GVF
-# const Horde = RLCore.Horde
-
 using ..GVFHordes
 
 import GVFHordes.GVFParamFuncs: FeatureCumulant, PredictionCumulant, ConstantDiscount, StateTerminationDiscount, PersistentPolicy
@@ -16,29 +10,9 @@ import GVFHordes.GVFParamFuncs: FeatureCumulant, PredictionCumulant, ConstantDis
 const RWC = ActionRNNs.RingWorldConst
 
 
-# export settings!, onestep, chain, gamma_chain, get_horde, oracle
-
-# function env_settings!(as::ArgParseSettings)
-#     @add_arg_table as begin
-#         "--size"
-#         help="The length of the ring world chain"
-#         arg_type=Int64
-#         default=6
-#     end
-# end
-
 ActionRNNs.RingWorld(parsed::Dict) = ActionRNNs.RingWorld(parsed["size"])
 
-# function horde_settings!(as::ArgParseSettings, prefix::AbstractString="")
-#     add_arg_table(as,
-#                   "--$(prefix)gamma",
-#                   Dict(:help=>"The gamma value for the gamma_chain horde",
-#                        :arg_type=>Float64,
-#                        :default=>0.9),
-#                   "--$(prefix)horde",
-#                   Dict(:help=>"The horde used for training",
-#                        :default=>"chain"))
-# end
+
 
 function onestep()
     gvfs = [GVF(FeatureCumulant(1), ConstantDiscount(0.0), PersistentPolicy(RWC.FORWARD))
@@ -199,15 +173,22 @@ function oracle(env::ActionRNNs.RingWorld, horde_str, γ=0.9)
     return ret
 end
 
-mutable struct StandardFeatureCreator <: AbstractFeatureConstructor end
 
-(fc::StandardFeatureCreator)(s, a=nothing) = MinimalRLCore.create_features(fc, s, a)
-MinimalRLCore.create_features(fc::StandardFeatureCreator, s, a) =
+
+mutable struct StandardFeatureCreator{T} <: AbstractFeatureConstructor end
+
+
+(fc::StandardFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
+
+MinimalRLCore.create_features(fc::StandardFeatureCreator{true}, s, a) =
     Float32[1.0, s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
-MinimalRLCore.create_features(fc::StandardFeatureCreator, s, a::Nothing) =
-    Float32[1.0, s[1], 1-s[1], 0, 0, 0, 0]
-MinimalRLCore.feature_size(fc::StandardFeatureCreator) = 7
+MinimalRLCore.feature_size(fc::StandardFeatureCreator{true}) = 7
 
+MinimalRLCore.create_features(fc::StandardFeatureCreator{false}, s, a) =
+    Float32[1.0, s[1], 1-s[1]]
+MinimalRLCore.feature_size(fc::StandardFeatureCreator{false}) = 3
+
+Base.size(fc::StandardFeatureCreator) = MinimalRLCore.feature_size(fc)
 
 mutable struct SansBiasFeatureCreator <: AbstractFeatureConstructor end
 
