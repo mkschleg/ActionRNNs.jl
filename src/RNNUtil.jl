@@ -53,7 +53,7 @@ end
 ###### Symbols #######
 
 hs_symbol_layer(l, idx) = if tuple_hidden_state(l)
-    throw("You Shouldn't Be here")
+    Symbol("hs_h_$(idx)"), Symbol("hs_c_$(idx)")
 else
     Symbol("hs_$(idx)")
 end
@@ -63,7 +63,9 @@ function get_hs_symbol_list(model)
     rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
     for idx ∈ rnn_idx
         if tuple_hidden_state(model[idx])
-            throw("LSTMs not supported yet")
+            hs = hs_symbol_layer(model[idx], idx)
+            push!(hs_symbol, hs[1])
+            push!(hs_symbol, hs[2])
         else
             push!(hs_symbol, hs_symbol_layer(model[idx], idx))
         end
@@ -75,26 +77,6 @@ end
 
 ########## Reset Functions ############
 
-# reset!(m, h_init) = 
-#     foreach(x -> x isa Flux.Recur && reset!(x, h_init), Flux.functor(m)[1])
-
-# function Base.getproperty(m::Flux.Recur, sym::Symbol)
-#     getfield(m, sym)
-#   # if sym === :init
-#   #   Zygote.ignore() do
-#   #     @warn "Recur field :init has been deprecated. To access initial state weights, use m::Recur.cell.state0 instead."
-#   #   end
-#   #   return getfield(m.cell, :state0)
-#   # else
-#   #   return getfield(m, sym)
-#   # end
-# end
-
-# Base.setproperty!(m::Flux.Recur, sym::Symbol, x) = begin
-#     @show "Here"
-    
-# end
-
 reset!(m, h_init::IdDict) = 
     foreach(x -> x isa Flux.Recur && reset!(x, h_init[x]), Flux.functor(m)[1])
 
@@ -102,7 +84,8 @@ function reset!(m, h_init::Dict)
     rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, m)
     for idx ∈ rnn_idx
         if tuple_hidden_state(m[idx])
-            throw("Not implemented yet.")
+            h_sym = hs_symbol_layer(m[idx], idx)
+            reset!(m[idx], (h_init[h_sym[1]], h_init[h_sym[2]]))
         else
             h_sym = hs_symbol_layer(m[idx], idx)
             reset!(m[idx], h_init[h_sym])
@@ -112,25 +95,17 @@ end
 
 # Can't do inplace, because it will overwrite init if you ever call reset!(m)
 function reset!(m::Flux.Recur, h_init)
-    # Flux.reset!(m)
-    (m.state = h_init)
-    # @show m.state === h_init
-end
-
-function reset!(m::Flux.Recur{T}, h_init) where {T<:Flux.LSTMCell}
-    # Flux.reset!(m)
     (m.state = h_init)
 end
-
 
 ############ Hidden State Manipulation ##########
 
 function get_next_hidden_state(rnn::Flux.Recur{T}, h_init, input) where {T}
-    return copy(rnn.cell(h_init, input)[1])
-end
-
-function get_next_hidden_state(rnn::Flux.Recur{T}, h_init, input) where {T<:Flux.LSTMCell}
-    return deepcopy(rnn.cell(h_init, input)[1])
+    if tuple_hidden_state(rnn)
+        deepcopy(rnn.cell(h_init, input)[1])
+    else
+        copy(rnn.cell(h_init, input)[1])
+    end
 end
 
 function get_next_hidden_state(c, h_init, input, d=nothing)
@@ -151,7 +126,8 @@ function get_hidden_state(c, d=nothing)
         rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, c)
         for idx ∈ rnn_idx
             if tuple_hidden_state(c[idx])
-                throw("Not implemented yet....")
+                hs_sym = hs_symbol_layer(c[idx], idx)
+                h_state[hs_sym[1]], h_state[hs_sym[2]] = get_hidden_state(c[idx])
             else
                 h_sym = hs_symbol_layer(c[idx], idx)
                 h_state[h_sym] = get_hidden_state(c[idx])
@@ -161,8 +137,12 @@ function get_hidden_state(c, d=nothing)
     end
 end
 
-get_hidden_state(rnn::Flux.Recur{T}) where {T} = copy(rnn.state)
-get_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = deepcopy(rnn.state)
+get_hidden_state(rnn::Flux.Recur{T}) where {T} = if tuple_hidden_state(rnn)
+    copy(rnn.state[1]), copy(rnn.state[2])
+else
+    copy(rnn.state)
+end
+# get_hidden_state(rnn::Flux.Recur{T}) where {T<:Union{Flux.LSTMCell, AALSTMCel}} = copy(rnn.state[1]), copy(rnn.state[2])
 
 
 function get_hidden_state_inplace(c, d=nothing)
@@ -176,7 +156,8 @@ function get_hidden_state_inplace(c, d=nothing)
         rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, c)
         for idx ∈ rnn_idx
             if tuple_hidden_state(c[idx])
-                throw("Not implemented yet....")
+                hs_sym = hs_symbol_layer(c[idx], idx)
+                h_state[hs_sym[1]], h_state[hs_sym[2]] = get_hidden_state_inplace(c[idx])
             else
                 h_sym = hs_symbol_layer(c[idx], idx)
                 h_state[h_sym] = get_hidden_state_inplace(c[idx])
@@ -188,7 +169,7 @@ end
 
 
 get_hidden_state_inplace(rnn::Flux.Recur{T}) where {T} = rnn.state
-get_hidden_state_inplace(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = rnn.state
+# get_hidden_state_inplace(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = rnn.state
 
 
 function get_initial_hidden_state(c, d=nothing)
@@ -202,7 +183,8 @@ function get_initial_hidden_state(c, d=nothing)
         rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, c)
         for idx ∈ rnn_idx
             if tuple_hidden_state(c[idx])
-                throw("Not implemented yet....")
+                hs_sym = hs_symbol_layer(c[idx], idx)
+                h_state[hs_sym[1]], h_state[hs_sym[2]] = get_initial_hidden_state(c[idx])
             else
                 h_sym = hs_symbol_layer(c[idx], idx)
                 h_state[h_sym] = get_initial_hidden_state(c[idx])
@@ -213,7 +195,7 @@ function get_initial_hidden_state(c, d=nothing)
 end
 
 get_initial_hidden_state(rnn::Flux.Recur{T}) where {T} = rnn.cell.state0
-get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = rnn.cell.state0
+# get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = rnn.cell.state0
 
 
 
@@ -232,9 +214,17 @@ function get_hs_details_for_er(model)
     hs_symbol = Symbol[]
     for idx ∈ rnn_idx
         hs_sym = hs_symbol_layer(model[idx], idx)
-        if hidden_state_init[hs_sym] isa Tuple
+        if tuple_hidden_state(model[idx])
             # push!(hs_type, hidden_state_init[model[idx]])
-            throw("LSTMs not supported yet")
+            # throw("LSTMs not supported yet")
+            hs_archtype_1, hs_archtype_2 = hidden_state_init[hs_sym[1]], hidden_state_init[hs_sym[2]]
+            push!(hs_type, eltype(hs_archtype_1))
+            push!(hs_length, length(hs_archtype_1))
+            push!(hs_symbol, hs_symbol_layer(model[idx], idx)[1])
+
+            push!(hs_type, eltype(hs_archtype_2))
+            push!(hs_length, length(hs_archtype_2))
+            push!(hs_symbol, hs_symbol_layer(model[idx], idx)[2])
         else
             hs_archtype = hidden_state_init[hs_sym]
             push!(hs_type, eltype(hs_archtype))
@@ -277,7 +267,25 @@ function get_hs_from_experience!(model, exp::NamedTuple, d::Dict, device)
     for idx in rnn_idx
         init_hs = CPU()(get_initial_hidden_state(model[idx]))
         if tuple_hidden_state(model[idx])
-            throw("How did you get here?")
+            # throw("How did you get here?")
+            hs_symbol = hs_symbol_layer(model[idx], idx)
+            h_1 = if :beg ∈ keys(exp)
+                device(hcat([(exp.beg[b][1] ? init_hs[1] : exp[hs_symbol[1]][b][1]) for b in 1:length(exp.beg)]...), hs_symbol[1])
+            else
+                device(hcat([(exp[hs_symbol[1]][b][1]) for b in 1:length(exp.beg)]...), hs_symbol[1])
+            end
+
+            h_2 = if :beg ∈ keys(exp)
+                device(hcat([(exp.beg[b][1] ? init_hs[1] : exp[hs_symbol[2]][b][1]) for b in 1:length(exp.beg)]...), hs_symbol[2])
+            else
+                device(hcat([(exp[hs_symbol[2]][b][1]) for b in 1:length(exp.beg)]...), hs_symbol[2])
+            end
+
+            int_h_1 = get!(()->h_1, hs, hs_symbol[1])
+            int_h_2 = get!(()->h_2, hs, hs_symbol[2])
+
+            copyto!(int_h_1, h_1)
+            copyto!(int_h_2, h_2)
         else
             hs_symbol = hs_symbol_layer(model[idx], idx)
             h = if :beg ∈ keys(exp)
@@ -302,10 +310,37 @@ function get_hs_from_experience!(model, exp::Vector, d::Dict, device)
     for idx in rnn_idx
         init_hs = CPU()(get_initial_hidden_state(model[idx]))
         if tuple_hidden_state(model[idx])
-            throw("How did you get here?")
+            # throw("How did you get here?")
+            
+            hs_symbol = hs_symbol_layer(model[idx], idx)
+            # init_hs = get_initial_hidden_state(model[idx])
+            h_1 = if :beg ∈ keys(exp[1][1])
+                hcat([(seq[1].beg[1] ? init_hs[1] : getindex(seq[1], hs_symbol[1])) for seq in exp]...)
+            else
+                if exp[1] isa NamedTuple
+                    getindex(exp[1], hs_symbol[1])
+                else
+                    hcat([(getindex(seq[1], hs_symbol[1])) for seq in exp]...)
+                end
+            end
+            int_h_1 = get!(()->h_1, hs, hs_symbol[1])
+            copyto!(int_h_1, h_1)
+
+                        
+            h_2 = if :beg ∈ keys(exp[1][1])
+                hcat([(seq[1].beg[1] ? init_hs[2] : getindex(seq[1], hs_symbol[2])) for seq in exp]...)
+            else
+                if exp[1] isa NamedTuple
+                    getindex(exp[1], hs_symbol[2])
+                else
+                    hcat([(getindex(seq[1], hs_symbol[2])) for seq in exp]...)
+                end
+            end
+            int_h_2 = get!(()->h_2, hs, hs_symbol[2])
+            copyto!(int_h_2, h_2)
         else
             hs_symbol = hs_symbol_layer(model[idx], idx)
-            init_hs = get_initial_hidden_state(model[idx])
+            # init_hs = get_initial_hidden_state(model[idx])
             h = if :beg ∈ keys(exp[1][1])
                 hcat([(seq[1].beg[1] ? init_hs : getindex(seq[1], hs_symbol)) for seq in exp]...)
             else
@@ -424,7 +459,41 @@ function modify_hs_in_er!(replay, model, exp, exp_idx, hs, grads = nothing, opt 
     
     for ridx in rnn_idx
         if tuple_hidden_state(model[ridx])
-            throw("How did you get here?")
+            # throw("How did you get here?")
+            hs_symbols = ActionRNNs.hs_symbol_layer(model[ridx], ridx)
+            for (idx, hs_symbol) ∈ enumerate(hs_symbols)
+                init_grad = zero(get_initial_hidden_state(model[ridx])[idx])
+                init_grad_n = 0
+                h = if hs isa IdDict
+                    hs[model[ridx]]
+                else
+                    hs[hs_symbol]
+                end
+                for (i, idx) ∈ enumerate(exp_idx)
+                    if exp[i][1].beg[] == true
+                        if grads isa Nothing
+                            init_grad  .+= h[:, i]
+                        else
+                            init_grad .+= grads[h][:, i]
+                        end
+                        init_grad_n += 1
+                    else
+                        if getindex(replay.buffer._stg_tuple, hs_symbol) isa Vector
+                            getindex(replay.buffer._stg_tuple, hs_symbol)[idx] = h[i]
+                        else
+                            getindex(replay.buffer._stg_tuple, hs_symbol)[:, idx] .= h[:, i]
+                        end
+                    end
+                end
+                if init_grad_n != 0
+                    g = init_grad ./ init_grad_n
+                    if grads isa Nothing
+                        model[ridx].cell.state0[idx] .= g
+                    else
+                        Flux.update!(opt, model[ridx].cell.state0[idx], g)
+                    end
+                end
+            end
         else
             hs_symbol = ActionRNNs.hs_symbol_layer(model[ridx], ridx)
             init_grad = zero(get_initial_hidden_state(model[ridx]))
@@ -464,7 +533,7 @@ end
 
 
 function modify_hs_in_er!(replay::SequenceReplay, model, exp, exp_idx, hs, grads = nothing, opt = nothing)
-    
+    throw("Please don't be here.")
     # rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
     
     # for ridx in rnn_idx
