@@ -36,7 +36,7 @@ function default_config()
         "replay_size"=>4000,
         "warm_up" => 1000,
         "batch_size"=>16,
-        "update_freq"=>4,
+        "update_wait"=>4,
         "tn_update_freq"=>1000,
         "truncation" => 8,
 
@@ -55,6 +55,7 @@ function get_ann(parsed, image_dims, rng)
     fs = prod(Flux.outdims(cl, image_dims))
     println(fs)
     nh = parsed["numhidden"]
+    latent_size=128
     
     if parsed["cell"] == "FacARNN"
 
@@ -62,7 +63,8 @@ function get_ann(parsed, image_dims, rng)
         Flux.Chain(
             cl,
             Flux.flatten,
-            ActionRNNs.FacARNN(fs, 4, nh, factors; init=init_func),
+            Dense(fs, latent_size, relu; initW=init_func),
+            ActionRNNs.FacARNN(latent_size, 4, nh, factors; init=init_func),
             Flux.Dense(nh, 4; initW=init_func))
         
     elseif parsed["cell"] == "ARNN"
@@ -70,8 +72,10 @@ function get_ann(parsed, image_dims, rng)
         Flux.Chain(
             cl,
             Flux.flatten,
-            ActionRNNs.MARNN(fs, 4, nh;
-                            init=init_func),
+            Dense(fs, latent_size, relu; initW=init_func),
+            ActionRNNs.ARNN(latent_size, 4, nh;
+                            init=init_func,
+                            hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, 4; initW=init_func))
         
     elseif parsed["cell"] == "RNN"
@@ -79,9 +83,9 @@ function get_ann(parsed, image_dims, rng)
         Flux.Chain(
             cl,
             Flux.flatten,
-            Flux.RNN(fs, nh;
+            Dense(fs, latent_size, relu; initW=init_func),
+            Flux.RNN(latent_size, nh;
                      init=init_func),
-                           # hs_learnable=parsed["hs_learnable"]),
             Flux.Dense(nh, 4; initW=init_func))
         
     else
@@ -89,7 +93,8 @@ function get_ann(parsed, image_dims, rng)
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
         Flux.Chain(
             cl, Flux.flatten,
-            rnntype(fs, nh; init=init_func),
+            Dense(fs, latent_size, relu; initW=init_func),
+            rnntype(latent_size, nh; init=init_func),
             Flux.Dense(nh,
                        4;
                        initW=init_func))
@@ -110,25 +115,28 @@ function construct_agent(env, parsed, rng)
     τ = parsed["truncation"]
 
 
-    # ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
-    ap = ActionRNNs.ϵGreedyDecay((1.0, 0.1), 10000, 1000, MinimalRLCore.get_actions(env))
+    ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+    # ap = ActionRNNs.ϵGreedyDecay((1.0, 0.1), 50000, 1000, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
-    chain = get_ann(parsed, (28,28, 1, 1), rng) |> gpu
+    chain = get_ann(parsed, (28,28, 1, 1), rng) #|> gpu
 
-    ActionRNNs.ImageDRQNAgent(chain,
-                              opt,
-                              τ,
-                              γ,
-                              (28, 28, 1),
-                              UInt8,
-                              parsed["replay_size"],
-                              parsed["warm_up"],
-                              parsed["batch_size"],
-                              parsed["update_freq"],
-                              parsed["tn_update_freq"],
-                              ap,
-                              parsed["hs_learnable"])
+    ActionRNNs.ControlImageERAgent(chain,
+                                   opt,
+                                   τ,
+                                   γ,
+                                   
+                                   (28, 28, 1),
+                                   UInt8,
+                                   
+                                   parsed["replay_size"],
+                                   parsed["warm_up"],
+                                   parsed["batch_size"],
+                                   parsed["update_wait"],
+                                   parsed["tn_update_freq"],
+                                   
+                                   ap,
+                                   parsed["hs_learnable"])
 end
 
 function main_experiment(parsed::Dict=default_config(); working=false, progress=false, verbose=false)
