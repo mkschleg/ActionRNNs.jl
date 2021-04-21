@@ -72,7 +72,7 @@ function experiment_wrapper(exp_func::Function, parsed, working)
     end
 
     ret = exp_func(parsed)
-    println(ret)
+
     if working
         ret
     elseif ret isa NamedTuple

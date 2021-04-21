@@ -56,13 +56,17 @@ function get_ann(parsed, fs, env, rng)
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
     
     
-    if parsed["cell"] == "FacARNN"
-        
+    if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         factors = parsed["factors"]
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
-        Flux.Chain(ActionRNNs.FacARNN(fs, na, nh, factors;
-                                      init=init_func,
-                                      initb=init_func),
+        Flux.Chain(rnn(fs, na, nh, factors;
+                       init=init_func,
+                       initb=initb),
                    Flux.Dense(nh, na; initW=init_func))
         
     elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
@@ -133,7 +137,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         env = ActionRNNs.DirectionalTMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
 
-
+        
         logger = ActionRNNs.SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
             (Float32, Float32, Bool, Int, Float32),

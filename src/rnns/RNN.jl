@@ -121,7 +121,7 @@ end
     ```
 
 """
-mutable struct FacARNNCell{F, A, V, H} <: AbstractActionRNN
+mutable struct FacMARNNCell{F, A, V, H} <: AbstractActionRNN
     σ::F
     W::A
     Wx::A
@@ -131,18 +131,19 @@ mutable struct FacARNNCell{F, A, V, H} <: AbstractActionRNN
     state0::H
 end
 
-# FacARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
-FacARNNCell(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
-    FacARNNCell(activation,
-                init(out, factors),
+# FacMARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
+FacMARNNCell(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
+    FacMARNNCell(activation,
+                init(out, factors; ignore_dims=2),
                 init(factors, in),
                 init(factors, out),
                 init(factors, actions),
                 initb(out, actions),
                 init_state(out, 1))
 
-FacARNN(args...; kwargs...) = Flux.Recur(FacARNNCell(args...; kwargs...))
-Flux.Recur(cell::FacARNNCell) = Flux.Recur(cell, cell.state0)
+FacMARNN(args...; kwargs...) = Flux.Recur(FacMARNNCell(args...; kwargs...))
+Flux.Recur(cell::FacMARNNCell) = Flux.Recur(cell, cell.state0)
+Flux.@functor FacMARNNCell
 
 function get_Wabya(Wa, a)
     if a isa Int
@@ -154,12 +155,12 @@ function get_Wabya(Wa, a)
     end
 end
 
-function (m::FacARNNCell)(h, x::Tuple{A, O}) where {A, O}
+function (m::FacMARNNCell)(h, x::Tuple{A, O}) where {A, O}
     W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
     new_h = m.σ.(W*((Wx*o .+ Wh*h) .* get_Wabya(Wa, a)) .+ b[:, a])
     return new_h, new_h
 end
 
-# Flux.hidden(m::FacARNNCell) = m.h
-Flux.@functor FacARNNCell
+# Flux.hidden(m::FacMARNNCell) = m.h
+
 
