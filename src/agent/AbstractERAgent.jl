@@ -138,6 +138,8 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     agent.am1 = copy(agent.action)
 
     agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
+
+    next!(agent.π)
     
     return (preds=values, h=cur_hidden_state, action=agent.action, update_state=us)
 end

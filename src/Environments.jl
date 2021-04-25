@@ -24,5 +24,6 @@ include("env/ImageTMaze.jl")
 export DirectionalTMaze
 include("env/DirectionalTMaze.jl")
 
-# export ContFourRooms
-# include("env/ContFourRooms.jl")
+export LunarLander
+include("env/LunarLander.jl")
+

@@ -5,6 +5,7 @@ import Random
 # using CuArrays
 
 abstract type AbstractPolicy end
+next!(ap::AbstractPolicy) = nothing
 
 mutable struct RandomActingPolicy{T<:AbstractFloat} <: AbstractPolicy
     probabilities::Array{T,1}
@@ -135,3 +136,4 @@ function get_prob(ap::ϵGreedyDecay, values, action, step=ap.cur_step)
     end
 end
 
+next!(ap::ϵGreedyDecay) = ap.cur_step += 1
