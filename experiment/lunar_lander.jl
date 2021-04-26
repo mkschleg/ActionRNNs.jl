@@ -3,6 +3,7 @@ module LunarLanderExperiment
 # include("../src/ActionRNNs.jl")
 
 import Flux
+import Flux: gpu
 import JLD2
 import LinearAlgebra.Diagonal
 import MinimalRLCore
@@ -101,7 +102,7 @@ function construct_agent(env, parsed, rng)
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed, fs, env, rng)
+    chain = get_ann(parsed, fs, env, rng) |> gpu
 
     ActionRNNs.DRQNAgent(chain,
                          opt,
