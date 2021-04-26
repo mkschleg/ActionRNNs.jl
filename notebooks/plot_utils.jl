@@ -136,13 +136,14 @@ function get_line_data_for(
         else
             search(ic, Dict(line_keys[i]=>p[i] for i ∈ 1:length(p)))
         end
-
-	d, c, ps = internal_func(
-	    sub_ic, 
-	    param_keys;
-	    get_comp_data=get_comp_data, 
-	    get_data=get_data)
-	push!(strg, LineData(params[p_idx], ps, d, c))
+        if !isempty(sub_ic)
+	    d, c, ps = internal_func(
+	        sub_ic, 
+	        param_keys;
+	        get_comp_data=get_comp_data, 
+	        get_data=get_data)
+	    push!(strg, LineData(params[p_idx], ps, d, c))
+        end
     end
     strg
 end

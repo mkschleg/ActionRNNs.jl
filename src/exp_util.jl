@@ -6,6 +6,7 @@
 include("exp_util/cycleworld.jl")
 include("exp_util/ringworld.jl")
 include("exp_util/tmaze.jl")
+include("exp_util/lunar_lander.jl")
 
 # Experiment utilities
 include("exp_util/experiment.jl")
