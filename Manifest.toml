@@ -588,9 +588,9 @@ version = "2.0.1+3"
 
 [[JuliaInterpreter]]
 deps = ["CodeTracking", "InteractiveUtils", "Random", "UUIDs"]
-git-tree-sha1 = "00f19427a78eb2d24edbd0da979171c8715dcd05"
+git-tree-sha1 = "d77a7167d45a8e339e96916e0e9d181c5f68277d"
 uuid = "aa1ae85d-cabe-5617-a682-6adf51b2e16a"
-version = "0.8.13"
+version = "0.8.14"
 
 [[Juno]]
 deps = ["Base64", "Logging", "Media", "Profile"]

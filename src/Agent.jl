@@ -13,7 +13,7 @@ include("agent/DRQNAgent.jl")
 include("agent/DRTDNAgent.jl")
 
 
-# include("agent/PredOnlineAgent.jl")
+include("agent/old_agents/PredOnlineAgent.jl")
 # include("agent/ControlFluxAgent.jl")
 include("agent/old_agents/PredERAgent.jl")
 # include("agent/ControlERAgent.jl")

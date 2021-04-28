@@ -54,7 +54,7 @@ function DRTDNAgent(horde,
 
     dev = Device(model)
     # @info dev
-    
+
     state_list, init_state = begin
         if dev isa CPU
             if needs_action_input(model)

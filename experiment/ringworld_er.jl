@@ -44,11 +44,12 @@ function default_args()
         "save_dir" => "ringworld",
 
         "seed" => 1,
-        "steps" => 200000,
+#         "steps" => 200000,
+        "steps" => 40,
         "size" => 6,
 
         # "features" => "OneHot",
-        # "cell" => "ARNN",
+#         "cell" => "AARNN",
         "cell" => "MARNN",
         "numhidden" => 6,
         "hs_learnable" => true,
@@ -86,7 +87,6 @@ function get_model(parsed, out_horde, fc, rng)
             factors = parsed["factors"]
             Flux.Chain(ActionRNNs.FacARNN(fs, 2, nh, factors; init=init_func),
                        Flux.Dense(nh, num_gvfs; initW=init_func))
-            
         elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
             rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
@@ -96,12 +96,10 @@ function get_model(parsed, out_horde, fc, rng)
             initb = (dims...; kwargs...) -> Flux.zeros(dims...)
             
             m = Flux.Chain(
-                rnn(fs, 4, nh;
+                rnn(fs, 2, nh;
                     init=init_func,
                     initb=initb),
                 Flux.Dense(nh, num_gvfs; initW=init_func))
-            
-            
         else
             
             rnntype = getproperty(Flux, Symbol(parsed["cell"]))
@@ -116,6 +114,7 @@ function get_model(parsed, out_horde, fc, rng)
 end
 
 function construct_agent(parsed, rng)
+
 
     fc = RWU.StandardFeatureCreator{parsed["action_features"]}()
     fs = size(fc)
@@ -173,9 +172,9 @@ function construct_new_agent(parsed, rng)
 
 end
 
-function main_experiment(parsed=default_args(); working=false, progress=false)
+function main_experiment(parsed=default_args(); working=false, progress=false, overwrite=false)
 
-    ActionRNNs.experiment_wrapper(parsed, working) do (parsed)
+    ActionRNNs.experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
         
         num_steps = parsed["steps"]
         seed = parsed["seed"]
