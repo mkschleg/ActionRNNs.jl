@@ -55,8 +55,11 @@ end
 #     (action, agent.build_features(state))
 
 
-# copied from src/agent/AbstractERAgent.jl
-function get_action_and_prob(π, values, rng)
+# TODO: copied from src/agent/AbstractERAgent.jl and renamed
+# so that two identical functions aren't included in agent.jl
+# I think this function should eventually be moved to agent_util.jl
+# since it should be used across all agents
+function get_action_and_prob_(π, values, rng)
     action = 0
     action_prob = 0.0
     if π isa AbstractValuePolicy
@@ -88,7 +91,7 @@ function MinimalRLCore.start!(agent::PredOnlineAgent, s, rng; kwargs...)
     Flux.reset!(agent.model)
     values = agent.model(s_t)
 
-    agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
+    agent.action, agent.action_prob = get_action_and_prob_(agent.π, values, rng)
 
     empty!(agent.state_list)
 
@@ -156,7 +159,7 @@ function MinimalRLCore.step!(agent::PredOnlineAgent, env_s_tp1, r, terminal, rng
     # Manage small details needed for next step
     ####
     agent.s_t = build_new_feat(agent, env_s_tp1, agent.action)
-    agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
+    agent.action, agent.action_prob = get_action_and_prob_(agent.π, values, rng)
 
     return (preds=values, h=cur_hidden_state, action=agent.action, loss=0.0f0)
 end

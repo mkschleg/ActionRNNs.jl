@@ -45,28 +45,24 @@ function default_args()
         "save_dir" => "ringworld_online",
 
         "seed" => 1,
-#         "steps" => 200000,
-        "steps" => 50000,
-        "size" => 6,
+        "steps" => 100000,
+        "size" => 10,
 
-        # "features" => "OneHot",
-#         "cell" => "AARNN",
         "cell" => "MARNN",
-#         "rnn_config" => "MARNN_OneHot",
-        "numhidden" => 6,
+#         "cell" => "MAGRU",
+        "numhidden" => 15,
         "hs_learnable" => true,
         
-#         "outhorde" => "gammas_term",
-        "outhorde" => "onestep",
+#         "outhorde" => "onestep",
+        "outhorde" => "gammas_term",
         "outgamma" => 0.9,
 
         "action_features"=>false,
 
-#         "alpha" => 0.001,
         "opt" => "RMSProp",
         "eta" => 0.001,
         "rho" => 0.9,
-        "truncation" => 3,
+        "truncation" => 10,
 
         "synopsis" => false)
 
@@ -74,22 +70,8 @@ end
 
 function get_model(parsed, out_horde, fc, rng)
 
-
-#     rnn_config_str = parsed["rnn_config"]
-#
-#     cell_str, fc_str = split(rnn_config_str, "_")
-
-#     fc = if fc_str == "OneHot"
-#         RWU.OneHotFeatureCreator()
-#     elseif fc_str == "SansAction"
-#         RWU.SansActionFeatureCreator()
-#     else
-#         throw(fc_str * " not a feature creator.")
-#     end
-    
     nh = parsed["numhidden"]
     init_func = (dims...)->glorot_uniform(rng, dims...)
-#     fs = MinimalRLCore.feature_size(fc)
     fs = size(fc)
     num_gvfs = length(out_horde)
 
@@ -121,22 +103,16 @@ function get_model(parsed, out_horde, fc, rng)
         end
     end
 
-#     fc, fs, chain
     chain
 end
 
 function construct_agent(parsed, rng)
 
     fc = RWU.StandardFeatureCreator{parsed["action_features"]}()
-    fs = size(fc)
 
-    # out_horde = RWU.gammas_term(collect(0.0:0.1:0.9))
     out_horde = RWU.get_horde(parsed, "out")
 
-#     fc, fs, chain = get_rnn_config(parsed, out_horde, rng)
     chain = get_model(parsed, out_horde, fc, rng)
-#     opt_func = getproperty(Flux, Symbol(parsed["opt"]))
-#     opt = opt_func(parsed["alpha"])
     opt = FLU.get_optimizer(parsed)
 
     
@@ -200,7 +176,6 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
     out_pred_strg, out_err_strg, out_loss_strg
     
 end
-
 
 end
 
