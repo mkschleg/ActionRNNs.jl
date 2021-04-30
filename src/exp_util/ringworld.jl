@@ -184,9 +184,13 @@ MinimalRLCore.create_features(fc::StandardFeatureCreator{true}, s, a) =
     Float32[1.0, s[1], 1-s[1], a==1, a==2, 1.0 - a==1, 1.0 - a==2]
 MinimalRLCore.feature_size(fc::StandardFeatureCreator{true}) = 7
 
+# MinimalRLCore.create_features(fc::StandardFeatureCreator{false}, s, a) =
+#     Float32[s[1], 1-s[1]]
+# MinimalRLCore.feature_size(fc::StandardFeatureCreator{false}) = 2
+
 MinimalRLCore.create_features(fc::StandardFeatureCreator{false}, s, a) =
-    Float32[s[1], 1-s[1]]
-MinimalRLCore.feature_size(fc::StandardFeatureCreator{false}) = 2
+    Float32[s[1]]
+MinimalRLCore.feature_size(fc::StandardFeatureCreator{false}) = 1
 
 Base.size(fc::StandardFeatureCreator) = MinimalRLCore.feature_size(fc)
 
