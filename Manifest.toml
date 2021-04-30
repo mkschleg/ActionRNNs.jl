@@ -828,9 +828,11 @@ version = "1.0.0"
 
 [[Reproduce]]
 deps = ["ArgParse", "BSON", "CodeTracking", "Dates", "Distributed", "FileIO", "Git", "HDF5", "JLD2", "JSON", "Logging", "Parallelism", "Pkg", "ProgressMeter", "Random", "Reexport", "SharedArrays", "Sockets"]
-git-tree-sha1 = "f9d21d8067586c820f4e2b2e2f030deb04992840"
+git-tree-sha1 = "573042905cc3917cfdfdd16114112678a7ad1359"
+repo-rev = "master"
+repo-url = "https://github.com/mkschleg/Reproduce.jl.git"
 uuid = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
-version = "0.9.2"
+version = "0.9.4"
 
 [[Requires]]
 deps = ["UUIDs"]
@@ -984,9 +986,9 @@ version = "0.3.0"
 
 [[TimeZones]]
 deps = ["Dates", "EzXML", "Mocking", "Pkg", "Printf", "RecipesBase", "Serialization", "Unicode"]
-git-tree-sha1 = "4ba8a9579a243400db412b50300cd61d7447e583"
+git-tree-sha1 = "3f6f0be07f33e33bd986a58b4cf2d6c9fd2b7f18"
 uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
-version = "1.5.3"
+version = "1.5.4"
 
 [[TimerOutputs]]
 deps = ["Printf"]
