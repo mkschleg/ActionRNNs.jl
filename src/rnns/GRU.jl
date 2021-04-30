@@ -94,3 +94,53 @@ for a good overview of the internals.
 """
 MAGRU(a...; ka...) = Flux.Recur(MAGRUCell(a...; ka...))
 Flux.Recur(m::MAGRUCell) = Flux.Recur(m, m.state0)
+
+
+struct FacMAGRUCell{A,V,S}  <: AbstractActionRNN
+    W::A
+    Wi::A
+    Wh::A
+    Wa::A
+    b::V
+    state0::S
+end
+
+FacMAGRUCell(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
+    FacMAGRUCell(init(out * 3, factors),
+                 init(factors, in),
+                 init(factors, out),
+                 init(factors, na),
+                 initb(out * 3, na),
+                 init_state(out,1))
+
+
+function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
+    o = size(h, 1)
+
+    a = x[1]
+    obs = x[2]
+
+    g = m.W * ((m.Wi*obs .+ m.Wh*h) .* get_Wabya(m.Wa, a)) .+ get_waa(m.b, a)
+    
+    r = σ.(gate(g, o, 1))
+    z = σ.(gate(g, o, 2))
+    h̃ = tanh.(gate(g, o, 3))
+    h′ = (1 .- z) .* h̃ .+ z .* h
+    sz = size(obs)
+  return h′, reshape(h′, :, sz[2:end]...)
+end
+
+Flux.@functor FacMAGRUCell
+
+Base.show(io::IO, l::FacMAGRUCell) =
+  print(io, "FacMAGRUCell(", size(l.Wi, 2), ", ", size(l.Wi, 1)÷3, ")")
+
+"""
+    FacMAGRU(in::Integer, out::Integer)
+[Multiplicative Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
+RNN but generally exhibits a longer memory span over sequences.
+See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
+for a good overview of the internals.
+"""
+FacMAGRU(a...; ka...) = Flux.Recur(FacMAGRUCell(a...; ka...))
+Flux.Recur(m::FacMAGRUCell) = Flux.Recur(m, m.state0)

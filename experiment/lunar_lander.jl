@@ -1,15 +1,16 @@
-module DirectionalTMazeERExperiment
+module LunarLanderExperiment
 
 # include("../src/ActionRNNs.jl")
 
 import Flux
+import Flux: gpu
 import JLD2
 import LinearAlgebra.Diagonal
 import MinimalRLCore
 using MinimalRLCore: run_episode!, get_actions
 import ActionRNNs
 
-using ActionRNNs: TMaze
+# using ActionRNNs: TMaze
 
 using Statistics
 using Random
@@ -17,30 +18,28 @@ using ProgressMeter
 using Reproduce
 using Random
 
-const TMU = ActionRNNs.TMazeUtils
 const FLU = ActionRNNs.FluxUtils
 
 function default_config()
     Dict{String,Any}(
-        "save_dir" => "tmaze",
+        "save_dir" => "lunar_lander",
 
         "seed" => 1,
-        "steps" => 80000,
-        "size" => 3,
+        "steps" => 500000,
 
-        "cell" => "MARNN",
-        "numhidden" => 6,
+        "cell" => "MAGRU",
+        "numhidden" => 32,
 
         "opt" => "RMSProp",
         "eta" => 0.0005,
         "rho" =>0.99,
 
-        "replay_size"=>1000,
+        "replay_size"=>10000,
         "warm_up" => 1000,
-        "batch_size"=>4,
-        "update_wait"=>4,
+        "batch_size"=>32,
+        "update_wait"=>8,
         "target_update_wait"=>1000,
-        "truncation" => 7,
+        "truncation" => 16,
 
         "hs_learnable" => true,
         
@@ -55,8 +54,7 @@ function get_ann(parsed, fs, env, rng)
     na = length(get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
     
-    
-    if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
+    rnn_layer = if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         factors = parsed["factors"]
@@ -64,10 +62,9 @@ function get_ann(parsed, fs, env, rng)
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
-        Flux.Chain(rnn(fs, na, nh, factors;
-                       init=init_func,
-                       initb=initb),
-                   Flux.Dense(nh, na; initW=init_func))
+        rnn(32, na, nh, factors;
+            init=init_func,
+            initb=initb)
         
     elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
@@ -77,36 +74,35 @@ function get_ann(parsed, fs, env, rng)
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
-        m = Flux.Chain(
-            rnn(fs, na, nh;
-                init=init_func,
-                initb=initb),
-            Flux.Dense(nh, na; initW=init_func))
-
+        rnn(32, na, nh;
+            init=init_func,
+            initb=initb)
 
     else
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-        Flux.Chain(rnntype(fs, nh; init=init_func),
-                   Flux.Dense(nh,
-                              length(get_actions(env));
-                              initW=init_func))
+        rnntype(32, nh; init=init_func)
     end
+
+    Flux.Chain(Flux.Dense(fs, 32; initW=init_func),
+               rnn_layer,
+               Flux.Dense(nh, nh; initW=init_func),
+               Flux.Dense(nh, na; initW=init_func))
 end
 
 function construct_agent(env, parsed, rng)
 
-    fc = TMU.StandardFeatureCreator{false}()
+    fc = ActionRNNs.LunarLanderUtils.IdentityFeatureCreator()
     fs = MinimalRLCore.feature_size(fc)
 
     γ = Float32(parsed["gamma"])
     τ = parsed["truncation"]
 
 
-    ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+    ap = ActionRNNs.ϵGreedyDecay((1.0, 0.05), 10000, 1000, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed, fs, env, rng)
+    chain = get_ann(parsed, fs, env, rng) |> gpu
 
     ActionRNNs.DRQNAgent(chain,
                          opt,
@@ -134,7 +130,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = ActionRNNs.DirectionalTMaze(parsed["size"])
+        env = ActionRNNs.LunarLander(seed, false)
         agent = construct_agent(env, parsed, rng)
 
         
@@ -165,6 +161,11 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
             success = false
             max_episode_steps = min(max((num_steps - sum(logger[:total_steps])), 2), 10000)
             n = 0
+            tr = if length(logger.data[:total_rews]) > 100
+                mean(logger.data[:total_rews][end-100:end])
+            else
+                mean(logger.data[:total_rews][1:end])
+            end
             total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
                 if progress
                     pr_suc = if length(logger.data.successes) <= 1000
@@ -172,13 +173,14 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
                     else
                         mean(logger.data.successes[end-1000:end])
                     end
+                    # tr += r
                     next!(prg_bar, showvalues=[(:episode, eps),
-                                               (:successes, pr_suc),
+                                               (:total_rews, tr),
                                                (:loss, usa[:avg_loss]),
                                                (:l1, usa[:l1]/n),
                                                (:action, a.action),
-                                               (:preds, a.preds),
-                                               (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
+                                               (:preds, a.preds)])
+
                 end
                 success = success || (r == 4.0)
                 if !(a.update_state isa Nothing)
@@ -187,6 +189,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
                 n+=1
             end
             logger(total_rew, steps, success, usa)
+
             eps += 1
         end
         save_results = logger.data

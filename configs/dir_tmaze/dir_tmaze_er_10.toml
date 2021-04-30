@@ -9,6 +9,7 @@ arg_iter_type = "iter"
 "steps" = 300000
 "opt" = "RMSProp"
 "rho" = 0.99
+
 "size" = 10
 "gamma" = 0.99
 "batch_size" = 8
