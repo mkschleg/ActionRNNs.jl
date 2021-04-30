@@ -20,7 +20,7 @@ arg_iter_type = "iter"
 "outhorde" = ["one_step", "gammas_term"]
 "cell" = ["MAGRU", "AAGRU", "GRU", "MARNN", "AARNN", "RNN"]
 "eta" = [0.0001, 0.0005, 0.005, 0.001]
-"truncation" = [1, 2, 3, 4, 6, 10, 16]
-"numhidden" = [3, 6, 9, 12]
+"truncation" = [1, 2, 4, 6, 10, 16, 20, 25, 30]
+"numhidden" = [3, 6, 9, 12, 15, 18, 20, 25, 30, 40]
 "seed" = "1:10"
 
