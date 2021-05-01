@@ -48,12 +48,6 @@ function PredOnlineAgent(out_horde,
 
 end
 
-# build_new_feat(agent::PredOnlineAgent{O, C, F, H, Φ, Π, G}, state, action) where {O, C, F, H, Φ, Π, G} =
-#     agent.build_features(state, action)
-#
-# build_new_feat(agent::PredOnlineAgent{O, C, F, H, Φ, Π, G}, state, action) where {O, C, F, H, Φ<:Tuple, Π, G}=
-#     (action, agent.build_features(state))
-
 
 # TODO: copied from src/agent/AbstractERAgent.jl and renamed
 # so that two identical functions aren't included in agent.jl
@@ -72,7 +66,7 @@ function get_action_and_prob_(π, values, rng)
     action, action_prob
 end
 
-# copied from src/agent/agent_util.jl
+# TODO: copied from src/agent/agent_util.jl, should just be added to agent_util.jl in the future
 build_new_feat(agent::PredOnlineAgent, state, action) = begin
     if eltype(agent.state_list) <: Tuple
         (action, agent.build_features(state, action))
@@ -95,29 +89,11 @@ function MinimalRLCore.start!(agent::PredOnlineAgent, s, rng; kwargs...)
 
     empty!(agent.state_list)
 
-
-#     agent.action, agent.action_prob = agent.π(env_s_tp1, rng)
-
-#     fill!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-
     push!(agent.state_list, build_new_feat(agent, s, agent.action))
     agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
     agent.s_t = build_new_feat(agent, s, agent.action)
     return agent.action
 end
-
-
-# function MinimalRLCore.start!(agent::PredOnlineAgent, env_s_tp1, rng; kwargs...)
-#
-#     agent.action, agent.action_prob = agent.π(env_s_tp1, rng)
-#
-#     fill!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-#
-#     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-#     agent.hidden_state_init = get_initial_hidden_state(agent.model)
-#     agent.s_t = build_new_feat(agent, env_s_tp1, agent.action)
-#     return agent.action
-# end
 
 
 function MinimalRLCore.step!(agent::PredOnlineAgent, env_s_tp1, r, terminal, rng; kwargs...)
@@ -151,10 +127,6 @@ function MinimalRLCore.step!(agent::PredOnlineAgent, env_s_tp1, r, terminal, rng
             get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1], 1)
     end
 
-    #TODO: review this
-#     agent.hidden_state_init =
-#         get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1], 1)
-
     ####
     # Manage small details needed for next step
     ####
@@ -163,38 +135,3 @@ function MinimalRLCore.step!(agent::PredOnlineAgent, env_s_tp1, r, terminal, rng
 
     return (preds=values, h=cur_hidden_state, action=agent.action, loss=0.0f0)
 end
-
-
-# function MinimalRLCore.step!(agent::PredOnlineAgent, env_s_tp1, r, terminal, rng; kwargs...)
-#
-#     new_action, new_prob = agent.π(env_s_tp1, rng)
-#     push!(agent.state_list, build_new_feat(agent, env_s_tp1, agent.action))
-#
-#     RNN update function
-#     update!(agent.model,
-#             agent.horde,
-#             agent.opt,
-#             agent.lu,
-#             agent.hidden_state_init,
-#             agent.state_list,
-#             env_s_tp1,
-#             agent.action,
-#             agent.action_prob)
-#     End update function
-#
-#     reset!(agent.model, agent.hidden_state_init)
-#     out_preds = agent.model.(agent.state_list)[end]
-#
-#     cur_hidden_state = get_hidden_state(agent.model)
-#
-#     agent.hidden_state_init =
-#         get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1])
-#
-#     agent.s_t = build_new_feat(agent, env_s_tp1, agent.action)
-#     agent.action = copy(new_action)
-#     agent.action_prob = new_prob
-#
-#     return (preds=out_preds, h=cur_hidden_state, action=agent.action, loss=0.0f0)
-# end
-
-# MinimalRLCore.get_action(agent::PredOnlineAgent, state) = agent.action

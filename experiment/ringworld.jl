@@ -51,6 +51,7 @@ function default_args()
         "cell" => "MARNN",
 #         "cell" => "MAGRU",
         "numhidden" => 15,
+        # TODO: the hs_learnable parameter should not be necessary and should be removed
         "hs_learnable" => true,
         
 #         "outhorde" => "onestep",
