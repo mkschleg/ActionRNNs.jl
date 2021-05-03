@@ -32,7 +32,7 @@ function update!(chain,
     reset!(chain, h_init)
     n = length(state_seq)
     grads = gradient(Flux.params(chain)) do
-        
+
         preds = map(chain, state_seq)
         v_tp1 = dropgrad(preds[n])
         cumulants, discounts, π_prob = dropgrad(get(horde, nothing, action_t, env_state_tp1, v_tp1))

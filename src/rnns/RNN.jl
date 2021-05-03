@@ -34,7 +34,7 @@ function (m::AARNNCell)(h, x::Tuple{A, X}) where {A, X}
 
     o = x[2]
     a = x[1]
-    
+
     new_h = σ.(Wi*o .+ get_waa(Wa, a) .+ Wh*h .+ b)
     sz = size(o)
     return new_h, new_h#reshape(h, :, sz[2:end]...)
