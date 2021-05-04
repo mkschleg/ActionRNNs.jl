@@ -1,5 +1,6 @@
+__precompile__(false)
 
-module RingWorldExperiment
+module RingWorldOnlineExperiment
 
 import Flux
 # import Flux.Tracker
@@ -8,6 +9,7 @@ import LinearAlgebra.Diagonal
 
 # include("../src/ActionRNNs.jl")
 import ActionRNNs
+using MinimalRLCore
 
 using DataStructures: CircularBuffer
 using ActionRNNs: RingWorld, step!, start!, glorot_uniform
@@ -18,7 +20,7 @@ using Random
 using ProgressMeter
 using Reproduce
 using Random
-using MinimalRLCore
+
 
 # using Plots
 
@@ -37,54 +39,49 @@ function results_synopsis(res, ::Val{true})
 end
 results_synopsis(res, ::Val{false}) = res
 
-function default_arg_parse()
+function default_args()
     Dict{String,Any}(
-        "save_dir" => "ringworld",
+
+        "save_dir" => "ringworld_online",
 
         "seed" => 1,
-        "steps" => 200000,
-        "size" => 6,
+        "steps" => 100000,
+        "size" => 10,
 
-        # "features" => "OneHot",
-        # "cell" => "ARNN",
-        "rnn_config" => "ARNN_OneHot",
-        "numhidden" => 6,
+        "cell" => "MARNN",
+#         "cell" => "MAGRU",
+        "numhidden" => 15,
+        # TODO: the hs_learnable parameter should not be necessary and should be removed
         "hs_learnable" => true,
         
+#         "outhorde" => "onestep",
         "outhorde" => "gammas_term",
         "outgamma" => 0.9,
-        
-        "opt" => "RMSProp",
-        "alpha" => 0.001,
-        "truncation" => 3,
 
+        "action_features"=>false,
+
+        "opt" => "RMSProp",
+        "eta" => 0.001,
+        "rho" => 0.9,
+        "truncation" => 10,
 
         "synopsis" => false)
 
 end
 
-function get_rnn_config(parsed, out_horde, rng)
+function get_model(parsed, out_horde, fc, rng)
 
-    rnn_config_str = parsed["rnn_config"]
-    
-    cell_str, fc_str = split(rnn_config_str, "_")
-
-    fc = if fc_str == "OneHot"
-        RWU.OneHotFeatureCreator()
-    elseif fc_str == "SansAction"
-        RWU.SansActionFeatureCreator()
-    else
-        throw(fc_str * " not a feature creator.")
-    end
-    
-    fs = MinimalRLCore.feature_size(fc)
-    
+    nh = parsed["numhidden"]
     init_func = (dims...)->glorot_uniform(rng, dims...)
+    fs = size(fc)
+    num_gvfs = length(out_horde)
 
     chain = begin
-        if cell_str == "FacARNN"
-            Flux.Chain(ActionRNNs.FacARNN(fs, 2, parsed["numhidden"], parsed["factors"], hs_learnable=parsed["hs_learnable"]; init=init_func),
-                       Flux.Dense(parsed["numhidden"], length(out_horde); initW=init_func))
+        if parsed["cell"] == "FacARNN"
+
+            factors = parsed["factors"]
+            Flux.Chain(ActionRNNs.FacARNN(fs, 2, nh, factors,; init=init_func),
+                       Flux.Dense(nh, num_gvfs; initW=init_func))
         elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
             rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
@@ -94,31 +91,30 @@ function get_rnn_config(parsed, out_horde, rng)
             initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
             m = Flux.Chain(
-                rnn(fs, 4, nh;
+                rnn(fs, 2, nh;
                     init=init_func,
                     initb=initb),
-                Flux.Dense(nh, length(get_actions(env)); initW=init_func))
+                Flux.Dense(nh, num_gvfs; initW=init_func))
         else
             rnntype = getproperty(Flux, Symbol(parsed["cell"]))
             Flux.Chain(rnntype(fs, nh; init=init_func),
                        Flux.Dense(nh,
-                                  length(get_actions(env));
+                                  num_gvfs;
                                   initW=init_func))
         end
     end
 
-    fc, fs, chain
+    chain
 end
 
 function construct_agent(parsed, rng)
 
+    fc = RWU.StandardFeatureCreator{parsed["action_features"]}()
 
-    # out_horde = RWU.gammas_term(collect(0.0:0.1:0.9))
     out_horde = RWU.get_horde(parsed, "out")
 
-    fc, fs, chain = get_rnn_config(parsed, out_horde, rng)
-    opt_func = getproperty(Flux, Symbol(parsed["opt"]))
-    opt = opt_func(parsed["alpha"])
+    chain = get_model(parsed, out_horde, fc, rng)
+    opt = FLU.get_optimizer(parsed)
 
     
     ap = ActionRNNs.RandomActingPolicy([0.5, 0.5])
@@ -130,36 +126,29 @@ function construct_agent(parsed, rng)
                                τ,
                                fc,
                                ap)
-                               # parsed)
 end
 
-function main_experiment(parsed::Dict{String, Any}; working=false, progress=false)
+function main_experiment(parsed=default_args(); working=false, progress=false, overwrite=false)
 
-    ActionRNNs.experiment_wrapper(parsed, working) do (parsed)
-        # savefile = ActionRNNs.save_setup(parsed)
-        # if isnothing(savefile)
-        #     return
-        # end
-        
+    ActionRNNs.experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
+
         num_steps = parsed["steps"]
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
         env = RingWorld(parsed)
         agent = construct_agent(parsed, rng)
-        
+
         out_pred_strg, out_err_strg =
             experiment_loop(env, agent, parsed["outhorde"], num_steps, rng; prgs=progress)
         
         results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg])
         save_results = results_synopsis(results, Val(parsed["synopsis"]))
-        # ActionRNNs.save_results(parsed, savefile, save_results)
         (save_results=save_results)
     end
 end
 
 # Creating an environment for to run in jupyter.
-
 function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
 
     out_pred_strg = zeros(Float32, num_steps, length(agent.horde))
@@ -172,9 +161,12 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
     run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
         
         out_preds = a.preds
-        out_pred_strg[cur_step, :] .= out_preds
+
+        out_pred_strg[cur_step, :] .= out_preds[:, 1]
         out_err_strg[cur_step, :] = out_pred_strg[cur_step, :] .- RWU.oracle(env, outhorde_str);
+
         out_loss_strg[cur_step] = a.loss
+
         if prgs
             ProgressMeter.next!(prg_bar)
         end
@@ -185,7 +177,6 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
     out_pred_strg, out_err_strg, out_loss_strg
     
 end
-
 
 end
 
