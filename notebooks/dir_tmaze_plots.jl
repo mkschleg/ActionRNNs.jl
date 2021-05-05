@@ -141,13 +141,11 @@ let
 	plt = nothing
 	args_list = [
 		Dict("numhidden"=>6, "truncation"=>8, "cell"=>"MAGRU", "eta"=>0.00125),
-		Dict("numhidden"=>9, "truncation"=>8, "cell"=>"AAGRU", "eta"=>0.00125),
-		Dict("numhidden"=>6, "truncation"=>8, "cell"=>"AAGRU", "eta"=>1.953125e-5),
-		Dict("numhidden"=>9, "truncation"=>8, "cell"=>"GRU", "eta"=>1.953125e-5),
+		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"AAGRU", "eta"=>0.00125),
+		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"GRU", "eta"=>1.953125e-5),
 		Dict("numhidden"=>6, "truncation"=>8, "cell"=>"MARNN", "eta"=>0.0003125),
-		Dict("numhidden"=>9, "truncation"=>8, "cell"=>"AARNN", "eta"=>0.00125),
-		Dict("numhidden"=>6, "truncation"=>8, "cell"=>"AARNN", "eta"=>0.00125),
-		Dict("numhidden"=>9, "truncation"=>8, "cell"=>"RNN", "eta"=>0.0003125)
+		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"AARNN", "eta"=>0.0003125),
+		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"RNN", "eta"=>7.8125e-5)
 	]
 	for args ∈ args_list
 		plt = plot_line_from_data_with_params!(
@@ -157,14 +155,147 @@ let
 			label=args["cell"], 
 			palette=color_scheme)
 	end
+	FileIO.save("../final_runs/dir_tmaze_6.jld2", "args", args_list)
+	plt
+end
+
+# ╔═╡ 2b51fabb-1910-4bd8-83aa-5b5312ef2229
+FileIO.load("../final_runs/dir_tmaze_6.jld2")
+
+# ╔═╡ eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
+ic_dir_10, dd_dir_10 = @load_data "../local_data/dir_tmaze_er_rnn_rmsprop_10/data/"
+
+# ╔═╡ eab5c7a0-8052-432d-977e-68b967baf5ca
+ic_dir_10[1].parsed_args["steps"]
+
+# ╔═╡ 55d1416b-d580-4112-827a-30504c21f397
+data_10 = PU.get_line_data_for(
+	ic_dir_10,
+	["numhidden", "truncation", "cell"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->PU.get_AUC(x, :successes),
+	get_data=(x)->PU.get_rolling_mean_line(x, :successes, 300))
+
+# ╔═╡ 467ed417-cf69-493d-b21c-3fc4d1fb9907
+md"""
+Truncation: $(@bind τ_dir_10 Select(string.(dd_dir_10["truncation"])))
+NumHidden: $(@bind nh_dir_10 Select(string.(dd_dir_10["numhidden"])))
+Cell: $(@bind cells_dir_10 MultiSelect(dd_dir_10["cell"]))
+"""
+
+# ╔═╡ 2040d613-0ea8-48ce-937c-9180073812ea
+let 
+	plt = nothing
+	τ = parse(Int, τ_dir_10)
+	nh = parse(Int, nh_dir_10)
+	for cell ∈ cells_dir_10
+		if cell[1:2] == "AA"
+			plt = plot_line_from_data_with_params!(plt, data_10, (nh, τ, cell); label=cell, palette=color_scheme,legend=:bottomright, ylabel="Perc Success", xlabel="Episode")
+		else
+			plt = plot_line_from_data_with_params!(plt, data_10, (nh, τ, cell); label=cell, palette=color_scheme)
+		end
+	end
+	plt
+	# savefig("example_plot.pdf")
+end
+
+# ╔═╡ cc730813-539b-418d-8da6-67f83bd05d70
+let 
+	# More Sweeping: AAGRU, GRU, AARNN, RNN nh = 17
+	
+	plt = nothing
+	args_list = [
+		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.0003125), #num_params = 1303
+		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.0003125), #num_params = 3499
+		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"AAGRU", "eta"=>7.8125e-5), #num_params = 1053
+		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU", "eta" => 7.8125e-5),
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AAGRU", "eta"=>7.8125e-5), #num_params = 1703
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"GRU", "eta"=>1.953125e-5),
+		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MARNN", "eta"=>0.0003125), #num_params = 463
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AARNN", "eta"=>7.8125e-5),
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"RNN", "eta"=>4.88281e-6)
+	]
+	for args ∈ args_list
+		plt = plot_line_from_data_with_params!(
+			plt, 
+			data_10, 
+			(args["numhidden"], args["truncation"], args["cell"]); 
+			label=args["cell"], 
+			palette=color_scheme)
+	end
+	FileIO.save("../final_runs/dir_tmaze_10_t_12.jld2", "args", args_list)
+	plt
+end
+
+# ╔═╡ fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
+
+
+# ╔═╡ ad7af5eb-36e0-4dc0-8454-5030301cf30d
+ic_tmaze_10, dd_tmaze_10 = @load_data "../local_data/tmaze_er_rnn_rmsprop_10/data/"
+
+# ╔═╡ 8aa7eeec-c0f4-4be9-90fd-4fe6ebe396bf
+data_tmaze_10 = PU.get_line_data_for(
+	ic_tmaze_10,
+	["numhidden", "truncation", "cell"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->PU.get_AUE(x, :successes),
+	get_data=(x)->PU.get_rolling_mean_line(x, :successes, 300))
+
+# ╔═╡ 6368a080-dd05-4402-8408-4c773801ba96
+md"""
+Truncation: $(@bind τ_tmaze_10 Select(string.(dd_tmaze_10["truncation"])))
+NumHidden: $(@bind nh_tmaze_10 Select(string.(dd_tmaze_10["numhidden"])))
+Cell: $(@bind cells_tmaze_10 MultiSelect(dd_tmaze_10["cell"]))
+"""
+
+# ╔═╡ 4a40c9b5-2b2f-4fdf-ab3d-a751ebfafd17
+let 
+	plt = nothing
+	τ = parse(Int, τ_tmaze_10)
+	nh = parse(Int, nh_tmaze_10)
+	for cell ∈ cells_tmaze_10
+		if cell[1:2] == "AA"
+			plt = plot_line_from_data_with_params!(plt, data_tmaze_10, (nh, τ, cell); label=cell, palette=color_scheme,legend=:bottomright, ylabel="Perc Success", xlabel="Episode")
+		else
+			plt = plot_line_from_data_with_params!(plt, data_tmaze_10, (nh, τ, cell); label=cell, palette=color_scheme)
+		end
+	end
+	plt
+	# savefig("example_plot.pdf")
+end
+
+# ╔═╡ 729c89c8-191e-4518-a844-084288ef069f
+let 
+	# More Sweeping: AAGRU, GRU, AARNN, RNN nh = 17
+	
+	plt = nothing
+	args_list = [
+		Dict("numhidden"=>10, "truncation"=>10, "cell"=>"MAGRU", "eta"=>7.8125e-5), #numparams = 1734,
+		Dict("numhidden"=>10, "truncation"=>10, "cell"=>"AAGRU", "eta"=>0.0003125), #numparams = 474,
+		Dict("numhidden"=>10, "truncation"=>10, "cell"=>"GRU", "eta"=>0.0003125), #numparams = 286
+		Dict("numhidden"=>20, "truncation"=>10, "cell"=>"MARNN", "eta"=>7.8125e-5),
+		Dict("numhidden"=>20, "truncation"=>10, "cell"=>"AARNN", "eta"=>7.8125e-5),
+		Dict("numhidden"=>20, "truncation"=>10, "cell"=>"RNN", "eta"=>7.8125e-5),
+	]
+	for args ∈ args_list
+		plt = plot_line_from_data_with_params!(
+			plt, 
+			data_tmaze_10, 
+			(args["numhidden"], args["truncation"], args["cell"]); 
+			label=args["cell"], 
+			palette=color_scheme)
+	end
+	FileIO.save("../final_runs/tmaze_10.jld2", "args", args_list)
 	plt
 end
 
 # ╔═╡ Cell order:
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
 # ╠═e0d51e67-63dc-45ea-9092-9965f97660b3
-# ╟─0c746c1e-ea39-4415-a1b1-d7124b886f98
-# ╟─92c2600e-58b4-4ea3-8272-3fe38c0422d1
+# ╠═0c746c1e-ea39-4415-a1b1-d7124b886f98
+# ╠═92c2600e-58b4-4ea3-8272-3fe38c0422d1
 # ╠═24ccf89f-ab20-447e-9d6f-633380ee8c20
 # ╠═240dc563-fd04-4c07-85ac-4e54ad016374
 # ╠═265db42d-1b27-463d-b0a1-cfc62748022a
@@ -176,3 +307,16 @@ end
 # ╠═e4cc9109-d8b1-4bff-a176-3627e24ab757
 # ╠═b265f4e5-7405-4fd9-bb91-377cb9e32789
 # ╠═0eb4c818-b533-4695-a0c7-53e72023281f
+# ╠═2b51fabb-1910-4bd8-83aa-5b5312ef2229
+# ╠═eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
+# ╠═eab5c7a0-8052-432d-977e-68b967baf5ca
+# ╠═55d1416b-d580-4112-827a-30504c21f397
+# ╠═467ed417-cf69-493d-b21c-3fc4d1fb9907
+# ╠═2040d613-0ea8-48ce-937c-9180073812ea
+# ╠═cc730813-539b-418d-8da6-67f83bd05d70
+# ╠═fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
+# ╠═ad7af5eb-36e0-4dc0-8454-5030301cf30d
+# ╠═8aa7eeec-c0f4-4be9-90fd-4fe6ebe396bf
+# ╠═6368a080-dd05-4402-8408-4c773801ba96
+# ╠═4a40c9b5-2b2f-4fdf-ab3d-a751ebfafd17
+# ╠═729c89c8-191e-4518-a844-084288ef069f

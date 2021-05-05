@@ -48,6 +48,9 @@ get_AUE(ddict, key, perc=0.1) = get_agg(ddict, key) do x
 end
 
 function get_rolling_mean_line(ddict, key, n)
+    if n > length(ddict["results"][key])
+        n = length(ddict["results"][key])
+    end
     rollmean(ddict["results"][key], n)
 end
 
