@@ -1,0 +1,20 @@
+[config]
+save_dir="tmaze_online_rnn_size6"
+exp_file="experiment/tmaze.jl"
+exp_module_name = "TMazeExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iter"
+
+[static_args]
+"steps" = 300000
+"opt" = "RMSProp"
+"rho" = 0.99
+"size" = 6
+"gamma" = 0.99
+
+[sweep_args]
+"cell" = ["MAGRU", "AAGRU", "GRU", "MARNN", "AARNN", "RNN"]
+"eta" = [0.0001, 0.0005, 0.005, 0.001]
+"truncation" = [1, 2, 4, 6, 8, 10, 12, 16]
+"numhidden" = [3, 6, 9, 12]
+"seed" = "1:5"
