@@ -24,9 +24,6 @@ function ControlOnlineAgent(model,
                             feature_size,
                             acting_policy)
 
-    # τ=parsed["truncation"]
-    # opt = FluxUtils.get_optimizer(parsed)
-
     state_list, init_state = begin
         if contains_rnntype(model, AbstractActionRNN)
             (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 1}}}(τ+1), (0, zeros(Float32, 1)))
@@ -48,19 +45,6 @@ function ControlOnlineAgent(model,
                      1, 0.0)
 
 end
-
-# function agent_settings!(as::Reproduce.ArgParseSettings,
-#                          env_type::Type{ControlOnlineAgent})
-#     FluxUtils.opt_settings!(as)
-#     FluxUtils.rnn_settings!(as)
-# end
-
-
-# build_new_feat(agent::ControlOnlineAgent, state, action) =
-#     agent.build_features(state, action)
-#
-# build_new_feat(agent::ControlOnlineAgent{LU, O, C, F, H, Φ, Π}, state, action) where {LU<:LearningUpdate, O, C, F, H, Φ<:Tuple, Π} =
-#     (action, agent.build_features(state, nothing))
 
 # TODO: copied from src/agent/AbstractERAgent.jl and renamed
 # so that two identical functions aren't included in agent.jl
@@ -98,7 +82,6 @@ function MinimalRLCore.start!(agent::ControlOnlineAgent, s, rng; kwargs...)
     values = agent.model(s_t)
 
     agent.action, agent.action_prob = get_action_and_prob__(agent.π, values, rng)
-#     agent.action = sample(agent.π, values, rng)
 
     empty!(agent.state_list)
 
@@ -131,7 +114,6 @@ function MinimalRLCore.step!(agent::ControlOnlineAgent, env_s_tp1, r, terminal, 
     reset!(agent.model, agent.hidden_state_init)
     values = agent.model.(agent.state_list)[end]
     
-#     agent.action = sample(agent.π, values, rng)
     cur_hidden_state = get_hidden_state(agent.model, 1)
 
     is_full = DataStructures.isfull(agent.state_list)
@@ -139,7 +121,6 @@ function MinimalRLCore.step!(agent::ControlOnlineAgent, env_s_tp1, r, terminal, 
         agent.hidden_state_init =
             get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1], 1)
     end
-#     agent.s_t = agent.state_list[end]
 
     ####
     # Manage small details needed for next step

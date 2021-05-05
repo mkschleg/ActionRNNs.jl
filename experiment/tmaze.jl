@@ -80,43 +80,6 @@ function get_ann(parsed, fs, env, rng)
                               initW=init_func))
     end
 
-#     chain = begin
-#         if false
-#             # ARNN
-#             Flux.Chain(
-#                 (x)->(Flux.onehot(x[1], 1:4), x[2]),
-#                 ActionRNNs.ActionStateStreams(Flux.Dense(4, parsed["ae_size"], tanh; initW=init_func), identity),
-#                 ActionRNNs.ARNN(fs, parsed["ae_size"], parsed["numhidden"]; init=init_func),
-#                 Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-#
-#             # generic RNN
-#             Flux.Chain(
-#                 (x)->(x[1:3], x[4:end]),
-#                 ActionRNNs.ActionStateStreams(Flux.param,
-#                                               Flux.Dense(4, parsed["ae_size"], Flux.sigmoid; initW=init_func)),
-#                 (x)->vcat(x[1], x[2]),
-#                 rnntype(parsed["ae_size"] + fs, parsed["numhidden"]; init=init_func),
-#                 Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-#         else
-#             if parsed["cell"] == "FacARNN"
-#                 # throw("You know this doesn't work yet...")
-#                 Flux.Chain(ActionRNNs.FacARNN(fs, 4, parsed["numhidden"], parsed["factors"]; hs_learnable=parsed["hs_learnable"], init=init_func),
-#                            Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-#             elseif parsed["cell"] == "ARNN"
-#                 Flux.Chain(
-#                     ActionRNNs.ARNN(fs, 4, parsed["numhidden"]; init=init_func, hs_learnable=parsed["hs_learnable"]),
-#                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-#             elseif parsed["cell"] == "RNN"
-#                 Flux.Chain(
-#                     ActionRNNs.RNN(fs, parsed["numhidden"]; init=init_func, hs_learnable=parsed["hs_learnable"]),
-#                     Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-#             else
-#                 rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-#                 Flux.Chain(rnntype(fs, parsed["numhidden"]; init=init_func),
-#                            Flux.Dense(parsed["numhidden"], length(get_actions(env)); initW=init_func))
-#             end
-#         end
-#     end
 end
 
 function construct_agent(env, parsed, rng)
@@ -137,16 +100,6 @@ function construct_agent(env, parsed, rng)
     
     chain = get_ann(parsed, fs, env, rng)
 
-#     fc = if is_actionrnn
-#         # States without one hot action encoding.
-#         TMU.StandardFeatureCreator{false}()
-#     else
-#         # States with one hot action encoding
-#         TMU.StandardFeatureCreator{true}()
-#     end
-#     fs = MinimalRLCore.feature_size(fc)
-
-    # TODO: add parsed["hs_learnable"]
     ActionRNNs.ControlOnlineAgent(chain,
                                   opt,
                                   τ,
@@ -166,7 +119,6 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
         rng = Random.MersenneTwister(seed)
         
         env = ActionRNNs.TMaze(parsed["size"])
-#         env = TMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
 
 
@@ -221,7 +173,6 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
         end
          save_results = logger.data
         (;save_results = save_results)
-#         (;agent = agent, save_results = logger.data)
     end
 end
 
