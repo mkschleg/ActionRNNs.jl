@@ -69,9 +69,11 @@ function update_batch!(lu::TD,
     
     reset!(chain, h_init)
     ps = get_params(chain, h_init, hs_learnable)
+
+    # preds = map(chain, state_seq)
     
     grads = gradient(ps) do
-        
+
         preds = map(chain, state_seq)
         v_tp1 = dropgrad(preds[n])
 

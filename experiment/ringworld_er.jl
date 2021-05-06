@@ -45,7 +45,7 @@ function default_args()
 
         "seed" => 1,
 #         "steps" => 200000,
-        "steps" => 40,
+        "steps" => 200000,
         "size" => 6,
 
         # "features" => "OneHot",
