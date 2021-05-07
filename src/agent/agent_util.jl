@@ -60,11 +60,16 @@ function get_state_from_experience(::Tuple, exp)
     get_state(seq) = seq.s
     s_1 = Flux.batchseq([[get_state.(seq); [seq[end].sp]] for seq in exp], zero(exp[1][1].s))
     a_1 = [rpad([[seqi_j.am1[] for seqi_j ∈ seq]; [seq[end].a[]]], length(s_1), 1) for seq in exp]
-    [([a_1[b][t] for b ∈ 1:length(a_1)], st) for (t, st) ∈ enumerate(s_1)]
+    [([a_1[b][t] for b ∈ 1:length(a_1)], st isa AbstractVector ? reshape(st, 1, :) : st) for (t, st) ∈ enumerate(s_1)]
 end
 
 function get_state_from_experience(type, exp)
-    Flux.batchseq([[getindex.(exp[i], :s); [exp[i][end].sp]] for i in 1:length(exp)], zero(exp[1][1].s))
+    s = Flux.batchseq([[getindex.(exp[i], :s); [exp[i][end].sp]] for i in 1:length(exp)], zero(exp[1][1].s))
+    if s[1] isa AbstractVector
+        [reshape(st, 1, :) for st ∈ s]
+    else
+        s
+    end
 end
 
 get_information_from_experience(agent::AbstractERAgent, exp) = 
