@@ -1,5 +1,5 @@
 [config]
-save_dir="dir_tmaze_er_rnn_rmsprop_10"
+save_dir="dir_tmaze_er_rnn_rmsprop"
 exp_file="experiment/dir_tmaze_er.jl"
 exp_module_name = "DirectionalTMazeERExperiment"
 exp_func_name = "main_experiment"
@@ -9,8 +9,7 @@ arg_iter_type = "iter"
 "steps" = 300000
 "opt" = "RMSProp"
 "rho" = 0.99
-
-"size" = 10
+"size" = 6
 "gamma" = 0.99
 "batch_size" = 8
 "replay_size" = 10000
@@ -20,8 +19,8 @@ arg_iter_type = "iter"
 "target_update_wait" = 1000
 
 [sweep_args]
-"cell" = ["MARNN", "AARNN", "RNN", "MAGRU", "AAGRU", "GRU"]
+"cell" = ["AARNN", "MARNN", "RNN", "AAGRU", "MAGRU", "GRU"]
 "eta" = "0.01*(2.0.^(-11:2:-2))"
-"truncation" = [12, 20]
-"numhidden" = [10, 15, 17, 20]
+"truncation" = [8]
+"numhidden" = [5, 10]
 "seed" = "1:20"

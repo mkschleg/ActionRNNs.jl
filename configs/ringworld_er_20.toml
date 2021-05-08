@@ -6,7 +6,7 @@ exp_func_name = "main_experiment"
 arg_iter_type = "iter"
 
 [static_args]
-"steps" = 400000
+"steps" = 500000
 "opt" = "RMSProp"
 "size" = 20
 "batch_size" = 4
@@ -20,12 +20,11 @@ arg_iter_type = "iter"
 
 [sweep_args]
 "outhorde" = ["onestep", "gammas_term"]
-"cell" = ["MARNN", "AARNN", "RNN", "MAGRU", "AAGRU", "GRU"]
-"hs_learnable" = [false, true]
+"cell" = ["MAGRU", "AAGRU", "GRU"]
+"hs_learnable" = [true]
 "update_freq" = [1, 4, 16]
 "rho" = [0.9, 0.99]
-# "eta" = "clamp.(0.01*1.5.^(-10:2:0), 0.0, 1.0)"
 "eta" = [0.0001, 0.0005, 0.005, 0.001]
-"truncation" = [1, 2, 4, 8, 12, 16, 20, 25, 30]
-"numhidden" = [3, 6, 9, 12, 15, 20]
-"seed" = "1:10"
+"truncation" = [1, 4, 8, 16, 20, 30]
+"numhidden" = [5, 10, 20] #[3, 6, 9, 12, 15, 20]
+"seed" = "1:5"

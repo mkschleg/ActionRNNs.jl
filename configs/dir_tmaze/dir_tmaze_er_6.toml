@@ -23,4 +23,4 @@ arg_iter_type = "iter"
 "eta" = "0.01*(2.0.^(-11:2:-2))"
 "truncation" = [1, 2, 4, 6, 8, 12, 16]
 "numhidden" = [3, 6, 9, 12]
-"seed" = "1:10"
+"seed" = "11:20"

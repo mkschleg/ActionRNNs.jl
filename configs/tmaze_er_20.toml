@@ -14,9 +14,10 @@ arg_iter_type = "iter"
 "batch_size" = 4
 "replay_size" = 1000
 "warm_up" = 1000
+"target_update_wait" = 1000
 
 [sweep_args]
-"cell" = ["MAGRU", "AAGRU", "GRU"]
+"cell" = ["MARNN", "AARNN", "RNN", "MAGRU", "AAGRU", "GRU"]
 "hs_learnable" = [false, true]
 "update_wait" = [4, 16]
 # "eta" = "clamp.(0.01*1.5.^(-10:2:0), 0.0, 1.0)"

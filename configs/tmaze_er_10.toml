@@ -14,13 +14,13 @@ arg_iter_type = "iter"
 "batch_size" = 4
 "replay_size" = 1000
 "warm_up" = 1000
+"target_update_wait" = 1000
+"hs_learnable" = true
+"update_wait" = 4
 
 [sweep_args]
 "cell" = ["MARNN", "AARNN", "RNN", "MAGRU", "AAGRU", "GRU"]
-"hs_learnable" = [false, true]
-"update_wait" = [4, 16]
-# "eta" = "clamp.(0.01*1.5.^(-10:2:0), 0.0, 1.0)"
-"eta" = [0.0001, 0.0005, 0.005, 0.001]
-"truncation" = [1, 2, 4, 6, 8, 10, 12, 16]
-"numhidden" = [3, 6, 9, 12, 16]
-"seed" = "1:5"
+"eta" = "0.01*(2.0.^(-11:2:-2))"
+"truncation" = [8, 10, 11, 12, 16]
+"numhidden" = [6, 10, 15, 20]
+"seed" = "1:10"
