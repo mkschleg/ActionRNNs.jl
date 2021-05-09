@@ -17,7 +17,10 @@ end
 using Revise
 
 # ╔═╡ e0d51e67-63dc-45ea-9092-9965f97660b3
-using Reproduce, Plots, RollingFunctions, Statistics, FileIO, PlutoUI, Pluto
+using Reproduce, ReproducePlotUtils, StatsPlots, RollingFunctions, Statistics, FileIO, PlutoUI, Pluto
+
+# ╔═╡ e53d7b29-788c-469c-9d44-573f996fa5e7
+const RPU = ReproducePlotUtils
 
 # ╔═╡ 0c746c1e-ea39-4415-a1b1-d7124b886f98
 color_scheme = [
@@ -33,70 +36,45 @@ color_scheme = [
 	colorant"#88CCEE",
 ]
 
-# ╔═╡ 92c2600e-58b4-4ea3-8272-3fe38c0422d1
-function ingredients(path::String)
-	# this is from the Julia source code (evalfile in base/loading.jl)
-	# but with the modification that it returns the module instead of the last object
-	name = Symbol(basename(path))
-	m = Module(name)
-	Core.eval(m,
-        Expr(:toplevel,
-             :(eval(x) = $(Expr(:core, :eval))($name, x)),
-             :(include(x) = $(Expr(:top, :include))($name, x)),
-             :(include(mapexpr::Function, x) = $(Expr(:top, :include))(mapexpr, $name, x)),
-             :(include($path))))
-	m
-end
-
-# ╔═╡ 24ccf89f-ab20-447e-9d6f-633380ee8c20
-Base.show(io::IO, ic::ItemCollection) = print(io, "ItemCollection(Size: ", length(ic), ", Dir Hash: ", ic.dir_hash, ")")
-
-# ╔═╡ 240dc563-fd04-4c07-85ac-4e54ad016374
-PU = ingredients("plot_utils.jl")
-
-# ╔═╡ 265db42d-1b27-463d-b0a1-cfc62748022a
-macro load_data(loc)
-    return quote
-		local ic = ItemCollection($(loc))
-		ic, diff(ic)
-	end
-end
+# ╔═╡ fe50ffef-b691-47b5-acf8-8378fbf860a1
+cell_colors = Dict(
+	"RNN" => color_scheme[3],
+	"AARNN" => color_scheme[1],
+	"MARNN" => color_scheme[5],
+	"GRU" => color_scheme[4],
+	"AAGRU" => color_scheme[end],
+	"MAGRU" => color_scheme[6])
 
 # ╔═╡ 834b1cf3-5b22-4e0a-abe9-61e427e6cfda
-function plot_line_from_data_with_params!(
-		plt, data_col::Vector{PU.LineData}, params; pkwargs...)
-    idx = findfirst(data_col) do (ld)
-        line_params = ld.line_params
-	all([line_params[i] == params[i] for i ∈ 1:length(line_params)])
-    end
-    d = data_col[idx]
-    label = if :label ∈ keys(pkwargs)
-	"$(pkwargs[:label]), $(d.swept_params))"
-    else
-	d.swept_params
-    end
-    if plt isa Nothing
-	plt = plot(PU.mean_uneven(d.data), ribbon=PU.std_uneven(d.data); pkwargs..., label=label)
-    else
-	plot!(plt, PU.mean_uneven(d.data), ribbon=PU.std_uneven(d.data); pkwargs..., label=label)
-    end
-    plt
-end
+# function plot_line_from_data_with_params!(
+# 		plt, data_col::Vector{PU.LineData}, params; pkwargs...)
+#     idx = findfirst(data_col) do (ld)
+#         line_params = ld.line_params
+# 	all([line_params[i] == params[i] for i ∈ 1:length(line_params)])
+#     end
+#     d = data_col[idx]
+#     if plt isa Nothing
+# 		plt = plot(d; pkwargs...)
+#     else
+# 		plot!(plt, d; pkwargs...)
+#     end
+#     plt
+# end
 
 # ╔═╡ 0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
-ic_dir_6, dd_dir_6 = @load_data "../local_data/dir_tmaze_er_rnn_rmsprop/data/"
+ic_dir_6, dd_dir_6 = RPU.load_data("../local_data/dir_tmaze_er_rnn_rmsprop/")
 
 # ╔═╡ 6211a38a-7b53-4054-970e-c29ad17de646
 ic_dir_6[1].parsed_args["steps"]
 
 # ╔═╡ e822182e-b485-4a95-a08c-efe1540ff6ad
-data_6 = PU.get_line_data_for(
+data_6 = RPU.get_line_data_for(
 	ic_dir_6,
 	["numhidden", "truncation", "cell"],
 	["eta"];
 	comp=findmax,
-	get_comp_data=(x)->PU.get_AUC(x, :successes),
-	get_data=(x)->PU.get_rolling_mean_line(x, :successes, 300))
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 300))
 
 # ╔═╡ c1b80cfd-dbb8-41c5-a778-66b112e1c091
 md"""
@@ -110,35 +88,32 @@ let
 	plt = nothing
 	τ = parse(Int, τ_dir_6)
 	nh = parse(Int, nh_dir_6)
+	plt = plot()
 	for cell ∈ cells_dir_6
-		if cell[1:2] == "AA"
-			plt = plot_line_from_data_with_params!(plt, data_6, (nh, τ, cell); label=cell, palette=color_scheme,legend=:bottomright, ylabel="Perc Success", xlabel="Episode")
-		else
-			plt = plot_line_from_data_with_params!(plt, data_6, (nh, τ, cell); label=cell, palette=color_scheme)
-		end
-	end
-	plt
-	# savefig("example_plot.pdf")
-end
-
-# ╔═╡ b265f4e5-7405-4fd9-bb91-377cb9e32789
-let 
-	plt = nothing
-	τ = parse(Int, τ_dir_6)
-	nh = parse(Int, nh_dir_6)
-	for cell ∈ cells_dir_6
-		if cell[1:2] == "AA"
-			plt = plot_line_from_data_with_params!(plt, data_6, (Int(1.5*nh), τ, cell); label=cell, palette=color_scheme)
-		else
-			plt = plot_line_from_data_with_params!(plt, data_6, (nh, τ, cell); label=cell, palette=color_scheme)
-		end
+		plot!(plt, 
+			data_6, 
+			Dict("numhidden"=>nh, "truncation"=>τ, "cell"=>cell), 
+			palette=RPU.custom_colorant)
 	end
 	plt
 end
 
 # ╔═╡ 0eb4c818-b533-4695-a0c7-53e72023281f
 let 
-	plt = nothing
+	args_list = [
+		Dict("numhidden"=>6, "truncation"=>8, "cell"=>"MAGRU"),
+		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"AAGRU"),
+		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"GRU"),
+		Dict("numhidden"=>6, "truncation"=>8, "cell"=>"MARNN"),
+		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"AARNN"),
+		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"RNN")
+	]
+	
+	plot(data_6, args_list, palette=RPU.custom_colorant)
+end
+
+# ╔═╡ 4d31c08d-d532-447d-931e-6eec9c7882f5
+let
 	args_list = [
 		Dict("numhidden"=>6, "truncation"=>8, "cell"=>"MAGRU", "eta"=>0.00125),
 		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"AAGRU", "eta"=>0.00125),
@@ -147,35 +122,50 @@ let
 		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"AARNN", "eta"=>0.0003125),
 		Dict("numhidden"=>10, "truncation"=>8, "cell"=>"RNN", "eta"=>7.8125e-5)
 	]
-	for args ∈ args_list
-		plt = plot_line_from_data_with_params!(
-			plt, 
-			data_6, 
-			(args["numhidden"], args["truncation"], args["cell"]); 
-			label=args["cell"], 
-			palette=color_scheme)
-	end
-	FileIO.save("../final_runs/dir_tmaze_6.jld2", "args", args_list)
-	plt
+end
+
+# ╔═╡ 5c3ddaed-47b6-465b-b4c5-bc0fb30c8601
+data_6_sens = RPU.get_line_data_for(
+	ic_dir_6,
+	["cell", "numhidden", "truncation", "eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ 1df7425f-b886-4140-af32-ac5bf4e70bc1
+data_6_sens[1].data
+
+# ╔═╡ 37af922e-ed3c-4aec-a4cf-c403c49a9ba9
+let
+	plot(data_6_sens, 
+	 	 Dict("numhidden"=>6, "truncation"=>8, "cell"=>"MAGRU"); 
+		 sort_idx="eta", z=1.97, lw=2, palette=ReproducePlotUtils.custom_colorant)
+	plot!(data_6_sens, 
+	 	  Dict("numhidden"=>10, "truncation"=>8, "cell"=>"GRU"); 
+	 	  sort_idx="eta", z=1.97, lw=2, palette=ReproducePlotUtils.custom_colorant)
+    plot!(data_6_sens, 
+	 	  Dict("numhidden"=>10, "truncation"=>8, "cell"=>"AAGRU"); 
+	 	  sort_idx="eta", z=1.97, lw=2, palette=ReproducePlotUtils.custom_colorant)
 end
 
 # ╔═╡ 2b51fabb-1910-4bd8-83aa-5b5312ef2229
 FileIO.load("../final_runs/dir_tmaze_6.jld2")
 
 # ╔═╡ eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
-ic_dir_10, dd_dir_10 = @load_data "../local_data/dir_tmaze_er_rnn_rmsprop_10/data/"
+ic_dir_10, dd_dir_10 = RPU.load_data("../local_data/dir_tmaze_er_rnn_rmsprop_10/")
 
 # ╔═╡ eab5c7a0-8052-432d-977e-68b967baf5ca
 ic_dir_10[1].parsed_args["steps"]
 
 # ╔═╡ 55d1416b-d580-4112-827a-30504c21f397
-data_10 = PU.get_line_data_for(
+data_10 = RPU.get_line_data_for(
 	ic_dir_10,
 	["numhidden", "truncation", "cell"],
 	["eta"];
 	comp=findmax,
-	get_comp_data=(x)->PU.get_AUC(x, :successes),
-	get_data=(x)->PU.get_rolling_mean_line(x, :successes, 300))
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 300))
 
 # ╔═╡ 467ed417-cf69-493d-b21c-3fc4d1fb9907
 md"""
@@ -185,63 +175,151 @@ Cell: $(@bind cells_dir_10 MultiSelect(dd_dir_10["cell"]))
 """
 
 # ╔═╡ 2040d613-0ea8-48ce-937c-9180073812ea
-let 
-	plt = nothing
+let
+	# plt = nothing
 	τ = parse(Int, τ_dir_10)
 	nh = parse(Int, nh_dir_10)
+	plt = plot()
 	for cell ∈ cells_dir_10
-		if cell[1:2] == "AA"
-			plt = plot_line_from_data_with_params!(plt, data_10, (nh, τ, cell); label=cell, palette=color_scheme,legend=:bottomright, ylabel="Perc Success", xlabel="Episode")
-		else
-			plt = plot_line_from_data_with_params!(plt, data_10, (nh, τ, cell); label=cell, palette=color_scheme)
-		end
+		plt = plot!( 
+			  data_10, 
+			  Dict("numhidden"=>nh, "truncation"=>τ, "cell"=>cell), 
+			  palette=RPU.custom_colorant)
 	end
 	plt
-	# savefig("example_plot.pdf")
 end
 
-# ╔═╡ cc730813-539b-418d-8da6-67f83bd05d70
-let 
-	# More Sweeping: AAGRU, GRU, AARNN, RNN nh = 17
-	
-	plt = nothing
+# ╔═╡ 7c1f8e58-4bfa-4da2-833d-0cc2a4ec74a4
+data_10_sens = RPU.get_line_data_for(
+	ic_dir_10,
+	["numhidden", "truncation", "cell", "eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ c6c301bd-d3c4-4d63-9b7b-46ea9ac7bc87
+let
+
+	plot(data_10_sens, 
+	 	  Dict("numhidden"=>17, "truncation"=>20, "cell"=>"GRU"); 
+	 	  sort_idx="eta", 
+		  z=1.97, lw=2, 
+		  palette=RPU.custom_colorant)
+    plot!(data_10_sens, 
+	 	  Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"); 
+	 	  sort_idx="eta", z=1.97, lw=2, palette=RPU.custom_colorant)
+	plot!(data_10_sens, 
+	 	 Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"); 
+		 sort_idx="eta", 
+		 z=1.97, 
+		 lw=2, 
+		 palette=RPU.custom_colorant, 
+		 xaxis=:log)
+end
+
+# ╔═╡ c05c7ffa-53cd-46bf-a661-886784eecc05
+plt_args_list = let
 	args_list = [
 		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.0003125), #num_params = 1303
 		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.0003125), #num_params = 3499
-		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"AAGRU", "eta"=>7.8125e-5), #num_params = 1053
-		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU", "eta" => 7.8125e-5),
-		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AAGRU", "eta"=>7.8125e-5), #num_params = 1703
-		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"GRU", "eta"=>1.953125e-5),
+		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.00125), #num_params = 1053
+		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.0003125),
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.00125), #num_params = 1703
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"GRU", "eta"=>0.00125),
 		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MARNN", "eta"=>0.0003125), #num_params = 463
-		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AARNN", "eta"=>7.8125e-5),
-		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"RNN", "eta"=>4.88281e-6)
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AARNN", "eta"=>0.0003125),
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"RNN", "eta"=>1.953125e-5)
 	]
-	for args ∈ args_list
-		plt = plot_line_from_data_with_params!(
-			plt, 
-			data_10, 
-			(args["numhidden"], args["truncation"], args["cell"]); 
-			label=args["cell"], 
-			palette=color_scheme)
-	end
-	FileIO.save("../final_runs/dir_tmaze_10_t_12.jld2", "args", args_list)
-	plt
+
+	FileIO.save("../final_runs/dir_tmaze_10.jld2", "args", args_list)
+	
+	plt_keys = ["numhidden", "truncation", "cell"]
+	[Dict(k=>args_list[i][k] for k ∈ plt_keys) for i in 1:length(args_list)]
 end
 
+# ╔═╡ cc730813-539b-418d-8da6-67f83bd05d70
+plot(data_10, 
+	 plt_args_list,
+	 palette=color_scheme, label_idx="cell", legend=:bottomright)
+
 # ╔═╡ fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
-
-
-# ╔═╡ ad7af5eb-36e0-4dc0-8454-5030301cf30d
-ic_tmaze_10, dd_tmaze_10 = @load_data "../local_data/tmaze_er_rnn_rmsprop_10/data/"
-
-# ╔═╡ 8aa7eeec-c0f4-4be9-90fd-4fe6ebe396bf
-data_tmaze_10 = PU.get_line_data_for(
-	ic_tmaze_10,
+data_10_dist = RPU.get_line_data_for(
+	ic_dir_10,
 	["numhidden", "truncation", "cell"],
 	["eta"];
 	comp=findmax,
-	get_comp_data=(x)->PU.get_AUE(x, :successes),
-	get_data=(x)->PU.get_rolling_mean_line(x, :successes, 300))
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ db83dce1-29d5-42f8-b226-4412ce63c8f1
+let
+	args_list_l = [
+		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"GRU"),
+		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"),
+		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"),
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"RNN"),
+		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AARNN"),
+		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"MARNN")]
+	boxplot(data_10_dist, args_list_l; 
+		label_idx="cell", 
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+end
+
+# ╔═╡ ad7af5eb-36e0-4dc0-8454-5030301cf30d
+ic_tmaze_10, dd_tmaze_10 = RPU.load_data("../local_data/tmaze_er_rnn_rmsprop_10/")
+
+# ╔═╡ 8aa7eeec-c0f4-4be9-90fd-4fe6ebe396bf
+data_tmaze_10_sens = RPU.get_line_data_for(
+	ic_tmaze_10,
+	["numhidden", "truncation", "cell", "eta"],
+	[];
+	comp=:max,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ b2a31d50-dcfd-47f2-98f5-37de8ef8f171
+let
+	plot(data_tmaze_10_sens, 
+	 	  Dict("numhidden"=>15, "truncation"=>12, "cell"=>"GRU"); 
+	 	  sort_idx="eta", 
+		  z=1.97, lw=2, 
+		  palette=RPU.custom_colorant, label="GRU")
+    plot!(data_tmaze_10_sens, 
+	 	  Dict("numhidden"=>15, "truncation"=>12, "cell"=>"AAGRU"); 
+	 	  sort_idx="eta", z=1.97, lw=2, palette=RPU.custom_colorant,
+		  label="AAGRU")
+	plot!(data_tmaze_10_sens, 
+	 	 Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"); 
+		 sort_idx="eta", 
+		 z=1.97, 
+		 lw=2, 
+		 palette=RPU.custom_colorant, 
+		 xaxis=:log,
+		 label="MAGRU", legend=:bottomright)
+end
+
+# ╔═╡ 41b2010d-16b8-4673-bd90-40c29d949914
+let
+	plot(data_tmaze_10_sens, 
+	 	  Dict("numhidden"=>15, "truncation"=>12, "cell"=>"RNN"); 
+	 	  sort_idx="eta", 
+		  z=1.97, lw=2, 
+		  palette=RPU.custom_colorant, label="RNN")
+    plot!(data_tmaze_10_sens, 
+	 	  Dict("numhidden"=>15, "truncation"=>12, "cell"=>"AARNN"); 
+	 	  sort_idx="eta", z=1.97, lw=2, palette=RPU.custom_colorant,
+		  label="AARNN")
+	plot!(data_tmaze_10_sens, 
+	 	 Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MARNN"); 
+		 sort_idx="eta", 
+		 z=1.97, 
+		 lw=2, 
+		 palette=RPU.custom_colorant, 
+		 xaxis=:log,
+		 label="MARNN")
+end
 
 # ╔═╡ 6368a080-dd05-4402-8408-4c773801ba96
 md"""
@@ -251,72 +329,79 @@ Cell: $(@bind cells_tmaze_10 MultiSelect(dd_tmaze_10["cell"]))
 """
 
 # ╔═╡ 4a40c9b5-2b2f-4fdf-ab3d-a751ebfafd17
-let 
-	plt = nothing
-	τ = parse(Int, τ_tmaze_10)
-	nh = parse(Int, nh_tmaze_10)
-	for cell ∈ cells_tmaze_10
-		if cell[1:2] == "AA"
-			plt = plot_line_from_data_with_params!(plt, data_tmaze_10, (nh, τ, cell); label=cell, palette=color_scheme,legend=:bottomright, ylabel="Perc Success", xlabel="Episode")
-		else
-			plt = plot_line_from_data_with_params!(plt, data_tmaze_10, (nh, τ, cell); label=cell, palette=color_scheme)
-		end
-	end
-	plt
-	# savefig("example_plot.pdf")
-end
+# let 
+# 	plt = nothing
+# 	τ = parse(Int, τ_tmaze_10)
+# 	nh = parse(Int, nh_tmaze_10)
+# 	for cell ∈ cells_tmaze_10
+# 		if cell[1:2] == "AA"
+# 			plt = plot_line_from_data_with_params!(plt, data_tmaze_10, (nh, τ, cell); label=cell, palette=color_scheme,legend=:bottomright, ylabel="Perc Success", xlabel="Episode")
+# 		else
+# 			plt = plot_line_from_data_with_params!(plt, data_tmaze_10, (nh, τ, cell); label=cell, palette=color_scheme)
+# 		end
+# 	end
+# 	plt
+# 	# savefig("example_plot.pdf")
+# end
 
 # ╔═╡ 729c89c8-191e-4518-a844-084288ef069f
-let 
-	# More Sweeping: AAGRU, GRU, AARNN, RNN nh = 17
+# let 
+# 	# More Sweeping: AAGRU, GRU, AARNN, RNN nh = 17
 	
-	plt = nothing
-	args_list = [
-		Dict("numhidden"=>10, "truncation"=>10, "cell"=>"MAGRU", "eta"=>7.8125e-5), #numparams = 1734,
-		Dict("numhidden"=>10, "truncation"=>10, "cell"=>"AAGRU", "eta"=>0.0003125), #numparams = 474,
-		Dict("numhidden"=>10, "truncation"=>10, "cell"=>"GRU", "eta"=>0.0003125), #numparams = 286
-		Dict("numhidden"=>20, "truncation"=>10, "cell"=>"MARNN", "eta"=>7.8125e-5),
-		Dict("numhidden"=>20, "truncation"=>10, "cell"=>"AARNN", "eta"=>7.8125e-5),
-		Dict("numhidden"=>20, "truncation"=>10, "cell"=>"RNN", "eta"=>7.8125e-5),
-	]
-	for args ∈ args_list
-		plt = plot_line_from_data_with_params!(
-			plt, 
-			data_tmaze_10, 
-			(args["numhidden"], args["truncation"], args["cell"]); 
-			label=args["cell"], 
-			palette=color_scheme)
-	end
-	FileIO.save("../final_runs/tmaze_10.jld2", "args", args_list)
-	plt
-end
+# 	plt = nothing
+# 	args_list = [
+# 		Dict("numhidden"=>10, "truncation"=>10, "cell"=>"MAGRU", "eta"=>7.8125e-5), #numparams = 1734,
+# 		Dict("numhidden"=>10, "truncation"=>10, "cell"=>"AAGRU", "eta"=>0.0003125), #numparams = 474,
+# 		Dict("numhidden"=>10, "truncation"=>10, "cell"=>"GRU", "eta"=>0.0003125), #numparams = 286
+# 		Dict("numhidden"=>20, "truncation"=>10, "cell"=>"MARNN", "eta"=>7.8125e-5),
+# 		Dict("numhidden"=>20, "truncation"=>10, "cell"=>"AARNN", "eta"=>7.8125e-5),
+# 		Dict("numhidden"=>20, "truncation"=>10, "cell"=>"RNN", "eta"=>7.8125e-5),
+# 	]
+# 	for args ∈ args_list
+# 		plt = plot_line_from_data_with_params!(
+# 			plt, 
+# 			data_tmaze_10, 
+# 			(args["numhidden"], args["truncation"], args["cell"]); 
+# 			label=args["cell"], 
+# 			palette=color_scheme)
+# 	end
+# 	# FileIO.save("../final_runs/tmaze_10.jld2", "args", args_list)
+# 	plt
+# end
 
 # ╔═╡ Cell order:
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
 # ╠═e0d51e67-63dc-45ea-9092-9965f97660b3
+# ╠═e53d7b29-788c-469c-9d44-573f996fa5e7
 # ╠═0c746c1e-ea39-4415-a1b1-d7124b886f98
-# ╠═92c2600e-58b4-4ea3-8272-3fe38c0422d1
-# ╠═24ccf89f-ab20-447e-9d6f-633380ee8c20
-# ╠═240dc563-fd04-4c07-85ac-4e54ad016374
-# ╠═265db42d-1b27-463d-b0a1-cfc62748022a
+# ╠═fe50ffef-b691-47b5-acf8-8378fbf860a1
 # ╠═834b1cf3-5b22-4e0a-abe9-61e427e6cfda
 # ╠═0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
 # ╠═6211a38a-7b53-4054-970e-c29ad17de646
 # ╠═e822182e-b485-4a95-a08c-efe1540ff6ad
 # ╠═c1b80cfd-dbb8-41c5-a778-66b112e1c091
 # ╠═e4cc9109-d8b1-4bff-a176-3627e24ab757
-# ╠═b265f4e5-7405-4fd9-bb91-377cb9e32789
 # ╠═0eb4c818-b533-4695-a0c7-53e72023281f
+# ╠═4d31c08d-d532-447d-931e-6eec9c7882f5
+# ╠═5c3ddaed-47b6-465b-b4c5-bc0fb30c8601
+# ╠═1df7425f-b886-4140-af32-ac5bf4e70bc1
+# ╠═37af922e-ed3c-4aec-a4cf-c403c49a9ba9
 # ╠═2b51fabb-1910-4bd8-83aa-5b5312ef2229
 # ╠═eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
 # ╠═eab5c7a0-8052-432d-977e-68b967baf5ca
 # ╠═55d1416b-d580-4112-827a-30504c21f397
 # ╠═467ed417-cf69-493d-b21c-3fc4d1fb9907
 # ╠═2040d613-0ea8-48ce-937c-9180073812ea
+# ╠═7c1f8e58-4bfa-4da2-833d-0cc2a4ec74a4
+# ╠═c6c301bd-d3c4-4d63-9b7b-46ea9ac7bc87
+# ╠═c05c7ffa-53cd-46bf-a661-886784eecc05
 # ╠═cc730813-539b-418d-8da6-67f83bd05d70
 # ╠═fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
+# ╠═db83dce1-29d5-42f8-b226-4412ce63c8f1
 # ╠═ad7af5eb-36e0-4dc0-8454-5030301cf30d
 # ╠═8aa7eeec-c0f4-4be9-90fd-4fe6ebe396bf
+# ╠═b2a31d50-dcfd-47f2-98f5-37de8ef8f171
+# ╠═41b2010d-16b8-4673-bd90-40c29d949914
 # ╠═6368a080-dd05-4402-8408-4c773801ba96
 # ╠═4a40c9b5-2b2f-4fdf-ab3d-a751ebfafd17
 # ╠═729c89c8-191e-4518-a844-084288ef069f
