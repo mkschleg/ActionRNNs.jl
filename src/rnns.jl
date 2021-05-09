@@ -24,6 +24,11 @@ contract_WA(W, a::Vector{Int}, x) = begin
     @ein ret[i, k] := Wa[k, i, j] * x[j, k]
 end
 
+contract_WA(W, a::Vector{Int}, x::AbstractVector{<:Number}) = begin
+    Wa = W[a, :, :]
+    @ein ret[i, k] := Wa[k, i, 1] * x[k]
+end
+
 contract_WA(W, a::AbstractVector{<:Number}, x) =
     @ein ret[i] := W[k, i, j] * a[k] * x[j]
 

@@ -1,4 +1,4 @@
-module DirectionalTMazeERExperiment
+module DirectionalTMazeExperiment
 
 # include("../src/ActionRNNs.jl")
 
@@ -22,7 +22,7 @@ const FLU = ActionRNNs.FluxUtils
 
 function default_config()
     Dict{String,Any}(
-        "save_dir" => "tmaze",
+        "save_dir" => "dir_tmaze_online",
 
         "seed" => 1,
         "steps" => 80000,
@@ -30,23 +30,16 @@ function default_config()
 
         "cell" => "MARNN",
         "numhidden" => 6,
-
+        
         "opt" => "RMSProp",
         "eta" => 0.0005,
-        "rho" =>0.99,
-
-        "replay_size"=>1000,
-        "warm_up" => 1000,
-        "batch_size"=>4,
-        "update_wait"=>4,
-        "target_update_wait"=>1000,
+        "rho" => 0.99,
         "truncation" => 8,
 
-        "hs_learnable" => true,
-        
+#         "hs_learnable" => true,
+
         "gamma"=>0.99)
 
-    
 end
 
 function get_ann(parsed, fs, env, rng)
@@ -54,8 +47,7 @@ function get_ann(parsed, fs, env, rng)
     nh = parsed["numhidden"]
     na = length(get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
-    
-    
+
     if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
@@ -63,20 +55,20 @@ function get_ann(parsed, fs, env, rng)
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-        
+
         Flux.Chain(rnn(fs, na, nh, factors;
                        init=init_func,
                        initb=initb),
                    Flux.Dense(nh, na; initW=init_func))
-        
+
     elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
-        
+
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-        
+
         m = Flux.Chain(
             rnn(fs, na, nh;
                 init=init_func,
@@ -91,6 +83,7 @@ function get_ann(parsed, fs, env, rng)
                               length(get_actions(env));
                               initW=init_func))
     end
+
 end
 
 function construct_agent(env, parsed, rng)
@@ -105,29 +98,21 @@ function construct_agent(env, parsed, rng)
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
-
+    
     chain = get_ann(parsed, fs, env, rng)
 
-    ActionRNNs.DRQNAgent(chain,
-                         opt,
-                         τ,
-                         γ,
-                         fc,
-                         fs,
-                         3,
-                         parsed["replay_size"],
-                         parsed["warm_up"],
-                         parsed["batch_size"],
-                         parsed["update_wait"],
-                         parsed["target_update_wait"],
-                         ap,
-                         parsed["hs_learnable"])
+    ActionRNNs.ControlOnlineAgent(chain,
+                                  opt,
+                                  τ,
+                                  γ,
+                                  fc,
+                                  fs,
+                                  ap)
 end
 
-function main_experiment(parsed = default_config(); working=false, progress=false, verbose=false)
+function main_experiment(parsed=default_config(); working=false, progress=false)
 
-
-    ActionRNNs.experiment_wrapper(parsed, working) do parsed
+    ActionRNNs.experiment_wrapper(parsed, working) do (parsed)
 
         num_steps = parsed["steps"]
 
@@ -137,7 +122,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         env = ActionRNNs.DirectionalTMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
 
-        
+
         logger = ActionRNNs.SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
             (Float32, Float32, Bool, Int, Float32),
@@ -150,8 +135,6 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
             )
         )
 
-        mean_loss = 1.0f0
-        
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
         while sum(logger.data.total_steps) <= num_steps
@@ -193,7 +176,6 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         (;save_results = save_results)
     end
 end
-
 
 
 end
