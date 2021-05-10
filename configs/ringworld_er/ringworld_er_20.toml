@@ -1,15 +1,15 @@
 [config]
-save_dir="ringworld_er_rnn_rmsprop_10"
+save_dir="ringworld_er_rmsprop_20"
 exp_file="experiment/ringworld_er.jl"
-exp_module_name = "RingWorldExperiment"
+exp_module_name = "RingWorldERExperiment"
 exp_func_name = "main_experiment"
 arg_iter_type = "iter"
 
 [static_args]
-steps = 200000
+steps = 400000
 opt = "RMSProp"
 rho = 0.9
-size = 10
+size = 20
 batch_size = 4
 replay_size = 1000
 warm_up = 1000
@@ -18,15 +18,14 @@ target_update_freq = 1000
 outgamma = 0.9
 action_features = false
 synopsis = true
-update_freq = 4
+
+outhorde = "gammas_term"
 hs_learnable = true
+update_freq = 4
 
 [sweep_args]
-outhorde = ["onestep", "gammas_term"]
 cell = ["MARNN", "AARNN", "RNN", "MAGRU", "AAGRU", "GRU"]
-eta = "0.01*(2.0.^(-11:2:-2))"
-# truncation = [1, 2, 4, 6, 8, 10, 12, 16]
-# numhidden = [3, 6, 9, 12, 15, 20]
-truncation = [1, 2, 4, 6, 8, 10, 12, 16]
-numhidden = [3, 6, 9, 12, 15, 20]
+eta = "0.1 .* 1.6 .^(-16:3:-2)"
+truncation = [1, 2, 4, 8, 12, 16, 20, 25, 30]
+numhidden = [3, 6, 9, 12, 15, 20, 30]
 seed = "1:10"

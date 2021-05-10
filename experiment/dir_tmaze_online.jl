@@ -1,4 +1,4 @@
-module DirectionalTMazeExperiment
+module DirectionalTMazeOnlineExperiment
 
 # include("../src/ActionRNNs.jl")
 
