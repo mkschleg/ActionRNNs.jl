@@ -143,6 +143,7 @@ function get_line_data_for(
 	    d, c, ps = internal_func(
 	        sub_ic, 
 	        param_keys;
+			comp=comp,
 	        get_comp_data=get_comp_data, 
 	        get_data=get_data)
 	    push!(strg, LineData(params[p_idx], ps, d, c))
