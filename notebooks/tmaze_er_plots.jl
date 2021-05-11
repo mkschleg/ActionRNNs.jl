@@ -45,22 +45,22 @@ data_tmaze_10_sens = RPU.get_line_data_for(
 	["numhidden", "truncation", "cell", "eta"],
 	[];
 	comp=:max,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
+	get_comp_data=(x)->RPU.get_MEAN(x, :successes),
+	get_data=(x)->RPU.get_MEAN(x, :successes))
 
 # ╔═╡ 52377f59-b234-4aa7-807c-914246c71a3c
 let
 	plot(data_tmaze_10_sens, 
-	 	 Dict("numhidden"=>15, "truncation"=>12, "cell"=>"GRU"); 
+	 	 Dict("numhidden"=>15, "truncation"=>10, "cell"=>"GRU"); 
 	 	 sort_idx="eta", 
 		 z=1.97, lw=2, 
 		 label="GRU", color=cell_colors["GRU"])
     plot!(data_tmaze_10_sens, 
-	 	  Dict("numhidden"=>15, "truncation"=>12, "cell"=>"AAGRU"); 
+	 	  Dict("numhidden"=>15, "truncation"=>10, "cell"=>"AAGRU"); 
 	 	  sort_idx="eta", z=1.97, lw=2, palette=RPU.custom_colorant,
 		  label="AAGRU", color=cell_colors["AAGRU"])
 	plot!(data_tmaze_10_sens, 
-	 	  Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"); 
+	 	  Dict("numhidden"=>10, "truncation"=>10, "cell"=>"MAGRU"); 
 		  sort_idx="eta", 
 		  z=1.97, 
 		  lw=2, 
@@ -73,18 +73,18 @@ end
 # ╔═╡ 4d3ec9dd-f7f8-4e70-b577-4180bd19e17d
 let
 	plot(data_tmaze_10_sens, 
-	 	 Dict("numhidden"=>20, "truncation"=>12, "cell"=>"RNN"); 
+	 	 Dict("numhidden"=>20, "truncation"=>10, "cell"=>"RNN"); 
 	 	 sort_idx="eta", 
 		 z=1.97, lw=2, 
 		 palette=RPU.custom_colorant, label="RNN",
 		 color=cell_colors["RNN"])
     plot!(data_tmaze_10_sens, 
-	 	  Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AARNN"); 
+	 	  Dict("numhidden"=>20, "truncation"=>10, "cell"=>"AARNN"); 
 	 	  sort_idx="eta", z=1.97, lw=2, palette=RPU.custom_colorant,
 		  label="AARNN",
 	color=cell_colors["AARNN"])
 	plot!(data_tmaze_10_sens, 
-	 	  Dict("numhidden"=>15, "truncation"=>12, "cell"=>"MARNN"); 
+	 	  Dict("numhidden"=>15, "truncation"=>10, "cell"=>"MARNN"); 
 		  sort_idx="eta", 
 		  z=1.97, 
 		  lw=2, 
