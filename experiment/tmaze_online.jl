@@ -1,4 +1,4 @@
-module TMazeExperiment
+module TMazeOnlineExperiment
 
 # include("../src/ActionRNNs.jl")
 

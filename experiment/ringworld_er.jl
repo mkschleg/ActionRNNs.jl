@@ -1,4 +1,4 @@
-module RingWorldExperiment
+module RingWorldERExperiment
 
 import Flux
 # import Flux.Tracker
