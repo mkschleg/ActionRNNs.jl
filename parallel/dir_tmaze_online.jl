@@ -6,7 +6,7 @@
 #SBATCH --mem-per-cpu=3000M # Memory request of 2 GB
 #SBATCH --time=5:00:00 # Running time of 24 hours
 #SBATCH --ntasks=128
-#SBATCH --account=ref-whitem
+#SBATCH --account=def-whitem
 
 using Pkg
 Pkg.activate(".")
