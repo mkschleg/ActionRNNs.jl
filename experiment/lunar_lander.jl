@@ -25,14 +25,14 @@ function default_config()
         "save_dir" => "lunar_lander",
 
         "seed" => 1,
-#         "steps" => 500000,
-        "steps" => 50,
+        "steps" => 500000,
+#         "steps" => 500,
 
-        "cell" => "GRU",
-        "numhidden" => 32,
+        "cell" => "AAGRU",
+        "numhidden" => 64,
 
         "opt" => "RMSProp",
-        "eta" => 0.0005,
+        "eta" => 0.0001,
         "rho" =>0.99,
 
         "replay_size"=>10000,
@@ -43,6 +43,8 @@ function default_config()
         "truncation" => 16,
 
         "hs_learnable" => true,
+        "encoding_size" => 32,
+        "omit_states" => [5],
         
         "gamma"=>0.99)
 
@@ -52,6 +54,7 @@ end
 function get_ann(parsed, fs, env, rng)
 
     nh = parsed["numhidden"]
+    es = parsed["encoding_size"]
     na = length(get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
     
@@ -63,7 +66,7 @@ function get_ann(parsed, fs, env, rng)
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
-        rnn(32, na, nh, factors;
+        rnn(es, na, nh, factors;
             init=init_func,
             initb=initb)
         
@@ -75,16 +78,16 @@ function get_ann(parsed, fs, env, rng)
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
-        rnn(32, na, nh;
+        rnn(es, na, nh;
             init=init_func,
             initb=initb)
 
     else
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-        rnntype(32, nh; init=init_func)
+        rnntype(es, nh; init=init_func)
     end
 
-    Flux.Chain(Flux.Dense(fs, 32; initW=init_func),
+    Flux.Chain(Flux.Dense(fs, es; initW=init_func),
                rnn_layer,
                Flux.Dense(nh, nh; initW=init_func),
                Flux.Dense(nh, na; initW=init_func))
@@ -93,7 +96,7 @@ end
 function construct_agent(env, parsed, rng)
 
     fc = ActionRNNs.LunarLanderUtils.IdentityFeatureCreator()
-    fs = MinimalRLCore.feature_size(fc)
+    fs = MinimalRLCore.feature_size(fc, parsed["omit_states"])
 
     γ = Float32(parsed["gamma"])
     τ = parsed["truncation"]
@@ -131,7 +134,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = ActionRNNs.LunarLander(seed, false)
+        env = ActionRNNs.LunarLander(seed, false, parsed["omit_states"])
         agent = construct_agent(env, parsed, rng)
 
         

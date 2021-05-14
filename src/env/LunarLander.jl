@@ -13,11 +13,12 @@ import OpenAIGym
 mutable struct LunarLander <: AbstractEnvironment
     gym::OpenAIGym.GymEnv
     cont::Bool
-    function LunarLander(seed, continuous=false)
+    omit_states::Vector
+    function LunarLander(seed, continuous=false, omit_states=[])
         if continuous
-            new(OpenAIGym.GymEnv(:LunarLanderContinuous, :v2; seed=seed), continuous)
+            new(OpenAIGym.GymEnv(:LunarLanderContinuous, :v2; seed=seed), continuous, omit_states)
         else
-            new(OpenAIGym.GymEnv(:LunarLander, :v2; seed=seed), continuous)
+            new(OpenAIGym.GymEnv(:LunarLander, :v2; seed=seed), continuous, omit_states)
         end
     end
 end
@@ -42,6 +43,8 @@ MinimalRLCore.is_terminal(env::LunarLander) = MinimalRLCore.is_terminal(env.gym)
 function MinimalRLCore.get_state(env::LunarLander) # -> get state of agent
 
     pystate = env.gym.state
+    observation = [pystate[i] for i in 1:length(pystate) if !(i in env.omit_states)]
+    observation
 #     x_in = if -0.5 < pystate[1] 0.5
 #         1.0f0
 #     else
