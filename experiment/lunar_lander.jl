@@ -25,9 +25,10 @@ function default_config()
         "save_dir" => "lunar_lander",
 
         "seed" => 1,
-        "steps" => 500000,
+#         "steps" => 500000,
+        "steps" => 50,
 
-        "cell" => "MAGRU",
+        "cell" => "GRU",
         "numhidden" => 32,
 
         "opt" => "RMSProp",

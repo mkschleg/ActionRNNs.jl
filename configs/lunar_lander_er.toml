@@ -1,0 +1,25 @@
+[config]
+save_dir="lunar_lander_er_rmsprop"
+exp_file="experiment/lunar_lander.jl"
+exp_module_name = "LunarLanderExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iter"
+
+[static_args]
+steps = 2000000
+opt = "RMSProp"
+gamma = 0.99
+batch_size = 32
+warm_up = 1000
+hs_learnable = true
+
+[sweep_args]
+update_wait = [8, 16]
+target_update_wait = [1000, 2000]
+replay_size = [10000, 100000]
+cell = ["GRU", "AAGRU"]
+eta = [0.00001, 0.0001, 0.001]
+rho = [0.9, 0.99]
+truncation = [16, 32]
+numhidden = [32, 64]
+seed = "1:2"
