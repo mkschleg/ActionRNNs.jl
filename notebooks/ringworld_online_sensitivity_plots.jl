@@ -97,7 +97,7 @@ function plot_sensitivity_from_data_with_params!(
 end
 
 # ╔═╡ 0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
-ic_dir, dd_dir = @load_data "../local_data/ringworld_online_rmsprop_10/data/"
+ic_dir, dd_dir = @load_data "../local_data/final_ringworld_online_rmsprop_10/data/"
 
 # ╔═╡ a117f7c7-830e-455d-8417-1ce949901937
 #eta_data = PU.get_line_data_for(
@@ -115,7 +115,7 @@ Cell: $(@bind cells MultiSelect(dd_dir["cell"]))
 """
 
 # ╔═╡ a0ecd484-08ad-439b-92fe-33dc8071dc5d
-let
+let 
 	plt = nothing
 	eta = log.(dd_dir["eta"])
 	nh = parse(Int, numhidden)
@@ -130,7 +130,7 @@ end
 sensitivity_data = PU.get_line_data_for(
 	ic_dir,
 	["numhidden", "cell", "truncation"],
-	"eta";
+	[];
 	comp=findmin,
 	get_comp_data=(x)->PU.get_AUC(x, "end"),
 	get_data=(x)->PU.get_AUC(x, "end"))
@@ -142,7 +142,7 @@ Cell: $(@bind cell Select(dd_dir["cell"]))
 """
 
 # ╔═╡ 586ba32f-79b6-4c2e-80af-ef2c1224fd31
-let
+let 
 	plt = nothing
 	lstyle = [:solid, :dash, :dot, :solid, :dash, :dot]
 	mshape = [:circle, :rect, :star5, :diamond, :hexagon, :utriangle]
@@ -155,7 +155,7 @@ let
 end
 
 # ╔═╡ c0e0a43a-4bf7-416d-b412-c1ee684e1e0e
-# savefig("../data/sensitivity_plots/ringworld_online_sensitivity_plot_$(cell).png")
+savefig("../data/sensitivity_plots/final_ringworld_online_sensitivity_plot_$(cell).png")
 
 # ╔═╡ d7ae12f9-ec9d-4d07-83ab-97205ffab69b
 begin
@@ -170,7 +170,7 @@ begin
 end
 
 # ╔═╡ b7e8ab78-9867-4b5b-9d7c-adc5af3c9ab2
-FileIO.save("../final_runs/ringworld_online_10.jld2", "args", args_list)
+# FileIO.save("../final_runs/ringworld_er_10.jld2", "args", args_list)
 
 # ╔═╡ Cell order:
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
