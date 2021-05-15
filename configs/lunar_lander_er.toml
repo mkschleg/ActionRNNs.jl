@@ -6,7 +6,7 @@ exp_func_name = "main_experiment"
 arg_iter_type = "iter"
 
 [static_args]
-steps = 2000000
+steps = 3000000
 opt = "RMSProp"
 gamma = 0.99
 batch_size = 32
@@ -17,11 +17,12 @@ update_wait = 8
 rho = 0.99
 numhidden = 128
 encoding_size = 128
-omit_states = [5]
+omit_states = [2, 3, 5]
+state_conditions = []
 
 [sweep_args]
 replay_size = [10000, 100000]
-cell = ["GRU", "AAGRU"]
-eta = "0.1 .* 1.6 .^(-14:2:-2)"
-truncation = [1, 4, 16, 32]
+cell = ["GRU", "AAGRU", "MAGRU"]
+eta = "0.1 .* 1.6 .^(-18:2:-8)"
+truncation = [4, 16, 32]
 seed = "1:5"

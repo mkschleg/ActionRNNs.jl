@@ -25,17 +25,17 @@ function default_config()
         "save_dir" => "lunar_lander",
 
         "seed" => 1,
-        "steps" => 500000,
-#         "steps" => 500,
+#         "steps" => 1000000,
+        "steps" => 50,
 
         "cell" => "AAGRU",
-        "numhidden" => 64,
+        "numhidden" => 128,
 
         "opt" => "RMSProp",
-        "eta" => 0.0001,
+        "eta" => 0.000355,
         "rho" =>0.99,
 
-        "replay_size"=>10000,
+        "replay_size"=>100000,
         "warm_up" => 1000,
         "batch_size"=>32,
         "update_wait"=>8,
@@ -43,9 +43,10 @@ function default_config()
         "truncation" => 16,
 
         "hs_learnable" => true,
-        "encoding_size" => 32,
+        "encoding_size" => 128,
         "omit_states" => [5],
-        
+        "state_conditions" => [],
+
         "gamma"=>0.99)
 
     
@@ -134,7 +135,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = ActionRNNs.LunarLander(seed, false, parsed["omit_states"])
+        env = ActionRNNs.LunarLander(seed, false, parsed["omit_states"], parsed["state_conditions"])
         agent = construct_agent(env, parsed, rng)
 
         

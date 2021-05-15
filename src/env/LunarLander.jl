@@ -14,11 +14,12 @@ mutable struct LunarLander <: AbstractEnvironment
     gym::OpenAIGym.GymEnv
     cont::Bool
     omit_states::Vector
-    function LunarLander(seed, continuous=false, omit_states=[])
+    state_conditions::Vector
+    function LunarLander(seed, continuous=false, omit_states=[], state_conditions=[])
         if continuous
-            new(OpenAIGym.GymEnv(:LunarLanderContinuous, :v2; seed=seed), continuous, omit_states)
+            new(OpenAIGym.GymEnv(:LunarLanderContinuous, :v2; seed=seed), continuous, omit_states, state_conditions)
         else
-            new(OpenAIGym.GymEnv(:LunarLander, :v2; seed=seed), continuous, omit_states)
+            new(OpenAIGym.GymEnv(:LunarLander, :v2; seed=seed), continuous, omit_states, state_conditions)
         end
     end
 end
@@ -35,7 +36,7 @@ MinimalRLCore.get_actions(env::LunarLander) = begin
         throw("not implemented")
     end
 end
-get_num_features(env::LunarLander) = 8
+# get_num_features(env::LunarLander) = 8
 MinimalRLCore.get_reward(env::LunarLander) =
     Float32(MinimalRLCore.get_reward(env.gym))
 MinimalRLCore.is_terminal(env::LunarLander) = MinimalRLCore.is_terminal(env.gym)
@@ -44,12 +45,15 @@ function MinimalRLCore.get_state(env::LunarLander) # -> get state of agent
 
     pystate = env.gym.state
     observation = [pystate[i] for i in 1:length(pystate) if !(i in env.omit_states)]
+    if 1 in env.state_conditions
+        @assert !(1 in env.omit_states)
+        observation[1] = if -0.5 < observation[1] < 0.5
+            1.0f0
+        else
+            0.0f0
+        end
+    end
     observation
-#     x_in = if -0.5 < pystate[1] 0.5
-#         1.0f0
-#     else
-#         0.0f0
-#     end
 #     y = pystate[2]
 #
 #     ang = if -0.05 < pystate[5] < 0.05
