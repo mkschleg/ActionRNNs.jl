@@ -1,6 +1,6 @@
 using Flux
 # using OMEinsum
-using KernelAbstractions
+using KernelAbstractions, LoopVectorization
 using OMEinsum
 using Tullio
 
@@ -20,20 +20,18 @@ contract_WA(W, a::Int, x) =
     W[a, :, :]*x
 
 contract_WA(W, a::Vector{Int}, x) = begin
-    Wa = W[a, :, :]
-    @ein ret[i, k] := Wa[k, i, j] * x[j, k]
+    @tullio ret[i, k] := W[a[k], i, j] * x[j, k]
 end
 
 contract_WA(W, a::Vector{Int}, x::AbstractVector{<:Number}) = begin
-    Wa = W[a, :, :]
-    @ein ret[i, k] := Wa[k, i, 1] * x[k]
+    @tullio ret[i, k] := W[a[k], i, 1] * x[k]
 end
 
 contract_WA(W, a::AbstractVector{<:Number}, x) =
-    @ein ret[i] := W[k, i, j] * a[k] * x[j]
+    @tullio ret[i] := W[k, i, j] * a[k] * x[j]
 
 contract_WA(W, a::AbstractMatrix{<:Number}, x) =
-    @ein ret[i, k] := W[l, i, j] * a[l, k] * x[j, k]
+    @tullio ret[i, k] := W[l, i, j] * a[l, k] * x[j, k]
 
 get_waa(Wa, a::Int) = Wa[:, a]
 get_waa(Wa, a::Vector{Int}) = Wa[:, a]
