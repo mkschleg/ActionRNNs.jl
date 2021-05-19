@@ -44,6 +44,11 @@ end
 
 function get_ann(parsed, fs, env, rng)
 
+    if "numhidden_factors" ∈ keys(parsed)
+        parsed["numhidden"] = parsed["numhidden_factors"][1]
+        parsed["factors"] = parsed["numhidden_factors"][2]
+    end
+    
     nh = parsed["numhidden"]
     na = length(get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
