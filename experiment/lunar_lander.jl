@@ -127,6 +127,7 @@ end
 
 function main_experiment(parsed = default_config(); working=false, progress=false, verbose=false)
 
+    GC.gc()
 
     ActionRNNs.experiment_wrapper(parsed, working) do parsed
 
