@@ -23,6 +23,12 @@ contract_WA(W, a::Vector{Int}, x) = begin
     @tullio ret[i, k] := W[a[k], i, j] * x[j, k]
 end
 
+contract_WA_ein(W, a::Vector{Int}, x) = begin
+    Wa = W[a, :, :]
+    @ein ret[i, k] := Wa[k, i, j] * x[j, k]
+end
+
+
 contract_WA(W, a::Vector{Int}, x::AbstractVector{<:Number}) = begin
     @tullio ret[i, k] := W[a[k], i, 1] * x[k]
 end
