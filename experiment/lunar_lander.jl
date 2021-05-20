@@ -159,7 +159,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         checkpoint = 1
         while sum(logger.data.total_steps) <= num_steps
             if sum(logger.data.total_steps) > checkpoint * 500000
-                ActionRNNs.save_results("$(data_dir)/results.jld2", (;save_results = logger.data))
+                ActionRNNs.save_results("$(data_dir)/results.jld2", logger.data)
 
                 GC.gc()
                 checkpoint += 1
@@ -217,7 +217,6 @@ function ll_experiment_wrapper(exp_func::Function, parsed, working; overwrite=fa
     end
 
     data_dir = rsplit(savefile, "/"; limit=2)
-    print("data_dir: $(data_dir)")
     ret = exp_func(parsed, data_dir[1])
 
     if working
