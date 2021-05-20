@@ -129,7 +129,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
 
     GC.gc()
 
-    ActionRNNs.experiment_wrapper(parsed, working) do parsed
+    ll_experiment_wrapper(parsed, working) do parsed, data_dir
 
         num_steps = parsed["steps"]
 
@@ -156,7 +156,16 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
+        checkpoint = 1
+        cp_steps = 500000
         while sum(logger.data.total_steps) <= num_steps
+            if sum(logger.data.total_steps) > checkpoint * cp_steps
+                ActionRNNs.save_results("$(data_dir)/results_steps$(checkpoint * cp_steps).jld2",
+                logger.data)
+
+                GC.gc()
+                checkpoint += 1
+            end
             usa = ActionRNNs.UpdateStateAnalysis(
                 (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
                 Dict(
@@ -203,6 +212,24 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
     end
 end
 
+function ll_experiment_wrapper(exp_func::Function, parsed, working; overwrite=false)
+    savefile = ActionRNNs.save_setup(parsed)
+    if isfile(savefile) && ActionRNNs.check_save_file_loadable(savefile) && !overwrite
+        return
+    end
+
+    data_dir = rsplit(savefile, "/"; limit=2)
+    print("data_dir: $(data_dir)")
+    ret = exp_func(parsed, data_dir[1])
+
+    if working
+        ret
+    elseif ret isa NamedTuple
+        ActionRNNs.save_results(savefile, ret.save_results)
+    else
+        ActionRNNs.save_results(savefile, ret)
+    end
+end
 
 
 end
