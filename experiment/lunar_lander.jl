@@ -157,11 +157,9 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
         checkpoint = 1
-        cp_steps = 500000
         while sum(logger.data.total_steps) <= num_steps
-            if sum(logger.data.total_steps) > checkpoint * cp_steps
-                ActionRNNs.save_results("$(data_dir)/results_steps$(checkpoint * cp_steps).jld2",
-                logger.data)
+            if sum(logger.data.total_steps) > checkpoint * 500000
+                ActionRNNs.save_results("$(data_dir)/results.jld2", (;save_results = logger.data))
 
                 GC.gc()
                 checkpoint += 1
