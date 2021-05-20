@@ -50,22 +50,6 @@ cell_colors = Dict(
 	"MAGRU" => color_scheme[6],
 	"FacMAGRU" => color_scheme[end-2])
 
-# ╔═╡ 834b1cf3-5b22-4e0a-abe9-61e427e6cfda
-# function plot_line_from_data_with_params!(
-# 		plt, data_col::Vector{PU.LineData}, params; pkwargs...)
-#     idx = findfirst(data_col) do (ld)
-#         line_params = ld.line_params
-# 	all([line_params[i] == params[i] for i ∈ 1:length(line_params)])
-#     end
-#     d = data_col[idx]
-#     if plt isa Nothing
-# 		plt = plot(d; pkwargs...)
-#     else
-# 		plot!(plt, d; pkwargs...)
-#     end
-#     plt
-# end
-
 # ╔═╡ 0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
 ic_dir_6, dd_dir_6 = RPU.load_data("../local_data/dir_tmaze_er_rnn_rmsprop/")
 
@@ -262,7 +246,7 @@ plt_args_list = let
 		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"RNN", "eta"=>1.953125e-5)
 	]
 
-	FileIO.save("../final_runs/dir_tmaze_10.jld2", "args", args_list)
+	# FileIO.save("../final_runs/dir_tmaze_10.jld2", "args", args_list)
 	
 	plt_keys = ["numhidden", "truncation", "cell"]
 	[Dict(k=>args_list[i][k] for k ∈ plt_keys) for i in 1:length(args_list)]
@@ -338,12 +322,25 @@ let
 	plot(data_fac_sens, args_list; sort_idx="factors", labels=["FacMARNN" "FacMAGRU"])
 end
 
+# ╔═╡ 4b654ad2-93cf-455e-9c7b-982766560205
+let
+	plts = []
+	for rs ∈ dd_fac["replay_size"]
+		
+		args_list = [
+			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMARNN"),
+			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMAGRU")]
+		push!(plts, plot(data_fac_sens, args_list; sort_idx="factors", labels=["FacMARNN" "FacMAGRU"], title=rs, color = 	[cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], legend=nothing, z=1.97, lw=2, xlabel="Factors", ylabel="Success"))
+	end
+	plot(plts..., size=(800, 600))
+end
+
 # ╔═╡ 2dbcb518-2fda-44c4-bfc0-b422a8da9c35
 let
 	args_list = [
 		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10),
 		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU", "factors"=>10)]
-	violin(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
+	boxplot(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
 	dotplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
 	args_list_l = [
 		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"GRU"),
@@ -352,7 +349,7 @@ let
 		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"RNN"),
 		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AARNN"),
 		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"MARNN")]
-	violin!(data_10_dist, args_list_l; 
+	boxplot!(data_10_dist, args_list_l; 
 		label_idx="cell", 
 		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
@@ -363,6 +360,60 @@ let
 	# 	color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
 end
 
+# ╔═╡ 7f630af5-a608-47d3-be13-589b9731798e
+ic_fac_adam, dd_fac_adam = RPU.load_data("../local_data/dir_tmaze_er_fac_rnn_adam_10/")
+
+# ╔═╡ f297e4f3-5826-4f90-8f24-ae731232f63b
+data_fac_adam_sens_eta = RPU.get_line_data_for(
+	ic_fac_adam,
+	["numhidden", "cell", "replay_size", "factors", "eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ baf539d2-bdd9-40be-bca7-2af231d7063d
+let
+	args_list = [
+		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>25),
+		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU", "factors"=>25)]
+	plot(data_fac_adam_sens_eta, args_list; sort_idx="eta", labels=["FacMARNN" "FacMAGRU"])
+end
+
+# ╔═╡ a2d66027-ea89-49c4-852d-594171f3f67b
+
+
+# ╔═╡ 4480eb51-352d-49ff-8181-96e6bf03cab3
+data_fac_adam_sens = RPU.get_line_data_for(
+	ic_fac_adam,
+	["numhidden", "cell", "replay_size", "factors"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ 8500402b-28aa-41ed-96d7-450903bc90d0
+let
+	plts = []
+	for rs ∈ dd_fac_adam["replay_size"]
+		
+		args_list = [
+			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMARNN"),
+			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMAGRU")]
+		push!(plts, plot(data_fac_adam_sens, args_list; sort_idx="factors", labels=["FacMARNN" "FacMAGRU"], title=rs, color = 	[cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], legend=nothing))
+	end
+	plot(plts...)
+end
+
+# ╔═╡ 20e3d6d4-bec8-4a42-8e5c-01c6f60600d7
+let
+	args_list = [
+			Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>100),
+			Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU", "factors"=>100)]
+		boxplot(data_fac_adam_sens, args_list; label_idx="cell", color = 	[cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], legend=nothing)
+		dotplot!(data_fac_adam_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
+end
+
 # ╔═╡ Cell order:
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
 # ╠═e0d51e67-63dc-45ea-9092-9965f97660b3
@@ -370,7 +421,6 @@ end
 # ╠═0c746c1e-ea39-4415-a1b1-d7124b886f98
 # ╠═1886bf05-f4be-4160-b61c-edf186a7f3cb
 # ╠═fe50ffef-b691-47b5-acf8-8378fbf860a1
-# ╠═834b1cf3-5b22-4e0a-abe9-61e427e6cfda
 # ╠═0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
 # ╠═6211a38a-7b53-4054-970e-c29ad17de646
 # ╠═e822182e-b485-4a95-a08c-efe1540ff6ad
@@ -399,4 +449,12 @@ end
 # ╠═39752286-a6db-439d-aca0-1be4821bfc2b
 # ╠═7d611b39-f9a8-43e4-951e-9d812cbd4384
 # ╠═a8949e02-61f5-456a-abee-2bad91d2df05
+# ╠═4b654ad2-93cf-455e-9c7b-982766560205
 # ╠═2dbcb518-2fda-44c4-bfc0-b422a8da9c35
+# ╠═7f630af5-a608-47d3-be13-589b9731798e
+# ╠═f297e4f3-5826-4f90-8f24-ae731232f63b
+# ╠═baf539d2-bdd9-40be-bca7-2af231d7063d
+# ╠═a2d66027-ea89-49c4-852d-594171f3f67b
+# ╠═4480eb51-352d-49ff-8181-96e6bf03cab3
+# ╠═8500402b-28aa-41ed-96d7-450903bc90d0
+# ╠═20e3d6d4-bec8-4a42-8e5c-01c6f60600d7
