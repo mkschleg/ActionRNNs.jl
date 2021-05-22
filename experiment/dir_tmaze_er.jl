@@ -60,6 +60,7 @@ function get_ann(parsed, fs, env, rng)
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         factors = parsed["factors"]
+        
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
