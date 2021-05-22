@@ -20,10 +20,9 @@ target_update_wait = 1000
 
 [sweep_args]
 # cell = ["MARNN", "AARNN", "RNN", "MAGRU", "AAGRU", "GRU"]
-cell = ["FacMARNN", "FacMAGRU"]
+cell_numhidden = [["FacMARNN", 25], ["FacMAGRU", 15]]
 eta = "0.01*(2.0.^(-11:2:-2))"
 replay_size = [10000, 20000]
 truncation = [12]
-numhidden = [10, 15, 20]
-factors = [5, 10, 15, 20, 25, 30, 40, 50]
+factors = [5, 10, 15, 17, 20, 30, 40, 50, 100]
 seed = "1:20"

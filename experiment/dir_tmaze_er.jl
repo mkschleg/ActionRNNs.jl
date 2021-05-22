@@ -126,7 +126,12 @@ end
 
 function main_experiment(parsed = default_config(); working=false, progress=false, verbose=false)
 
-
+    if "cell_numhidden" ∈ keys(parsed)
+        parsed["cell"] = parsed["cell_numhidden"][1]
+        parsed["numhidden"] = parsed["cell_numhidden"][2]
+        delete!(parsed, "cell_numhidden")
+    end
+    
     ActionRNNs.experiment_wrapper(parsed, working) do parsed
 
         num_steps = parsed["steps"]
