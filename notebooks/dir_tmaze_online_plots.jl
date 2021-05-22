@@ -67,7 +67,16 @@ cell_colors = Dict(
 # end
 
 # ╔═╡ eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
-ic_dir_10, dd_dir_10 = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_size10_1M_nh15/")
+ic_dir_reg, dd_dir_reg = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_size10_1M_nh15/")
+
+# ╔═╡ ed00f8a0-f8f5-4340-8c6e-61ecb67e5d18
+ic_dir_facmagru, dd_dir_facmagru = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_10_facmagru/")
+
+# ╔═╡ fedb725a-d13d-425f-bde9-531d453d8791
+ic_dir_facmarnn, dd_dir_facmarnn = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_10_facmarnn/")
+
+# ╔═╡ 35ae89bb-a66d-4fed-be4c-2f134b73afbf
+ic_dir_10, dd_dir_10 = ic_dir_reg, dd_dir_reg
 
 # ╔═╡ eab5c7a0-8052-432d-977e-68b967baf5ca
 ic_dir_10[1].parsed_args["steps"]
@@ -76,6 +85,24 @@ ic_dir_10[1].parsed_args["steps"]
 data_10 = RPU.get_line_data_for(
 	ic_dir_10,
 	["numhidden", "cell"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 300))
+
+# ╔═╡ a8ff395b-4161-4be1-82e3-21316b550af4
+data_facmagru = RPU.get_line_data_for(
+	ic_dir_facmagru,
+	["numhidden_factors"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 300))
+
+# ╔═╡ 9cbe1fd5-1948-4d7c-92dc-e5999ba5c0e5
+data_facmarnn = RPU.get_line_data_for(
+	ic_dir_facmarnn,
+	["numhidden_factors"],
 	["eta"];
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
@@ -101,6 +128,38 @@ let
 	end
 	plt
 end
+
+# ╔═╡ a26a302e-bcbd-4671-9dc3-57cd92c0e6f8
+md"""
+NumHidden and Factors GRU: $(@bind nh_fac_dir_facmagru Select(string.(dd_dir_facmagru["numhidden_factors"])))
+NumHidden and Factors RNN: $(@bind nh_fac_dir_facmarnn Select(string.(dd_dir_facmarnn["numhidden_factors"])))
+"""
+
+# ╔═╡ d4e9f6a6-f2fe-4145-b2ec-f15600d60f42
+let
+	# plt = nothing
+	#τ = parse(Int, τ_dir_10)
+	nh_gru = parse(Int, nh_fac_dir_facmagru[2:3])
+	factors_gru = parse(Int, nh_fac_dir_facmagru[6:7]) 
+	nh_rnn = parse(Int, nh_fac_dir_facmarnn[2:3])
+	factors_rnn = parse(Int, nh_fac_dir_facmarnn[6:7]) 
+	plt = plot()
+	plt = plot!(
+		data_facmagru,
+		Dict("numhidden_factors"=>[nh_gru, factors_gru]), label="FacMAGRU $([nh_gru, factors_gru])",
+		palette=RPU.custom_colorant, legend=:topleft)
+	plt = plot!(
+		data_facmarnn,
+		Dict("numhidden_factors"=>[nh_rnn, factors_rnn]), label="FacMARNN $([nh_rnn, factors_rnn])",
+		palette=RPU.custom_colorant, legend=:topleft)
+	plt
+end
+
+# ╔═╡ 9dfaef30-4e20-489b-8945-528bdfcdbefb
+nh_fac_dir_facmagru
+
+# ╔═╡ 089bf5c2-8521-43e7-96bc-4ad7822905b2
+parse(Int, nh_fac_dir_facmagru[6:7])
 
 # ╔═╡ 7c1f8e58-4bfa-4da2-833d-0cc2a4ec74a4
 data_10_sens = RPU.get_line_data_for(
@@ -248,6 +307,103 @@ let
 		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
 end
 
+# ╔═╡ 30341781-351f-4b61-80a3-3f3c65f816e2
+data_10_dist_facmagru = RPU.get_line_data_for(
+	ic_dir_facmagru,
+	["numhidden_factors"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ c107cfa9-6ac9-40d4-8cf2-610779421e4f
+data_10_dist_facmarnn = RPU.get_line_data_for(
+	ic_dir_facmarnn,
+	["numhidden_factors"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ cb4d5803-996d-4341-80d0-3ef1bae52dc6
+dd_dir_facmagru
+
+# ╔═╡ 5096204e-5134-4fda-8894-20e0c1a3e650
+let
+	args_list = [
+		Dict("numhidden_factors"=>[15, 37]),
+		Dict("numhidden_factors"=>[15, 75]),
+		Dict("numhidden_factors"=>[15, 100]),
+		Dict("numhidden_factors"=>[20, 28]),
+		Dict("numhidden_factors"=>[20, 75]),
+		Dict("numhidden_factors"=>[20, 100]),
+		Dict("numhidden_factors"=>[26, 21]),
+		Dict("numhidden_factors"=>[26, 75]),
+		Dict("numhidden_factors"=>[26, 100])
+	]
+	boxplot(data_10_dist_facmagru, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMAGRU"] cell_colors["FacMAGRU"] cell_colors["FacMAGRU"]], legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, title="FacMAGRU MUE")
+	dotplot!(data_10_dist_facmagru, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMAGRU"] cell_colors["FacMAGRU"] cell_colors["FacMAGRU"]])
+	
+end
+
+# ╔═╡ 08552490-3e28-4f9c-8c98-c6f2a19fca6f
+dd_dir_facmarnn
+
+# ╔═╡ fafaf816-d61e-4f52-8528-9b2b8e9fe971
+let
+	args_list = [
+		Dict("numhidden_factors"=>[27, 40]),
+		Dict("numhidden_factors"=>[27, 75]),
+		Dict("numhidden_factors"=>[27, 100]),
+		Dict("numhidden_factors"=>[36, 31]),
+		Dict("numhidden_factors"=>[36, 75]),
+		Dict("numhidden_factors"=>[36, 100]),
+		Dict("numhidden_factors"=>[46, 24]),
+		Dict("numhidden_factors"=>[46, 75]),
+		Dict("numhidden_factors"=>[46, 100])
+	]
+	boxplot(data_10_dist_facmarnn, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMARNN"]], legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, title="FacMARNN MUE")
+	dotplot!(data_10_dist_facmarnn, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMARNN"]])
+	
+end
+
+# ╔═╡ a6dc6873-8779-4e4e-856c-3dc818268acf
+let
+	args_list = [
+		Dict("numhidden_factors"=>[15, 37]),
+		Dict("numhidden_factors"=>[20, 28]),
+		Dict("numhidden_factors"=>[26, 21])
+	]
+	boxplot(data_10_dist_facmagru, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMAGRU"] cell_colors["FacMAGRU"] cell_colors["FacMAGRU"]])
+	dotplot!(data_10_dist_facmagru, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMAGRU"] cell_colors["FacMAGRU"] cell_colors["FacMAGRU"]])
+	
+	args_list_l = [
+		Dict("numhidden"=>26, "cell"=>"GRU"),
+		Dict("numhidden"=>26, "cell"=>"AAGRU"),
+		Dict("numhidden"=>15, "cell"=>"MAGRU"),
+		Dict("numhidden"=>46, "cell"=>"RNN"),
+		Dict("numhidden"=>46, "cell"=>"AARNN"),
+		Dict("numhidden"=>27, "cell"=>"MARNN")]
+
+	boxplot!(data_10_dist, args_list_l;
+		label_idx="cell",
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, title="MUE")
+	dotplot!(data_10_dist, args_list_l;
+		label_idx="cell",
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
+		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	
+	
+	args_list_rnn = [
+		Dict("numhidden_factors"=>[27, 40]),
+		Dict("numhidden_factors"=>[36, 31]),
+		Dict("numhidden_factors"=>[46, 24])
+	]
+	boxplot!(data_10_dist_facmarnn, args_list_rnn; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMARNN"] cell_colors["FacMARNN"] cell_colors["FacMARNN"]])
+	dotplot!(data_10_dist_facmarnn, args_list_rnn; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMARNN"] cell_colors["FacMARNN"] cell_colors["FacMARNN"]])
+end
+
 # ╔═╡ c8e944f2-ef02-4b81-8b6d-3527609f0822
 data_10_dist_mean = RPU.get_line_data_for(
 	ic_dir_10,
@@ -256,6 +412,97 @@ data_10_dist_mean = RPU.get_line_data_for(
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MEAN(x, :successes),
 	get_data=(x)->RPU.get_MEAN(x, :successes))
+
+# ╔═╡ 8a7d820c-7ca9-461d-9160-27c47496436a
+data_10_dist_mean_facmagru = RPU.get_line_data_for(
+	ic_dir_facmagru,
+	["numhidden_factors"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MEAN(x, :successes),
+	get_data=(x)->RPU.get_MEAN(x, :successes))
+
+# ╔═╡ 04655ac3-0d40-4063-bc8c-0826e13c6722
+data_10_dist_mean_facmarnn = RPU.get_line_data_for(
+	ic_dir_facmarnn,
+	["numhidden_factors"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MEAN(x, :successes),
+	get_data=(x)->RPU.get_MEAN(x, :successes))
+
+# ╔═╡ f0390e50-13a6-496f-b0ab-97ed1b2b18e7
+let
+	args_list = [
+		Dict("numhidden_factors"=>[15, 37]),
+		Dict("numhidden_factors"=>[15, 75]),
+		Dict("numhidden_factors"=>[15, 100]),
+		Dict("numhidden_factors"=>[20, 28]),
+		Dict("numhidden_factors"=>[20, 75]),
+		Dict("numhidden_factors"=>[20, 100]),
+		Dict("numhidden_factors"=>[26, 21]),
+		Dict("numhidden_factors"=>[26, 75]),
+		Dict("numhidden_factors"=>[26, 100])
+	]
+	boxplot(data_10_dist_mean_facmagru, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMAGRU"] cell_colors["FacMAGRU"] cell_colors["FacMAGRU"]], legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, title="FacMAGRU MEAN")
+	dotplot!(data_10_dist_mean_facmagru, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMAGRU"] cell_colors["FacMAGRU"] cell_colors["FacMAGRU"]])
+	
+end
+
+# ╔═╡ ec7f5f9a-94be-473d-9542-8780c91f9e8e
+let
+	args_list = [
+		Dict("numhidden_factors"=>[27, 40]),
+		Dict("numhidden_factors"=>[27, 75]),
+		Dict("numhidden_factors"=>[27, 100]),
+		Dict("numhidden_factors"=>[36, 31]),
+		Dict("numhidden_factors"=>[36, 75]),
+		Dict("numhidden_factors"=>[36, 100]),
+		Dict("numhidden_factors"=>[46, 24]),
+		Dict("numhidden_factors"=>[46, 75]),
+		Dict("numhidden_factors"=>[46, 100])
+	]
+	boxplot(data_10_dist_mean_facmarnn, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMARNN"]], legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, title="FacMARNN MEAN")
+	dotplot!(data_10_dist_mean_facmarnn, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMARNN"]])
+	
+end
+
+# ╔═╡ 588cd0d2-c598-4e50-a1a0-93f9eddbc10e
+let
+	args_list = [
+		Dict("numhidden_factors"=>[15, 37]),
+		Dict("numhidden_factors"=>[20, 28]),
+		Dict("numhidden_factors"=>[26, 21])
+	]
+	boxplot(data_10_dist_mean_facmagru, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMAGRU"] cell_colors["FacMAGRU"] cell_colors["FacMAGRU"]])
+	dotplot!(data_10_dist_mean_facmagru, args_list; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMAGRU"] cell_colors["FacMAGRU"] cell_colors["FacMAGRU"]])
+	
+	args_list_l = [
+		Dict("numhidden"=>26, "cell"=>"GRU"),
+		Dict("numhidden"=>26, "cell"=>"AAGRU"),
+		Dict("numhidden"=>15, "cell"=>"MAGRU"),
+		Dict("numhidden"=>46, "cell"=>"RNN"),
+		Dict("numhidden"=>46, "cell"=>"AARNN"),
+		Dict("numhidden"=>27, "cell"=>"MARNN")]
+
+	boxplot!(data_10_dist_mean, args_list_l;
+		label_idx="cell",
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, title="MEAN")
+	dotplot!(data_10_dist_mean, args_list_l;
+		label_idx="cell",
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
+		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	
+	
+	args_list_rnn = [
+		Dict("numhidden_factors"=>[27, 40]),
+		Dict("numhidden_factors"=>[36, 31]),
+		Dict("numhidden_factors"=>[46, 24])
+	]
+	boxplot!(data_10_dist_mean_facmarnn, args_list_rnn; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMARNN"] cell_colors["FacMARNN"] cell_colors["FacMARNN"]])
+	dotplot!(data_10_dist_mean_facmarnn, args_list_rnn; make_label_string=true, label_idx="numhidden_factors", color = [cell_colors["FacMARNN"] cell_colors["FacMARNN"] cell_colors["FacMARNN"]])
+end
 
 # ╔═╡ e0a3851d-3db5-440e-b67e-75ca7d9517e1
 let
@@ -414,10 +661,19 @@ end
 # ╟─fe50ffef-b691-47b5-acf8-8378fbf860a1
 # ╟─834b1cf3-5b22-4e0a-abe9-61e427e6cfda
 # ╠═eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
+# ╠═ed00f8a0-f8f5-4340-8c6e-61ecb67e5d18
+# ╠═fedb725a-d13d-425f-bde9-531d453d8791
+# ╠═35ae89bb-a66d-4fed-be4c-2f134b73afbf
 # ╠═eab5c7a0-8052-432d-977e-68b967baf5ca
 # ╠═55d1416b-d580-4112-827a-30504c21f397
+# ╠═a8ff395b-4161-4be1-82e3-21316b550af4
+# ╠═9cbe1fd5-1948-4d7c-92dc-e5999ba5c0e5
 # ╟─467ed417-cf69-493d-b21c-3fc4d1fb9907
 # ╠═2040d613-0ea8-48ce-937c-9180073812ea
+# ╟─a26a302e-bcbd-4671-9dc3-57cd92c0e6f8
+# ╠═d4e9f6a6-f2fe-4145-b2ec-f15600d60f42
+# ╠═9dfaef30-4e20-489b-8945-528bdfcdbefb
+# ╠═089bf5c2-8521-43e7-96bc-4ad7822905b2
 # ╠═7c1f8e58-4bfa-4da2-833d-0cc2a4ec74a4
 # ╠═859b98dd-1024-4fec-8741-40edf72d0287
 # ╠═f5a1e45c-398a-40e3-8c5f-b1d72ead0a89
@@ -435,7 +691,19 @@ end
 # ╠═cc730813-539b-418d-8da6-67f83bd05d70
 # ╠═fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
 # ╠═db83dce1-29d5-42f8-b226-4412ce63c8f1
+# ╠═30341781-351f-4b61-80a3-3f3c65f816e2
+# ╠═c107cfa9-6ac9-40d4-8cf2-610779421e4f
+# ╠═cb4d5803-996d-4341-80d0-3ef1bae52dc6
+# ╠═5096204e-5134-4fda-8894-20e0c1a3e650
+# ╠═08552490-3e28-4f9c-8c98-c6f2a19fca6f
+# ╠═fafaf816-d61e-4f52-8528-9b2b8e9fe971
+# ╠═a6dc6873-8779-4e4e-856c-3dc818268acf
 # ╠═c8e944f2-ef02-4b81-8b6d-3527609f0822
+# ╠═8a7d820c-7ca9-461d-9160-27c47496436a
+# ╠═04655ac3-0d40-4063-bc8c-0826e13c6722
+# ╠═f0390e50-13a6-496f-b0ab-97ed1b2b18e7
+# ╠═ec7f5f9a-94be-473d-9542-8780c91f9e8e
+# ╠═588cd0d2-c598-4e50-a1a0-93f9eddbc10e
 # ╠═e0a3851d-3db5-440e-b67e-75ca7d9517e1
 # ╠═6ef161be-ec61-461d-9c38-60510c08328b
 # ╠═4f2e1222-9daa-439c-9d57-957f23e44657
