@@ -1,21 +1,18 @@
 [config]
-save_dir="final_ringworld_online_rmsprop_10"
-exp_file="experiment/ringworld_online.jl"
-exp_module_name = "RingWorldOnlineExperiment"
+save_dir="final_dir_tmaze_online_rmsprop_10"
+exp_file="experiment/dir_tmaze_online.jl"
+exp_module_name = "DirTMazeOnlineExperiment"
 exp_func_name = "main_experiment"
 arg_iter_type = "looper"
 run_param = "seed"
-run_list = "21:70"
-arg_file = "final_runs/ringworld_online_10.jld2"
+run_list = "21:121"
+arg_file = "final_runs/dir_tmaze_online_10.jld2"
 
 [static_args]
-steps = 300000
+steps = 500000
 opt = "RMSProp"
-rho = 0.9
+rho = 0.99
 size = 10
+gamma = 0.99
+truncation = 20
 
-hs_learnable = false
-outgamma = 0.9
-action_features = false
-synopsis = true
-outhorde = "gammas_term"
