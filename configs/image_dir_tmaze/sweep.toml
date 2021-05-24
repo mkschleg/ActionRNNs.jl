@@ -1,7 +1,7 @@
 [config]
 save_dir="image_dir_tmaze_adam_6"
-exp_file="experiment/dir_tmaze_er.jl"
-exp_module_name = "DirectionalTMazeERExperiment"
+exp_file="experiment/viz_dir_tmaze.jl"
+exp_module_name = "VisualDirectionalTMazeERExperiment"
 exp_func_name = "main_experiment"
 arg_iter_type = "iter"
 
@@ -24,6 +24,6 @@ arg_iter_type = "iter"
 
 [sweep_args]
 "cell_numhidden" = [["MAGRU", 32], ["MAGRU", 64], ["AAGRU", 70], ["AAGRU", 132]]
-"eta" = "(2.0.^(-18:2:-10))"
+"eta" = "(2.0.^(-20:2:-10))"
 "truncation" = [10, 12]
 "seed" = "1:5"
