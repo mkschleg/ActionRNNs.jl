@@ -82,11 +82,19 @@ function get_model(parsed, out_horde, fc, rng)
     num_gvfs = length(out_horde)
     
     chain = begin
-        if parsed["cell"] == "FacARNN"
-            
+
+        # if parsed["cell"] == "FacARNN"
+        if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
+
+            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
             factors = parsed["factors"]
-            Flux.Chain(ActionRNNs.FacARNN(fs, 2, nh, factors; init=init_func),
+            init_func = (dims...; kwargs...)->
+                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+            
+            Flux.Chain(rnn(fs, 2, nh, factors; init=init_func, initb=initb),
                        Flux.Dense(nh, num_gvfs; initW=init_func))
+            
         elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
             rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
@@ -174,6 +182,11 @@ end
 
 function main_experiment(parsed=default_args(); working=false, progress=false, overwrite=false)
 
+    if "numhidden_factors" ∈ keys(parsed)
+        parsed["numhidden"] = parsed["numhidden_factors"][1]
+        parsed["factors"] = parsed["numhidden_factors"][2]
+    end
+    
     ActionRNNs.experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
         
         num_steps = parsed["steps"]
