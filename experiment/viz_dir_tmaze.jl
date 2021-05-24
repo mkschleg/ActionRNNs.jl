@@ -25,7 +25,7 @@ function default_config()
         "save_dir" => "tmaze",
 
         "seed" => 1,
-        "steps" => 400000,
+        "steps" => 750000,
         "size" => 10,
 
 
@@ -121,7 +121,7 @@ function construct_agent(env, parsed, rng)
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed, (28, 28, 1, 1), env, rng)# |> Flux.gpu
+    chain = get_ann(parsed, (28, 28, 1, 1), env, rng) #|> Flux.gpu
 
     ActionRNNs.ImageDRQNAgent(chain,
                          opt,
@@ -146,6 +146,12 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         delete!(parsed, "cell_numhidden")
     end
 
+    if "numhidden_factors" ∈ keys(parsed)
+        parsed["numhidden"] = parsed["numhidden_factors"][1]
+        parsed["factors"] = parsed["numhidden_factors"][2]
+        delete!(parsed, "numhidden_factors")
+    end
+    
     ActionRNNs.experiment_wrapper(parsed, working) do parsed
 
         num_steps = parsed["steps"]

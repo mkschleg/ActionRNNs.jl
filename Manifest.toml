@@ -1237,7 +1237,7 @@ version = "0.9.4"
 
 [[ReproducePlotUtils]]
 deps = ["DataFrames", "FileIO", "PlotUtils", "Plots", "RecipesBase", "Reproduce", "RollingFunctions", "Statistics", "StatsPlots"]
-git-tree-sha1 = "9c6bf09a9f9071d09a98a6c33fe9f31d50dfbd30"
+git-tree-sha1 = "f83fa9f3a037081608e4607dc7582913c2e19f3f"
 repo-rev = "master"
 repo-url = "https://github.com/mkschleg/ReproducePlotUtils.jl.git"
 uuid = "c4339a9b-a0bc-4ed5-8923-5e6db10394ac"
