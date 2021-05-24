@@ -1,0 +1,21 @@
+[config]
+save_dir="final_ringworld_online_rmsprop_10"
+exp_file="experiment/ringworld_online.jl"
+exp_module_name = "RingWorldOnlineExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "looper"
+run_param = "seed"
+run_list = "21:70"
+arg_file = "final_runs/ringworld_online_10.jld2"
+
+[static_args]
+steps = 300000
+opt = "RMSProp"
+rho = 0.9
+size = 10
+
+hs_learnable = false
+outgamma = 0.9
+action_features = false
+synopsis = true
+outhorde = "gammas_term"
