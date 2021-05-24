@@ -1,0 +1,29 @@
+[config]
+save_dir="image_dir_tmaze_adam_6"
+exp_file="experiment/dir_tmaze_er.jl"
+exp_module_name = "DirectionalTMazeERExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iter"
+
+[static_args]
+"steps" = 400000
+
+"opt" = "ADAM"
+"size" = 6
+"gamma" = 0.9
+
+"batch_size" = 16
+"replay_size" = 50000
+"warm_up" = 1000
+"hs_learnable" = true
+"update_wait" = 4
+"target_update_wait" = 10000
+
+"latent_size" = 128	
+"output_size" = 128
+
+[sweep_args]
+"cell_numhidden" = [["MAGRU", 32], ["MAGRU", 64], ["AAGRU", 70], ["AAGRU", 132]]
+"eta" = "(2.0.^(-18:2:-10))"
+"truncation" = [10, 12]
+"seed" = "1:5"

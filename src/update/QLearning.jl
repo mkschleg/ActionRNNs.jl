@@ -1,6 +1,6 @@
 
-
-using KernelAbstractions, Tullio
+using CUDA, CUDAKernels, KernelAbstractions
+using LoopVectorization, Tullio
 
 
 function q_learning_loss(q_t, a_t, r, terminal, γ, q_tp1)
@@ -107,7 +107,7 @@ function update_batch!(lu::QLearning,
         end
         loss
     end
-
+    # throw("oh no")
     Flux.update!(opt, ps, grads)
     UpdateState(ℒ, grads, Flux.params(chain), opt)
 end

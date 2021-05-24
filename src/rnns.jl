@@ -1,5 +1,6 @@
 using Flux
 # using OMEinsum
+using CUDA, CUDAKernels
 using KernelAbstractions, LoopVectorization
 using OMEinsum
 using Tullio
@@ -21,6 +22,11 @@ contract_WA(W, a::Int, x) =
 
 contract_WA(W, a::Vector{Int}, x) = begin
     @tullio ret[i, k] := W[a[k], i, j] * x[j, k]
+end
+
+contract_WA(W::CuArray, a::Vector{Int}, x) = begin
+    Wa = W[a, :, :]
+    @tullio ret[i, k] := Wa[k, i, j] * x[j, k]
 end
 
 contract_WA_ein(W, a::Vector{Int}, x) = begin
