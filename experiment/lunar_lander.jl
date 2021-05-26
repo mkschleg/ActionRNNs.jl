@@ -26,7 +26,7 @@ function default_config()
 
         "seed" => 1,
 #         "steps" => 1000000,
-        "steps" => 50,
+        "steps" => 100,
 
         "cell" => "AAGRU",
         "numhidden" => 128,
@@ -44,8 +44,8 @@ function default_config()
 
         "hs_learnable" => true,
         "encoding_size" => 128,
-        "omit_states" => [5],
-        "state_conditions" => [],
+        "omit_states" => [6],
+        "state_conditions" => [2],
 
         "gamma"=>0.99)
 
@@ -88,9 +88,14 @@ function get_ann(parsed, fs, env, rng)
         rnntype(es, nh; init=init_func)
     end
 
-    Flux.Chain(Flux.Dense(fs, es; initW=init_func),
+#     Flux.Chain(Flux.Dense(fs, es; initW=init_func),
+#                rnn_layer,
+#                Flux.Dense(nh, nh; initW=init_func),
+#                Flux.Dense(nh, na; initW=init_func))
+
+   Flux.Chain(Flux.Dense(fs, es, Flux.relu; initW=init_func),
                rnn_layer,
-               Flux.Dense(nh, nh; initW=init_func),
+               Flux.Dense(nh, nh, Flux.relu; initW=init_func),
                Flux.Dense(nh, na; initW=init_func))
 end
 
