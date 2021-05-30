@@ -112,7 +112,7 @@ function construct_agent(env, parsed, rng)
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed, fs, env, rng) |> gpu
+    chain = get_ann(parsed, fs, env, rng)# |> gpu
 
     ActionRNNs.DRQNAgent(chain,
                          opt,

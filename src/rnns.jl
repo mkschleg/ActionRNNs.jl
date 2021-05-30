@@ -1,8 +1,10 @@
 using Flux
 # using OMEinsum
+using CUDA, CUDAKernels
 using KernelAbstractions, LoopVectorization
 using OMEinsum
 using Tullio
+import TensorCore: ⊡
 
 ####
 # Abstraction to help deal w/ whether to pass in tuple or not.
@@ -19,8 +21,9 @@ _needs_action_input(m::AbstractActionRNN) = true
 contract_WA(W, a::Int, x) =
     W[a, :, :]*x
 
-contract_WA(W, a::Vector{Int}, x) = begin
-    @tullio ret[i, k] := W[a[k], i, j] * x[j, k]
+contract_WA(W, a::AbstractVector{Int}, x) = begin
+    mid = W ⊡ x
+    @tullio ret[i, k] := mid[a[k], i, k]
 end
 
 contract_WA_ein(W, a::Vector{Int}, x) = begin
