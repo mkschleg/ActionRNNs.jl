@@ -150,6 +150,12 @@ end
 # ╔═╡ efd6ca8b-1eb6-4b56-8f01-c80ddfdd9033
 final_ic_tmaze_10, final_dd_tmaze_10 = RPU.load_data("../local_data/final_act_tmaze_er_rnn_rmsprop_10/")
 
+# ╔═╡ b5ce8032-b53f-47e2-9919-766321d77407
+let
+	sub_ic = search(final_ic_tmaze_10, Dict("cell"=>"MARNN"))
+	sub_ic[1].parsed_args
+end
+
 # ╔═╡ a1bd4e67-4a69-48fe-9cbf-45a0fd79a648
 data_final_tmaze_10 = RPU.get_line_data_for(
 	final_ic_tmaze_10,
@@ -208,6 +214,9 @@ let
 	
 end
 
+# ╔═╡ 3fdd4480-8e40-40d6-b9cb-e7af98810f69
+data_tmaze_fac_10[4]
+
 # ╔═╡ 564984e2-b447-4fc8-af99-7476b60ce1dd
 let
 	plt = plot(legend=false, grid=false, tickfontsize=11, tickdir=:out, ylims=(0.45, 1.0))
@@ -248,9 +257,11 @@ end
 # ╠═a7a9a2e2-2afb-4e7a-a198-9b1e21877cc4
 # ╠═4f61294f-4abf-490d-a963-75201431198d
 # ╠═efd6ca8b-1eb6-4b56-8f01-c80ddfdd9033
+# ╠═b5ce8032-b53f-47e2-9919-766321d77407
 # ╠═a1bd4e67-4a69-48fe-9cbf-45a0fd79a648
 # ╠═ee415dca-6671-47a8-9054-1c43b4892d4b
 # ╠═43574db2-c5fa-4f2c-89e1-b3f618d0145e
 # ╠═dec90ab5-c8fd-4492-9f01-5f1cf8d55b49
 # ╠═aca33fc3-952a-4837-bfc5-63b42af357b2
+# ╠═3fdd4480-8e40-40d6-b9cb-e7af98810f69
 # ╠═564984e2-b447-4fc8-af99-7476b60ce1dd
