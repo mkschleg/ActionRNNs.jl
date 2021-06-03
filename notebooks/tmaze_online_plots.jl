@@ -79,7 +79,7 @@ data_10 = RPU.get_line_data_for(
 	["eta"];
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 300))
+	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 500))
 
 # ╔═╡ 467ed417-cf69-493d-b21c-3fc4d1fb9907
 md"""
@@ -98,7 +98,7 @@ let
 		plt = plot!(
 			  data_10,
 			  Dict("numhidden"=>nh, "truncation"=>τ, "cell"=>cell),
-			  palette=RPU.custom_colorant, legend=:topleft)
+			  palette=RPU.custom_colorant, legend=:bottomright, lw=1)
 	end
 	plt
 end
@@ -280,14 +280,14 @@ let
 		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"RNN"),
 		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AARNN"),
 		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MARNN")]
-	boxplot(data_10_dist, args_list_l;
+	
+	violin(data_10_dist, args_list_l, label_idx="cell", legend=false, color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :), lw=2, linecolor=:black)
+	boxplot!(data_10_dist, args_list_l;
 		label_idx="cell",
 		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_10_dist, args_list_l;
-		label_idx="cell",
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+		legend=false, ylims=(0.4, 1.0), fillalpha=0.75, outliers=false, lw=2, linecolor=:black, tickfontsize=11, grid=false, tickdir=:out, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="TMaze Online")
+	dotplot!(data_10_dist, args_list_l, label_idx="cell", color=:black, tickdir=:out, grid=false)
+savefig("../data/paper_plots/tmaze_online_violin_and_box_plots_300k_steps_MUE_tau_12.pdf")
 end
 
 # ╔═╡ 305f8ac8-8f5f-4ec4-84a6-867f69a8887c
