@@ -26,7 +26,7 @@ function default_config()
 
         "seed" => 1,
 #         "steps" => 1000000,
-        "steps" => 100,
+        "steps" => 1000,
 
         "cell" => "AAGRU",
         "numhidden" => 128,
@@ -43,7 +43,8 @@ function default_config()
         "truncation" => 16,
 
         "hs_learnable" => true,
-        "encoding_size" => 128,
+        "action_encoding_size" => 64,
+        "state_encoding_size" => 128,
         "omit_states" => [6],
         "state_conditions" => [2],
 
@@ -55,7 +56,8 @@ end
 function get_ann(parsed, fs, env, rng)
 
     nh = parsed["numhidden"]
-    es = parsed["encoding_size"]
+    aes = parsed["action_encoding_size"]
+    ses = parsed["state_encoding_size"]
     na = length(get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
     
@@ -67,7 +69,7 @@ function get_ann(parsed, fs, env, rng)
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
-        rnn(es, na, nh, factors;
+        rnn(ses, na, nh, factors;
             init=init_func,
             initb=initb)
         
@@ -79,24 +81,30 @@ function get_ann(parsed, fs, env, rng)
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
-        rnn(es, na, nh;
+        rnn(ses, aes, nh;
             init=init_func,
             initb=initb)
 
     else
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-        rnntype(es, nh; init=init_func)
+        rnntype(ses, nh; init=init_func)
     end
 
-#     Flux.Chain(Flux.Dense(fs, es; initW=init_func),
+#    Flux.Chain(Flux.Dense(fs, es, Flux.relu; initW=init_func),
 #                rnn_layer,
-#                Flux.Dense(nh, nh; initW=init_func),
+#                Flux.Dense(nh, nh, Flux.relu; initW=init_func),
 #                Flux.Dense(nh, na; initW=init_func))
 
-   Flux.Chain(Flux.Dense(fs, es, Flux.relu; initW=init_func),
+   action_state_stream = ActionRNNs.ActionStateStreams(
+       Flux.Dense(na, aes, Flux.relu; initW=init_func),
+       Flux.Dense(fs, ses, Flux.relu; initW=init_func),
+       na
+   )
+   Flux.Chain(action_state_stream,
                rnn_layer,
                Flux.Dense(nh, nh, Flux.relu; initW=init_func),
                Flux.Dense(nh, na; initW=init_func))
+
 end
 
 function construct_agent(env, parsed, rng)

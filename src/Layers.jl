@@ -62,10 +62,28 @@ end
 struct ActionStateStreams{AM, SM}
     action_model::AM
     state_model::SM
+    num_actins::Int
 end
 
 Flux.@functor ActionStateStreams
-(l::ActionStateStreams)(x::Tuple) = (l.action_model(x[1]), l.state_model(x[2]))
+(l::ActionStateStreams)(x::Tuple{Vector, Vector}) = (l.action_model(x[1]), l.state_model(x[2]))
+(l::ActionStateStreams)(x::Tuple{Int, Vector}) =
+    (l.action_model(make_action_matrix(x[1], l.num_actions)), l.state_model(x[2]))
+(l::ActionStateStreams)(x::Tuple{Vector, Matrix}) =
+    (l.action_model(make_action_matrix(x[1], l.num_actions)), l.state_model(x[2]))
+
+function make_action_matrix(actions, na)
+    action_matrix = zeros(Float32, na, size(actions, 1))
+    for i in 1:size(actions, 1)
+        action_matrix[actions[i], i] = 1
+    end
+    action_matrix
+end
+
+# function (l::ActionStateStreams)(x::Tuple{Vector, Matrix})
+#     println("action size_: $(make_action_matrix(x[1], 4)), state size_: $(x[2])")
+#     (l.action_model(make_action_matrix(x[1], 4)), l.state_model(x[2]))
+# end
 
 function Base.show(io::IO, l::ActionStateStreams)
   print(io, "ActionStateStream(", string(l.action_model), ", ", string(l.state_model), ")")
