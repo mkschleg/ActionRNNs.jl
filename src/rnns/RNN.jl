@@ -1,9 +1,6 @@
 
 # Sepcifying a action-conditional RNN Cell
 using Flux
-# using OMEinsum
-using KernelAbstractions
-using OMEinsum
 using Tullio
 
 struct AARNNCell{F,A,V,S} <: AbstractActionRNN
@@ -139,7 +136,21 @@ FacMARNNCell(in, actions, out, factors, activation=tanh; hs_learnable=true, init
                 init(factors, out),
                 init(factors, actions),
                 initb(out, actions),
+                 init_state(out, 1))
+
+function FacMARNNCell_init2(in, actions, out, factors, activation=tanh;
+                            hs_learnable=true, init=glorot_uniform,
+                            initb=Flux.zeros, init_state=Flux.zeros)
+    W = init(actions, out, in)
+    
+    FacMARNNCell(activation,
+                init(out, factors; ignore_dims=2),
+                init(factors, in),
+                init(factors, out),
+                init(factors, actions),
+                initb(out, actions),
                 init_state(out, 1))
+end
 
 FacMARNN(args...; kwargs...) = Flux.Recur(FacMARNNCell(args...; kwargs...))
 Flux.Recur(cell::FacMARNNCell) = Flux.Recur(cell, cell.state0)
