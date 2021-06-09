@@ -36,7 +36,7 @@ color_scheme = [
     colorant"#DDDDDD",
 	colorant"#117733",
 	colorant"#882255",
-	colorant"#88CCEE",
+	colorant"#1E90FF",
 ]
 
 # ╔═╡ 55b8266e-f72e-4cdf-a987-5321f1e5d953
@@ -52,18 +52,6 @@ nh_colors = Dict(
 	20 => color_scheme[end],
 	21 => color_scheme[6],
 	22 => color_scheme[end-2])
-
-# ╔═╡ e78b5abb-3ee3-48fd-901a-40d49f48f664
-cell_colors = Dict(
-	"RNN" => color_scheme[3],
-	"AARNN" => color_scheme[1],
-	"MARNN" => color_scheme[5],
-	"FacMARNN" => color_scheme[end-1],
-	"GRU" => color_scheme[4],
-	"AAGRU" => color_scheme[end],
-	"MAGRU" => color_scheme[6],
-	"FacMAGRU" => color_scheme[end-2])
-
 
 # ╔═╡ 92c2600e-58b4-4ea3-8272-3fe38c0422d1
 function ingredients(path::String)
@@ -195,23 +183,6 @@ Number Hidden: $(@bind nh_dir_sens Select(string.(dd_dir_all["numhidden"])))
 Truncation: $(@bind τ_dir_sens Select(string.(dd_dir_all["truncation"])))
 Cell: $(@bind cells_dir_sens MultiSelect(dd_dir_all["cell"]))
 """
-
-# ╔═╡ 85d2153a-8cb1-40f8-aa3d-3d3faa1fa10e
-let
-	# plt = nothing
-	nh = parse(Int, nh_dir_sens)
-	τ = parse(Int, τ_dir_sens)
-	plt = plot()
-	for cell ∈ cells_dir_sens
-		plt = plot!(data_online_sens,
-	 	  Dict("cell"=>cell, "truncation"=>τ, "numhidden"=>nh);
-	 	  sort_idx="eta",
-		  z=1.97, lw=2, xaxis=:log,
-		  palette=RPU.custom_colorant, label="cell: $(cell)",
-		  color=cell_colors[cell], title="Truncation: $(τ), numhidden: $(nh)")
-	end
-	plt
-end
 
 # ╔═╡ 1377c495-47e0-41c1-9ca6-eebc1a5a9dde
 begin
@@ -448,6 +419,250 @@ let
 	plt
 end
 
+# ╔═╡ 379f4f22-c716-4a24-b75f-3eb127b94334
+#savefig("../data/ringworld_lc_plots/final_ringworld_er_lc_plot_same_params.pdf")
+
+# ╔═╡ 1e0f4ca4-0ade-433d-a4dd-13537e5fc6b4
+data = data_rpu_online
+
+# ╔═╡ bd790756-66ec-4b82-af61-10eaf209e1ff
+data_rpu_online
+
+# ╔═╡ 242424b3-7135-4209-afe4-82429a858b66
+lc_data = RPU.get_line_data_for(
+	ic_dir_rpu_online_all,
+	["numhidden", "cell", "truncation"],
+	["eta"];
+	comp=findmin,
+	get_comp_data=(x)->RPU.get_AUC(x, "end"),
+	get_data=(x)->RPU.get_rolling_mean_line(x, "lc", 10))
+
+# ╔═╡ 19ea46d1-40f2-4e4f-8c97-72db8fb86482
+lc_data_final = RPU.get_line_data_for(
+	ic_dir_rpu_online,
+	["numhidden", "cell", "truncation"],
+	[];
+	comp=findmin,
+	get_comp_data=(x)->RPU.get_AUC(x, "end"),
+	get_data=(x)->RPU.get_rolling_mean_line(x, "lc", 10))
+
+# ╔═╡ c8c20326-d661-438f-bd23-8982f1a6329e
+data_dist_online = RPU.get_line_data_for(
+	ic_dir_rpu_online,
+	["numhidden", "truncation", "cell"],
+	[];
+	comp=findmin,
+	get_comp_data=(x)->RPU.get_AUC(x, "end"),
+	get_data=(x)->RPU.get_AUC(x, "end"))
+
+# ╔═╡ 69df05a1-dcd2-498a-8fc4-da95b62b5add
+data_dist_online_facmarnn = RPU.get_line_data_for(
+	ic_dir_rpu_online_facmarnn,
+	["numhidden_factors"],
+	["eta"];
+	comp=findmin,
+	get_comp_data=(x)->RPU.get_AUC(x, "end"),
+	get_data=(x)->RPU.get_AUC(x, "end"))
+
+# ╔═╡ 22db7508-72f0-40cc-9d8e-b7843dba4d3e
+#savefig("../data/ringworld_lc_plots/final_ringworld_online_lc_plot_same_params.pdf")
+
+# ╔═╡ 8dee9c88-4a33-4fd5-9095-f4fccae6bbf7
+sensitivity_data = PU.get_line_data_for(
+	ic_dir_rpu_online_all,
+	["numhidden", "cell", "truncation"],
+	["eta"];
+	comp=findmin,
+	get_comp_data=(x)->PU.get_AUC(x, "end"),
+	get_data=(x)->PU.get_AUC(x, "end"))
+
+# ╔═╡ 1d888ffa-0d14-4e71-9cb4-607836adc405
+sensitivity_data_ne = PU.get_line_data_for(
+	ic_dir_rpu_online,
+	["numhidden", "cell", "truncation"],
+	[];
+	comp=findmin,
+	get_comp_data=(x)->PU.get_AUC(x, "end"),
+	get_data=(x)->PU.get_AUC(x, "end"))
+
+# ╔═╡ b2952b4c-4d2e-4c65-9a0c-5b067053a89d
+begin
+	eta_val = nothing
+	for data in sensitivity_data
+		if data.line_params == (12, "GRU", 12)
+			eta_val = data
+		end
+	end
+	eta_val
+end
+
+# ╔═╡ 63da8a2e-01e9-4ae6-aef7-1c13f743fdf0
+sub_ic_g = search(ic_dir_rpu_online, Dict("cell"=>"GRU", "numhidden"=>12, "truncation"=>12))
+
+# ╔═╡ b0ca03a1-20f4-4ba2-b0fb-8a48fe9696b2
+sub_ic_g[1].parsed_args["eta"]
+
+# ╔═╡ 028b3b1c-63cd-4c5f-a472-90f058df2a00
+begin
+	args_list_12 = [
+		Dict("numhidden"=>12, "truncation"=>12, "cell"=>"GRU", "eta"=>0.0009095),
+		Dict("numhidden"=>12, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.003725),
+		Dict("numhidden"=>9, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.003725), 
+		Dict("numhidden"=>12, "factors"=>10, "truncation"=>12, "cell"=>"FacMAGRU", "eta"=>0.003725)
+		]
+	
+	FileIO.save("../final_runs/ringworld_online_10_t12_grus.jld2", "args", args_list_12)
+end
+
+# ╔═╡ 0ab2174b-9e6d-431a-a9cd-10d2518a759b
+begin
+	different_vals = []
+	for data in sensitivity_data
+		a = data.line_params
+		if a[3] != 9 && a[3] != 11
+			final_eta = search(ic_dir_rpu_online, Dict("cell"=>a[2], "numhidden"=>a[1], "truncation"=>a[3]))[1].parsed_args["eta"]
+			if data.swept_params[1] != final_eta
+				push!(different_vals, data)
+			end
+		end
+	end
+	different_vals
+end
+
+# ╔═╡ da215349-0686-405a-a7f7-8012a86382ab
+ic_dir_rpu_online
+
+# ╔═╡ 7002dd0e-01b8-4598-929c-dbff02fb9143
+md"""
+NumHidden: $(@bind nh_dir MultiSelect(string.(dd_dir_all["numhidden"])))
+Cell: $(@bind cell Select(dd_dir_all["cell"]))
+"""
+
+# ╔═╡ 92e35913-4eec-47cc-ac8e-48ec0a22533e
+
+savefig("../data/sensitivity_plots/sweep_ringworld_online_sensitivity_plot_95c_$(cell).png")
+
+# ╔═╡ d864b0dd-90a3-4e91-9022-8146568575cc
+let 
+	plt = nothing
+	lstyle = [:solid, :dash, :dot, :solid, :dash, :dot]
+	mshape = [:circle, :rect, :star5, :diamond, :hexagon, :utriangle]
+	trunc = dd_dir["truncation"]
+	for (i, nh) ∈ enumerate(nh_dir)
+		nh_ = parse(Int, nh)
+		plt = plot_sensitivity_from_data_with_params!(plt, sensitivity_data_ne, (nh_, cell), trunc; label="$(nh)", palette=color_scheme, color=nh_colors[nh_], legend=:topright, ylabel="RMSE (Final 50k steps)", xlabel="Truncation", ylim=(0, 0.35), title="Cell: $(cell), Envsize: 10", markershape=mshape[i], markersize=5, linestyle=:solid, grid=false, tickdir=:out, legendtitlefontsize=10, legendfontsize=8, legendfonthalign=:center, lw=2, z=1.97)
+	end
+	plt
+end
+
+# ╔═╡ d7ae12f9-ec9d-4d07-83ab-97205ffab69b
+begin
+	args_list = Dict{String, Any}[]
+
+	for data in sensitivity_data
+		if data.line_params[3] != 9 && data.line_params[3] != 11 && data.line_params[1] != 17
+			push_dict = Dict("numhidden"=>data.line_params[1], "truncation"=>data.line_params[3], "cell"=>data.line_params[2], "eta"=>data.swept_params)
+			push!(args_list, push_dict)
+		end
+	end
+end
+
+# ╔═╡ cbe39710-5202-411f-bd42-368de800e5f1
+begin
+	the_arg = nothing
+	for  arg in args_list
+		if arg["numhidden"] == 9 && arg["truncation"] == 12 && arg["cell"] == "MAGRU"
+			the_arg = arg
+		end
+	end
+	the_arg
+end
+
+# ╔═╡ 1a02cb1b-2495-482d-9588-2a93f3abac47
+begin
+	args_list_hc = [
+		Dict("numhidden"=>20, "truncation"=>8, "cell"=>"RNN", "eta"=>0.003725),
+		Dict("numhidden"=>20, "truncation"=>8, "cell"=>"AARNN", "eta"=>0.003725),
+		Dict("numhidden"=>15, "truncation"=>8, "cell"=>"MARNN", "eta"=>0.0009095), 
+		Dict("numhidden"=>20, "factors"=>10, "truncation"=>8, "cell"=>"FacMARNN", "eta"=>0.0009095),
+		Dict("numhidden"=>12, "truncation"=>8, "cell"=>"RNN", "eta"=>0.00005421),
+		Dict("numhidden"=>12, "truncation"=>8, "cell"=>"AARNN", "eta"=>0.003725),
+		Dict("numhidden"=>9, "truncation"=>8, "cell"=>"MARNN", "eta"=>0.003725), 
+		Dict("numhidden"=>12, "factors"=>10, "truncation"=>8, "cell"=>"FacMARNN", "eta"=>0.0009095),
+		Dict("numhidden"=>12, "truncation"=>8, "cell"=>"GRU", "eta"=>0.00005421), 
+		Dict("numhidden"=>12, "truncation"=>8, "cell"=>"AAGRU", "eta"=>0.003725),
+		Dict("numhidden"=>9, "truncation"=>8, "cell"=>"MAGRU", "eta"=>0.003725), 
+		Dict("numhidden"=>12, "factors"=>10, "truncation"=>8, "cell"=>"FacMAGRU", "eta"=>0.003725)
+		]
+	
+	FileIO.save("../final_runs/ringworld_online_10.jld2", "args", args_list_hc)
+end
+
+# ╔═╡ 8c60f5fd-0c62-4d1a-b7d8-91b02a14b97d
+f=jldopen("../final_runs/ringworld_online_10_old.jld2", "r")
+
+# ╔═╡ be347bbc-1549-4dcd-add3-1ee3e91a76f7
+begin
+	f__=jldopen("/Users/Vtkachuk/Desktop/Work/Research/Martha White/Matt Schlegel/ActionRNNs.jl/local_data/final_ringworld_online_rmsprop_10/settings/settings_0xed290a678f32f129.jld2", "r")
+	data__ = read(f, keys(f)[1])
+end
+
+# ╔═╡ e510936c-2b38-4669-99ab-29ef6ab3ce16
+begin
+	settings_val = 1
+	for  arg in data__
+		if arg["numhidden"] == 9 && arg["truncation"] == 12 && arg["cell"] == "MAGRU"
+			settings_val = arg
+		end
+	end
+	settings_val
+end
+
+# ╔═╡ a83ddc94-9fa8-4411-a78a-fef19444096e
+data_ = read(f, keys(f)[1])
+
+# ╔═╡ 64919972-1b56-4ba5-b9e5-c7aa247aed85
+color_scheme_ = [
+    colorant"#44AA99",
+    colorant"#332288",
+    colorant"#DDCC77",
+    colorant"#999933",
+    colorant"#CC6677",
+    colorant"#AA4499",
+    colorant"#DDDDDD",
+	colorant"#117733",
+	colorant"#882255",
+	colorant"#1E90FF",
+]
+
+# ╔═╡ e78b5abb-3ee3-48fd-901a-40d49f48f664
+cell_colors = Dict(
+	"RNN" => color_scheme_[3],
+	"AARNN" => color_scheme_[end],
+	"MARNN" => color_scheme_[5],
+	"FacMARNN" => color_scheme_[1],
+	"GRU" => color_scheme_[4],
+	"AAGRU" => color_scheme_[2],
+	"MAGRU" => color_scheme_[6],
+	"FacMAGRU" => color_scheme_[end-2])
+
+# ╔═╡ 85d2153a-8cb1-40f8-aa3d-3d3faa1fa10e
+let
+	# plt = nothing
+	nh = parse(Int, nh_dir_sens)
+	τ = parse(Int, τ_dir_sens)
+	plt = plot()
+	for cell ∈ cells_dir_sens
+		plt = plot!(data_online_sens,
+	 	  Dict("cell"=>cell, "truncation"=>τ, "numhidden"=>nh);
+	 	  sort_idx="eta",
+		  z=1.97, lw=2, xaxis=:log,
+		  palette=RPU.custom_colorant, label="cell: $(cell)",
+		  color=cell_colors[cell], title="Truncation: $(τ), numhidden: $(nh)")
+	end
+	plt
+end
+
 # ╔═╡ 427d801e-f2a1-4417-b505-14cd90968f67
 let 
 	args_list = [
@@ -461,9 +676,6 @@ let
 	end
 	plt
 end
-
-# ╔═╡ 379f4f22-c716-4a24-b75f-3eb127b94334
-#savefig("../data/ringworld_lc_plots/final_ringworld_er_lc_plot_same_params.pdf")
 
 # ╔═╡ f6f5a8ac-e1a3-41e2-a38c-5f31d2c60505
 let 
@@ -484,9 +696,6 @@ let
 	plt
 end
 
-# ╔═╡ 1e0f4ca4-0ade-433d-a4dd-13537e5fc6b4
-data = data_rpu_online
-
 # ╔═╡ 6c795e94-7196-4832-ab0f-aba17ea551f2
 let
 	params = Dict("numhidden"=>9, "truncation"=>6, "cell"=>"MARNN")
@@ -500,9 +709,6 @@ let
 	end
 	plot!(data[idx].data, legend=false, ylims=(0.0, 0.4), color=cell_colors[params["cell"]])
 end
-
-# ╔═╡ bd790756-66ec-4b82-af61-10eaf209e1ff
-data_rpu_online
 
 # ╔═╡ 093eec7f-b57d-4e6f-a971-f1b60cde0220
 let 
@@ -587,6 +793,21 @@ let
 	plt
 end
 
+# ╔═╡ 533a195d-746b-4f28-b811-ff1af27d29c5
+let 
+	plt = plot(data_online_rnn_t12, [Dict()]; z=1, lw=2, label="RNN (nh: 20, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online RNN Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["RNN"], fillalpha=0.4)
+	
+		plt = plot!(data_online_aarnn_t12, [Dict()]; z=1, lw=2, label="AARNN (nh: 20, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online RNN Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["AARNN"], fillalpha=0.4)
+	
+		plt = plot!(data_online_marnn_t12, [Dict()]; z=1, lw=2, label="MARNN (nh: 15, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online RNN Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["MARNN"], fillalpha=0.4)
+	
+		plt = plot!(data_online_facmarnn_t12, [Dict()]; z=1, lw=2, label="FacRNN (nh: 20, fac: 10, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSVE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online RNN Cells", grid=false, tickdir=:out, color=cell_colors["FacMARNN"], fillalpha=0.4, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15)
+
+	plt
+	
+	savefig("../data/paper_plots/ringworld_online_learning_curves_with_fac_RNN_300K_steps_tau_12.pdf")
+end
+
 # ╔═╡ 6e15e9b9-1bae-43bd-ae4c-408fac574a14
 let 
 	plt = plot(data_online_gru_t12, [Dict()]; z=1, lw=2, label="GRU (nh: 12, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online GRU Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["GRU"], fillalpha=0.4)
@@ -595,9 +816,11 @@ let
 	
 		plt = plot!(data_online_magru_t12, [Dict()]; z=1, lw=2, label="MAGRU (nh: 9, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online GRU Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["MAGRU"], fillalpha=0.4)
 	
-		plt = plot!(data_online_facmagru_t12, [Dict()]; z=1, lw=2, label="FacMAGRU (nh: 12, fac: 10, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online GRU Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["FacMAGRU"], fillalpha=0.4)
+		plt = plot!(data_online_facmagru_t12, [Dict()]; z=1, lw=2, label="FacMAGRU (nh: 12, fac: 10, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSVE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online GRU Cells", grid=false, tickdir=:out, color=cell_colors["FacMAGRU"], fillalpha=0.4, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15)
 
 	plt
+	
+	savefig("../data/paper_plots/ringworld_online_learning_curves_with_fac_GRU_300K_steps_tau_12.pdf")
 end
 
 # ╔═╡ 06cec7af-094f-44b4-8e9d-cfacefed52f6
@@ -726,24 +949,6 @@ let
 	plt
 end
 
-# ╔═╡ 242424b3-7135-4209-afe4-82429a858b66
-lc_data = RPU.get_line_data_for(
-	ic_dir_rpu_online_all,
-	["numhidden", "cell", "truncation"],
-	["eta"];
-	comp=findmin,
-	get_comp_data=(x)->RPU.get_AUC(x, "end"),
-	get_data=(x)->RPU.get_rolling_mean_line(x, "lc", 10))
-
-# ╔═╡ 19ea46d1-40f2-4e4f-8c97-72db8fb86482
-lc_data_final = RPU.get_line_data_for(
-	ic_dir_rpu_online,
-	["numhidden", "cell", "truncation"],
-	[];
-	comp=findmin,
-	get_comp_data=(x)->RPU.get_AUC(x, "end"),
-	get_data=(x)->RPU.get_rolling_mean_line(x, "lc", 10))
-
 # ╔═╡ a7e885ac-4b74-49ed-b395-74d99ccdbbba
 let 
 	args_list = [
@@ -784,13 +989,15 @@ let
 		plt = plot!(data_online_marnn_t12, [Dict()]; z=1, lw=2, label="MARNN (nh: 15, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online RNN Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["MARNN"], fillalpha=0.4)
 	
 	
-	plt = plot!(data_online_gru, [Dict()]; z=1, lw=2, label="GRU (nh: 12, τ: 8)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online GRU Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["GRU"], fillalpha=0.4)
+	plt = plot!(data_online_gru_t12, [Dict()]; z=1, lw=2, label="GRU (nh: 12, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online GRU Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["GRU"], fillalpha=0.4)
 	
-		plt = plot!(data_online_aagru, [Dict()]; z=1, lw=2, label="AAGRU (nh: 12, τ: 8)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online GRU Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["AAGRU"], fillalpha=0.4)
+		plt = plot!(data_online_aagru_t12, [Dict()]; z=1, lw=2, label="AAGRU (nh: 12, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online GRU Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["AAGRU"], fillalpha=0.4)
 	
-		plt = plot!(data_online_magru, [Dict()]; z=1, lw=2, label="MAGRU (nh: 9, τ: 8)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online RNN + GRU Cells, Size: 10", grid=false, tickdir=:out, color=cell_colors["MAGRU"], fillalpha=0.4)
+		plt = plot!(data_online_magru_t12, [Dict()]; z=1, lw=2, label="MAGRU (nh: 9, τ: 12)", palette=RPU.custom_colorant,legend=:topright, ylabel="RMSE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online", grid=false, tickdir=:out, color=cell_colors["MAGRU"], fillalpha=0.4, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15)
 
 	plt
+	
+	savefig("../data/paper_plots/ringworld_online_learning_curves_300K_steps_tau_12.pdf")
 end
 
 # ╔═╡ f9149118-1f58-4b32-a731-e9b5e4a3079a
@@ -814,24 +1021,6 @@ let
 	end
 	plt
 end
-
-# ╔═╡ c8c20326-d661-438f-bd23-8982f1a6329e
-data_dist_online = RPU.get_line_data_for(
-	ic_dir_rpu_online,
-	["numhidden", "truncation", "cell"],
-	[];
-	comp=findmin,
-	get_comp_data=(x)->RPU.get_AUC(x, "end"),
-	get_data=(x)->RPU.get_AUC(x, "end"))
-
-# ╔═╡ 69df05a1-dcd2-498a-8fc4-da95b62b5add
-data_dist_online_facmarnn = RPU.get_line_data_for(
-	ic_dir_rpu_online_facmarnn,
-	["numhidden_factors"],
-	["eta"];
-	comp=findmin,
-	get_comp_data=(x)->RPU.get_AUC(x, "end"),
-	get_data=(x)->RPU.get_AUC(x, "end"))
 
 # ╔═╡ 2b2f2f39-b861-40af-a964-d22b6f2f85ea
 let
@@ -1007,9 +1196,6 @@ let
 	plot!(data_rpu_online_1M[idx].data, legend=false, ylims=(0.0, 0.4), color=cell_colors[params["cell"]])
 end
 
-# ╔═╡ 22db7508-72f0-40cc-9d8e-b7843dba4d3e
-#savefig("../data/ringworld_lc_plots/final_ringworld_online_lc_plot_same_params.pdf")
-
 # ╔═╡ 50e88e24-daf7-4891-b09a-a8afde96bd06
 let 
 	args_list = [
@@ -1046,77 +1232,6 @@ let
 	plt
 end
 
-# ╔═╡ 8dee9c88-4a33-4fd5-9095-f4fccae6bbf7
-sensitivity_data = PU.get_line_data_for(
-	ic_dir_rpu_online_all,
-	["numhidden", "cell", "truncation"],
-	["eta"];
-	comp=findmin,
-	get_comp_data=(x)->PU.get_AUC(x, "end"),
-	get_data=(x)->PU.get_AUC(x, "end"))
-
-# ╔═╡ 1d888ffa-0d14-4e71-9cb4-607836adc405
-sensitivity_data_ne = PU.get_line_data_for(
-	ic_dir_rpu_online,
-	["numhidden", "cell", "truncation"],
-	[];
-	comp=findmin,
-	get_comp_data=(x)->PU.get_AUC(x, "end"),
-	get_data=(x)->PU.get_AUC(x, "end"))
-
-# ╔═╡ b2952b4c-4d2e-4c65-9a0c-5b067053a89d
-begin
-	eta_val = nothing
-	for data in sensitivity_data
-		if data.line_params == (12, "GRU", 12)
-			eta_val = data
-		end
-	end
-	eta_val
-end
-
-# ╔═╡ 63da8a2e-01e9-4ae6-aef7-1c13f743fdf0
-sub_ic_g = search(ic_dir_rpu_online, Dict("cell"=>"GRU", "numhidden"=>12, "truncation"=>12))
-
-# ╔═╡ b0ca03a1-20f4-4ba2-b0fb-8a48fe9696b2
-sub_ic_g[1].parsed_args["eta"]
-
-# ╔═╡ 028b3b1c-63cd-4c5f-a472-90f058df2a00
-begin
-	args_list_12 = [
-		Dict("numhidden"=>12, "truncation"=>12, "cell"=>"GRU", "eta"=>0.0009095),
-		Dict("numhidden"=>12, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.003725),
-		Dict("numhidden"=>9, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.003725), 
-		Dict("numhidden"=>12, "factors"=>10, "truncation"=>12, "cell"=>"FacMAGRU", "eta"=>0.003725)
-		]
-	
-	FileIO.save("../final_runs/ringworld_online_10_t12_grus.jld2", "args", args_list_12)
-end
-
-# ╔═╡ 0ab2174b-9e6d-431a-a9cd-10d2518a759b
-begin
-	different_vals = []
-	for data in sensitivity_data
-		a = data.line_params
-		if a[3] != 9 && a[3] != 11
-			final_eta = search(ic_dir_rpu_online, Dict("cell"=>a[2], "numhidden"=>a[1], "truncation"=>a[3]))[1].parsed_args["eta"]
-			if data.swept_params[1] != final_eta
-				push!(different_vals, data)
-			end
-		end
-	end
-	different_vals
-end
-
-# ╔═╡ da215349-0686-405a-a7f7-8012a86382ab
-ic_dir_rpu_online
-
-# ╔═╡ 7002dd0e-01b8-4598-929c-dbff02fb9143
-md"""
-NumHidden: $(@bind nh_dir MultiSelect(string.(dd_dir_all["numhidden"])))
-Cell: $(@bind cell Select(dd_dir_all["cell"]))
-"""
-
 # ╔═╡ 586ba32f-79b6-4c2e-80af-ef2c1224fd31
 let 
 	plt = nothing
@@ -1125,107 +1240,11 @@ let
 	trunc = dd_dir_all["truncation"]
 	for (i, nh) ∈ enumerate(nh_dir)
 		nh_ = parse(Int, nh)
-		plt = plot_sensitivity_from_data_with_params!(plt, sensitivity_data, (nh_, cell), trunc; label="$(nh)", palette=color_scheme, color=nh_colors[nh_], legend=:topright, ylabel="RMSE (Final 50k steps)", xlabel="Truncation", ylim=(0, 0.35), title="Cell: $(cell), Envsize: 10", markershape=mshape[i], markersize=5, linestyle=:solid, grid=false, tickdir=:out, legendtitlefontsize=10, legendfontsize=8, legendfonthalign=:center, lw=2, z=1.97)
+		plt = plot_sensitivity_from_data_with_params!(plt, sensitivity_data, (nh_, cell), trunc; label="$(nh)", palette=color_scheme, color=cell_colors[cell], legend=:topright, ylabel="RMSVE (final 50k steps)", xlabel="Truncation", ylim=(0, 0.40), title="Cell: $(cell)", markershape=mshape[i], markersize=5, linestyle=:solid, grid=false, tickdir=:out, legendtitlefontsize=10, legendfonthalign=:center, lw=2, z=1.97, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, legendtitle="nh")
 	end
 	plt
-end
-
-# ╔═╡ 92e35913-4eec-47cc-ac8e-48ec0a22533e
-
-savefig("../data/sensitivity_plots/sweep_ringworld_online_sensitivity_plot_95c_$(cell).png")
-
-# ╔═╡ d864b0dd-90a3-4e91-9022-8146568575cc
-let 
-	plt = nothing
-	lstyle = [:solid, :dash, :dot, :solid, :dash, :dot]
-	mshape = [:circle, :rect, :star5, :diamond, :hexagon, :utriangle]
-	trunc = dd_dir["truncation"]
-	for (i, nh) ∈ enumerate(nh_dir)
-		nh_ = parse(Int, nh)
-		plt = plot_sensitivity_from_data_with_params!(plt, sensitivity_data_ne, (nh_, cell), trunc; label="$(nh)", palette=color_scheme, color=nh_colors[nh_], legend=:topright, ylabel="RMSE (Final 50k steps)", xlabel="Truncation", ylim=(0, 0.35), title="Cell: $(cell), Envsize: 10", markershape=mshape[i], markersize=5, linestyle=:solid, grid=false, tickdir=:out, legendtitlefontsize=10, legendfontsize=8, legendfonthalign=:center, lw=2, z=1.97)
-	end
-	plt
-end
-
-# ╔═╡ d7ae12f9-ec9d-4d07-83ab-97205ffab69b
-begin
-	args_list = Dict{String, Any}[]
-
-	for data in sensitivity_data
-		if data.line_params[3] != 9 && data.line_params[3] != 11 && data.line_params[1] != 17
-			push_dict = Dict("numhidden"=>data.line_params[1], "truncation"=>data.line_params[3], "cell"=>data.line_params[2], "eta"=>data.swept_params)
-			push!(args_list, push_dict)
-		end
-	end
-end
-
-# ╔═╡ cbe39710-5202-411f-bd42-368de800e5f1
-begin
-	the_arg = nothing
-	for  arg in args_list
-		if arg["numhidden"] == 9 && arg["truncation"] == 12 && arg["cell"] == "MAGRU"
-			the_arg = arg
-		end
-	end
-	the_arg
-end
-
-# ╔═╡ 1a02cb1b-2495-482d-9588-2a93f3abac47
-begin
-	args_list_hc = [
-		Dict("numhidden"=>20, "truncation"=>8, "cell"=>"RNN", "eta"=>0.003725),
-		Dict("numhidden"=>20, "truncation"=>8, "cell"=>"AARNN", "eta"=>0.003725),
-		Dict("numhidden"=>15, "truncation"=>8, "cell"=>"MARNN", "eta"=>0.0009095), 
-		Dict("numhidden"=>20, "factors"=>10, "truncation"=>8, "cell"=>"FacMARNN", "eta"=>0.0009095),
-		Dict("numhidden"=>12, "truncation"=>8, "cell"=>"RNN", "eta"=>0.00005421),
-		Dict("numhidden"=>12, "truncation"=>8, "cell"=>"AARNN", "eta"=>0.003725),
-		Dict("numhidden"=>9, "truncation"=>8, "cell"=>"MARNN", "eta"=>0.003725), 
-		Dict("numhidden"=>12, "factors"=>10, "truncation"=>8, "cell"=>"FacMARNN", "eta"=>0.0009095),
-		Dict("numhidden"=>12, "truncation"=>8, "cell"=>"GRU", "eta"=>0.00005421), 
-		Dict("numhidden"=>12, "truncation"=>8, "cell"=>"AAGRU", "eta"=>0.003725),
-		Dict("numhidden"=>9, "truncation"=>8, "cell"=>"MAGRU", "eta"=>0.003725), 
-		Dict("numhidden"=>12, "factors"=>10, "truncation"=>8, "cell"=>"FacMAGRU", "eta"=>0.003725)
-		]
 	
-	FileIO.save("../final_runs/ringworld_online_10.jld2", "args", args_list_hc)
 end
-
-# ╔═╡ 8c60f5fd-0c62-4d1a-b7d8-91b02a14b97d
-f=jldopen("../final_runs/ringworld_online_10_old.jld2", "r")
-
-# ╔═╡ be347bbc-1549-4dcd-add3-1ee3e91a76f7
-begin
-	f__=jldopen("/Users/Vtkachuk/Desktop/Work/Research/Martha White/Matt Schlegel/ActionRNNs.jl/local_data/final_ringworld_online_rmsprop_10/settings/settings_0xed290a678f32f129.jld2", "r")
-	data__ = read(f, keys(f)[1])
-end
-
-# ╔═╡ e510936c-2b38-4669-99ab-29ef6ab3ce16
-begin
-	settings_val = 1
-	for  arg in data__
-		if arg["numhidden"] == 9 && arg["truncation"] == 12 && arg["cell"] == "MAGRU"
-			settings_val = arg
-		end
-	end
-	settings_val
-end
-
-# ╔═╡ a83ddc94-9fa8-4411-a78a-fef19444096e
-data_ = read(f, keys(f)[1])
-
-# ╔═╡ 64919972-1b56-4ba5-b9e5-c7aa247aed85
-color_scheme_ = [
-    colorant"#44AA99",
-    colorant"#332288",
-    colorant"#DDCC77",
-    colorant"#999933",
-    colorant"#CC6677",
-    colorant"#AA4499",
-    colorant"#DDDDDD",
-	colorant"#117733",
-	colorant"#882255",
-	colorant"#1E90FF",
-]
 
 # ╔═╡ 29de4184-0745-4407-8bc3-5bbe1e6869f5
 cell_colors_ = Dict(
@@ -1262,10 +1281,10 @@ end
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
 # ╠═e0d51e67-63dc-45ea-9092-9965f97660b3
 # ╠═fbdbb061-f620-4704-ba0f-9e4d00ddcc8f
-# ╟─0c746c1e-ea39-4415-a1b1-d7124b886f98
+# ╠═0c746c1e-ea39-4415-a1b1-d7124b886f98
 # ╠═55b8266e-f72e-4cdf-a987-5321f1e5d953
 # ╟─94700b85-0982-47e1-9e08-8380dd585cac
-# ╟─e78b5abb-3ee3-48fd-901a-40d49f48f664
+# ╠═e78b5abb-3ee3-48fd-901a-40d49f48f664
 # ╟─92c2600e-58b4-4ea3-8272-3fe38c0422d1
 # ╟─24ccf89f-ab20-447e-9d6f-633380ee8c20
 # ╠═240dc563-fd04-4c07-85ac-4e54ad016374
@@ -1312,6 +1331,7 @@ end
 # ╠═346dd791-4b42-4f7d-a5f6-e6e1032cade9
 # ╠═84edfef4-f525-452b-8f5d-d44e17b93a3b
 # ╠═7cf29ef3-b311-44e8-9036-de788e85cfcc
+# ╠═533a195d-746b-4f28-b811-ff1af27d29c5
 # ╠═6e15e9b9-1bae-43bd-ae4c-408fac574a14
 # ╟─06cec7af-094f-44b4-8e9d-cfacefed52f6
 # ╟─53c68570-f342-4051-9b2d-8f3db95d4427
@@ -1352,7 +1372,7 @@ end
 # ╠═cbe39710-5202-411f-bd42-368de800e5f1
 # ╠═be347bbc-1549-4dcd-add3-1ee3e91a76f7
 # ╠═7002dd0e-01b8-4598-929c-dbff02fb9143
-# ╟─586ba32f-79b6-4c2e-80af-ef2c1224fd31
+# ╠═586ba32f-79b6-4c2e-80af-ef2c1224fd31
 # ╠═92e35913-4eec-47cc-ac8e-48ec0a22533e
 # ╠═d864b0dd-90a3-4e91-9022-8146568575cc
 # ╠═d7ae12f9-ec9d-4d07-83ab-97205ffab69b

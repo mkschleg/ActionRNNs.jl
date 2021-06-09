@@ -430,32 +430,6 @@ begin
 	get_data=(x)->RPU.get_rolling_mean_line(x, :total_steps, 2000))
 end
 
-# ╔═╡ 930746a7-ce5a-45fd-8963-08c9302a9685
-let
-	# plt = nothing
-	plt = plot()
-	plt = plot!(
-		  data_opt_sc2_g_4M_relu_final_steps,
-		  Dict(), label="cell: GRU (nh: 154)",
-			  palette=RPU.custom_colorant, legend=:bottomright, lw=2, z=1, color=cell_colors["GRU"])
-	
-	plt = plot!(
-		  data_opt_sc2_a_4M_relu_final_steps,
-		  Dict(), label="cell: AAGRU (nh: 152)",
-			  palette=RPU.custom_colorant, legend=:bottomright, lw=2, z=1, color=cell_colors["AAGRU"])
-	
-	plt = plot!(
-		  data_opt_sc2_m_4M_relu_final_steps,
-		  Dict(), label="cell: MAGRU (nh: 64)",
-			  palette=RPU.custom_colorant, legend=:bottomright, lw=2, z=1, color=cell_colors["MAGRU"])
-	
-	plt = plot!(
-		  data_opt_sc2_f152_4M_relu_final_steps,
-		  Dict(), label="cell: FacMAGRU (nh: 152, fac: 170",
-			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(0, 500), lw=2, z=1, color=cell_colors["FacMAGRU"], title="Steps: 4M", grid=false, tickdir=:out,)
-	plt
-end
-
 # ╔═╡ dcfd8f8c-ed8d-4b44-bacb-673ff9e05c09
 function get_running_sum_line(ddict, key; n=nothing)
 	if n isa Nothing
@@ -1496,6 +1470,57 @@ Eta: $(@bind eta_dir Select(string.(dd_dir["eta"])))
 Cell: $(@bind cells_dir MultiSelect(dd_dir["cell"]))
 """
 
+# ╔═╡ 90bf6c60-0a64-47d7-b63a-de4fbd82b5e9
+begin 
+	data_sens_g = RPU.get_line_data_for(
+	ic_dir_os6_sc2_gru_4M_relu,
+	["eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+	
+	data_sens_a = RPU.get_line_data_for(
+	ic_dir_os6_sc2_aagru_4M_relu,
+	["eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+	
+	data_sens_m = RPU.get_line_data_for(
+	ic_dir_os6_sc2_magru_4M_relu,
+	["eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+	
+	data_sens_f152 = RPU.get_line_data_for(
+	ic_dir_os6_sc2_facmagru152_4M_relu,
+	["eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+	
+	data_sens_f100 = RPU.get_line_data_for(
+	ic_dir_os6_sc2_facmagru100_4M_relu,
+	["eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+	
+	data_sens_f64 = RPU.get_line_data_for(
+	ic_dir_os6_sc2_facmagru64_4M_relu,
+	["eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+end
+
 # ╔═╡ 2040d613-0ea8-48ce-937c-9180073812ea
 let
 	# plt = nothing
@@ -1527,22 +1552,6 @@ Truncation: $(@bind τ_dir_sens_ Select(string.(dd_dir["truncation"])))
 Cell: $(@bind cells_dir_sens_ MultiSelect(dd_dir["cell"]))
 """
 
-# ╔═╡ 5f70ab7f-f603-4c78-bddd-f60e125211ce
-let
-	# plt = nothing
-	τ = parse(Int, τ_dir_sens_)
-	plt = plot()
-	for cell ∈ cells_dir_sens_
-		plt = plot!(data_sens,
-	 	  Dict("cell"=>cell, "truncation"=>τ);
-	 	  sort_idx="eta",
-		  z=1.97, lw=2, xaxis=:log,
-		  palette=RPU.custom_colorant, label="cell: $(cell)",
-		  color=cell_colors[cell], title="Truncation: $(τ)")
-	end
-	plt
-end
-
 # ╔═╡ 699c81ce-9043-42f4-900f-953128ac1265
 cell_colors_ = Dict(
 	"RNN" => color_scheme_[3],
@@ -1553,6 +1562,53 @@ cell_colors_ = Dict(
 	"AAGRU" => color_scheme_[2],
 	"MAGRU" => color_scheme_[6],
 	"FacMAGRU" => color_scheme_[end-2])
+
+# ╔═╡ 930746a7-ce5a-45fd-8963-08c9302a9685
+let
+	# plt = nothing
+	plt = plot()
+	plt = plot!(
+		  data_opt_sc2_g_4M_relu_final_steps,
+		  Dict(), label="cell: GRU (nh: 154)",
+			  palette=RPU.custom_colorant, legend=:bottomright, lw=2, z=1, color=cell_colors_["GRU"])
+	
+	plt = plot!(
+		  data_opt_sc2_a_4M_relu_final_steps,
+		  Dict(), label="cell: AAGRU (nh: 152)",
+			  palette=RPU.custom_colorant, legend=:bottomright, lw=2, z=1, color=cell_colors_["AAGRU"])
+	
+	plt = plot!(
+		  data_opt_sc2_m_4M_relu_final_steps,
+		  Dict(), label="cell: MAGRU (nh: 64)",
+			  palette=RPU.custom_colorant, legend=:bottomright, lw=2, z=1, color=cell_colors_["MAGRU"], grid=false, tickdir=:out, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, fillalpha=0.3, title="Lunar Lander", ylabel="Steps", xlabel="Episode")
+	
+	plt
+
+	savefig("../data/paper_plots/lunar_lander_er_step_curves_4M_nonfac_cells.pdf")
+end
+
+# ╔═╡ 2f992ed9-e6f1-4b1b-907b-9f2bd0361b04
+let
+	# plt = nothing
+	plt = plot()	
+	plt = plot!(
+		  data_opt_sc2_f152_4M_relu_final_steps,
+		  Dict(), label="cell: FacGRU (nh: 152, fac: 170",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(100, 450), lw=2, z=1, color=cell_colors_["FacMAGRU"], grid=false, tickdir=:out, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, fillalpha=0.3, title="Lunar Lander", ylabel="Steps", xlabel="Episode")
+	
+	plt = plot!(
+		  data_opt_sc2_f100_4M_relu_final_steps,
+		  Dict(), label="cell: FacGRU (nh: 100, fac: 265",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(100, 450), lw=2, z=1, color=cell_colors_["FacMAGRU"], grid=false, tickdir=:out, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, fillalpha=0.3, linestyle=:dot, title="Lunar Lander", ylabel="Steps", xlabel="Episode")
+	
+	plt = plot!(
+		  data_opt_sc2_f64_4M_relu_final_steps,
+		  Dict(), label="cell: FacGRU (nh: 64, fac: 380",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(100, 450), lw=2, z=1, color=cell_colors_["FacMAGRU"], grid=false, tickdir=:out, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, fillalpha=0.3, linestyle=:dash, title="Lunar Lander", ylabel="Steps", xlabel="Episode")
+	plt
+	
+	savefig("../data/paper_plots/lunar_lander_er_step_curves_4M_fac_cells.pdf")
+end
 
 # ╔═╡ 8128d88a-d4f9-405d-a668-5dba0ebfd576
 let
@@ -1632,6 +1688,56 @@ let
 	plt
 end
 
+# ╔═╡ 5f70ab7f-f603-4c78-bddd-f60e125211ce
+let
+	# plt = nothing
+	plt = plot()
+	plt = plot!(data_sens_g,
+	  Dict();
+	  sort_idx="eta",
+	  z=1.97, lw=2, xaxis=:log,
+	  palette=RPU.custom_colorant, label="cell: GRU, (nh: 154)", xlabel="Learning Rate", ylabel="Mean Return (last 10% of episodes)", title="Lunar Lander",
+	  color=cell_colors_["GRU"])
+	
+	plt = plot!(data_sens_a,
+	  Dict();
+	  sort_idx="eta",
+	  z=1.97, lw=2, xaxis=:log,
+	  palette=RPU.custom_colorant, label="cell: AAGRU, (nh: 152)", xlabel="Learning Rate", ylabel="Mean Return (last 10% of episodes)", title="Lunar Lander",
+	  color=cell_colors_["AAGRU"])
+	
+	plt = plot!(data_sens_m,
+	  Dict();
+	  sort_idx="eta",
+	  z=1.97, lw=2, xaxis=:log,
+	  palette=RPU.custom_colorant, label="cell: MAGRU, (nh: 64)", xlabel="Learning Rate", ylabel="Mean Return (last 10% of episodes)", title="Lunar Lander",
+	  color=cell_colors_["MAGRU"])
+	
+	plt = plot!(data_sens_f152,
+	  Dict();
+	  sort_idx="eta",
+	  z=1.97, lw=2, xaxis=:log,
+	  palette=RPU.custom_colorant, label="cell: FacGRU, (nh: 152, fac: 170)", xlabel="Learning Rate", ylabel="Mean Return (last 10% of episodes)", title="Lunar Lander",
+	  color=cell_colors_["FacMAGRU"])
+	
+		plt = plot!(data_sens_f100,
+	  Dict();
+	  sort_idx="eta",
+	  z=1.97, lw=2, xaxis=:log,
+	  palette=RPU.custom_colorant, label="cell: FacGRU, (nh: 100, fac: 265)", xlabel="Learning Rate", ylabel="Mean Return (last 10% of episodes)", title="Lunar Lander", linestyle=:dot,
+	  color=cell_colors_["FacMAGRU"])
+	
+		plt = plot!(data_sens_f64,
+	  Dict();
+	  sort_idx="eta",
+	  z=1.97, lw=2, xaxis=:log,
+	  palette=RPU.custom_colorant, label="cell: FacGRU, (nh: 64, fac: 380)", xlabel="Learning Rate", ylabel="Mean Return (last 10% of episodes)", title="Lunar Lander", linestyle=:dash, ylim=(-400, 550), grid=false, tickdir=:out,
+	  color=cell_colors_["FacMAGRU"], legend=:topright, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15,)
+	
+	plt
+#	savefig("../data/paper_plots/lunar_lander_er_lr_sensitivity_curves_4M_steps.pdf")
+end
+
 # ╔═╡ 84db962e-1192-4a16-8684-5263c0d675c6
 let
 	# plt = nothing
@@ -1654,10 +1760,59 @@ let
 	plt = plot!(
 		  data_opt_sc2_f152_4M_relu_final,
 		  Dict(), label=nothing,
-			  palette=RPU.custom_colorant, legend=nothing, ylim=(-250, 150), lw=3, z=1, color=cell_colors_["FacMAGRU"], grid=false, tickdir=:out, tickfontsize=12, fillalpha=0.4)
+			  palette=RPU.custom_colorant, legend=nothing, ylim=(-250, 150), lw=3, z=1, color=cell_colors_["FacMAGRU"], grid=false, tickdir=:out, tickfontsize=12, fillalpha=0.4, title="Lunar Lander")
 	plt
 	
 #	savefig("../data/paper_plots/lunar_lander_er_learning_curves_4M_steps.pdf")
+end
+
+# ╔═╡ 42995a23-e5be-49b6-a4ea-28eee592ebd0
+let
+	# plt = nothing
+	plt = plot()
+	plt = plot!(
+		  data_opt_sc2_g_4M_relu_final,
+		  Dict(), label="cell: GRU (nh: 154)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-400, 150), ylabel="Total Reward", xlabel="Episode", lw=3, z=1, color=cell_colors_["GRU"], fillalpha=0.3)
+	
+	plt = plot!(
+		  data_opt_sc2_a_4M_relu_final,
+		  Dict(), label="cell: AAGRU (nh: 152)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-400, 150), ylabel="Total Reward", xlabel="Episode", lw=3, z=1, color=cell_colors_["AAGRU"], fillalpha=0.3)
+	
+	plt = plot!(
+		  data_opt_sc2_m_4M_relu_final,
+		  Dict(), label="cell: MAGRU (nh: 64)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylabel="Total Reward", xlabel="Episode", lw=3, z=1, color=cell_colors_["MAGRU"], ylim=(-300, 150), grid=false, tickdir=:out, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, fillalpha=0.3, title="Lunar Lander Non-Factored Cells")
+	
+
+	plt
+	
+	savefig("../data/paper_plots/lunar_lander_er_learning_curves_4M_eps_nonfac_cells.pdf")
+end
+
+# ╔═╡ c9e6f13c-0ab8-405f-a39d-656627384c67
+let
+	# plt = nothing
+	plt = plot()
+	
+	plt = plot(
+		  data_opt_sc2_f152_4M_relu_final,
+		  Dict(), label="cell: FacGRU (nh: 152, fac: 170",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-400, 150), ylabel="Total Reward", xlabel="Episode", lw=3, z=1, color=cell_colors_["FacMAGRU"], fillalpha=0.3)
+	
+	plt = plot!(
+		  data_opt_sc2_f100_4M_relu_final,
+		  Dict(), label="cell: FacGRU (nh: 100, fac: 265)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-400, 150), ylabel="Total Reward", xlabel="Episode", lw=3, z=1, color=cell_colors_["FacMAGRU"], fillalpha=0.3, linestyle=:dot)
+	
+	plt = plot!(
+		  data_opt_sc2_f64_4M_relu_final,
+		  Dict(), label="cell: FacGRU (nh: 64, fac: 380)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-300, 150), lw=3, z=1, color=cell_colors_["FacMAGRU"],  grid=false, tickdir=:out, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, fillalpha=0.3, linestyle=:dash, title="Lunar Lander Factored Cells")
+	plt
+	
+	savefig("../data/paper_plots/lunar_lander_er_learning_curves_4M_eps_fac_cells.pdf")
 end
 
 # ╔═╡ e3f6be18-cae5-4048-a635-f3ab049b8e79
@@ -1681,21 +1836,21 @@ let
 	
 	plt = plot!(
 		  data_opt_sc2_f152_4M_relu_final,
-		  Dict(), label="cell: FacMAGRU (nh: 152, fac: 170",
+		  Dict(), label="cell: FacGRU (nh: 152, fac: 170",
 			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-400, 150), ylabel="Total Reward", xlabel="Episode", lw=3, z=1, color=cell_colors_["FacMAGRU"], fillalpha=0.3)
 	
 	plt = plot!(
 		  data_opt_sc2_f100_4M_relu_final,
-		  Dict(), label="cell: FacMAGRU (nh: 100, fac: 265)",
-			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-400, 150), ylabel="Total Reward", xlabel="Episode", lw=3, z=1, color=cell_colors_["FacMARNN"], fillalpha=0.3)
+		  Dict(), label="cell: FacGRU (nh: 100, fac: 265)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-400, 150), ylabel="Total Reward", xlabel="Episode", lw=3, z=1, color=cell_colors_["FacMAGRU"], fillalpha=0.3, linestyle=:dot)
 	
 	plt = plot!(
 		  data_opt_sc2_f64_4M_relu_final,
-		  Dict(), label="cell: FacMAGRU (nh: 64, fac: 380)",
-			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-300, 150), lw=3, z=1, color=cell_colors_["MARNN"],  grid=false, tickdir=:out, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, fillalpha=0.3)
+		  Dict(), label="cell: FacGRU (nh: 64, fac: 380)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-300, 150), lw=3, z=1, color=cell_colors_["FacMAGRU"],  grid=false, tickdir=:out, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, fillalpha=0.3, linestyle=:dash, title="Lunar Lander")
 	plt
 	
-	#savefig("../data/paper_plots/lunar_lander_er_learning_curves_4M_steps_6_cells.pdf")
+#	savefig("../data/paper_plots/lunar_lander_er_learning_curves_4M_eps_6_cells.pdf")
 end
 
 # ╔═╡ 4581ec85-5931-47ed-92c3-30d69c7ea635
@@ -1742,26 +1897,36 @@ let
 	plt = plot!(
 		  data_opt_sc2_g_4M_relu_final_el_50k_fast,
 		  Dict(), label="cell: GRU, (nh: 154)",
-			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-500, 300), ylabel="Total Reward", xlabel="Steps (10 Thousand)", lw=2, color=cell_colors["GRU"], fillalpha=0.3)
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-500, 300), ylabel="Total Reward", xlabel="Steps (10 Thousand)", lw=3, color=cell_colors_["GRU"], fillalpha=0.3)
 	
 	plt = plot!(
 		  data_opt_sc2_a_4M_relu_final_el_50k_fast,
 		  Dict(), label="cell: AAGRU, (nh: 152)",
-			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-500, 300), ylabel="Total Reward", xlabel="Steps (10 Thousand)", lw=2, color=cell_colors["AAGRU"], fillalpha=0.3)
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-500, 300), ylabel="Total Reward", xlabel="Steps (10 Thousand)", lw=3, color=cell_colors_["AAGRU"], fillalpha=0.3)
 	
 	plt = plot!(
 		  data_opt_sc2_m_4M_relu_final_el_50k_fast,
 		  Dict(), label="cell: MAGRU, (nh: 64)",
-			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-500, 300), ylabel="Total Reward", xlabel="Steps (10 Thousand)", lw=2, title="Lunar Lander MUE, $(ic_dir[1].parsed_args["steps"]) steps", color=cell_colors["MAGRU"], fillalpha=0.3)
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-500, 300), ylabel="Total Reward", xlabel="Steps (10 Thousand)", lw=3, title="Lunar Lander MUE, $(ic_dir[1].parsed_args["steps"]) steps", color=cell_colors_["MAGRU"], fillalpha=0.3)
 	
 	plt = plot!(
 		  data_opt_sc2_f152_4M_relu_final_el_50k_fast,
-		  Dict(), label="cell: FacMAGRU, (nh: 152, fac: 170)",
-			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-300, 170), ylabel="Total Reward", xlabel="Steps (100 Thousand)", lw=2, title="Lunar Lander MUE, 4M steps", color=cell_colors["FacMAGRU"], fillalpha=0.3)
+		  Dict(), label="cell: FacGRU, (nh: 152, fac: 170)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-300, 170), ylabel="Total Reward", xlabel="Steps (100 Thousand)", lw=3, title="Lunar Lander MUE, 4M steps", color=cell_colors_["FacMAGRU"], fillalpha=0.3)
+	
+		plt = plot!(
+		  data_opt_sc2_f100_4M_relu_final_el_50k_fast,
+		  Dict(), label="cell: FacGRU, (nh: 100, fac: 265)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-300, 170), ylabel="Total Reward", xlabel="Steps (100 Thousand)", lw=3, title="Lunar Lander MUE, 4M steps", color=cell_colors_["FacMAGRU"], fillalpha=0.3, linestyle=:dot)
+	
+		plt = plot!(
+		  data_opt_sc2_f64_4M_relu_final_el_50k_fast,
+		  Dict(), label="cell: FacGRU, (nh: 64, fac: 380)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-300, 170), ylabel="Total Reward", xlabel="Steps (100 Thousand)", lw=3, title="Lunar Lander", color=cell_colors_["FacMAGRU"], fillalpha=0.3, linestyle=:dash, grid=false, tickdir=:out, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15,)
 	
 	plt
 	
-
+savefig("../data/paper_plots/lunar_lander_er_learning_curves_4M_steps_6_cells.pdf")
 end
 
 # ╔═╡ Cell order:
@@ -1791,9 +1956,10 @@ end
 # ╠═b2a18bf1-f75a-42b3-a207-78bc4d9e043f
 # ╠═ae4cfd3a-084b-48f2-8a19-421853a189c9
 # ╠═77ded675-c775-4e17-b51f-9084f3ccbb88
-# ╟─c93e55ba-62a3-4f73-b552-7ba90cb4a8fb
+# ╠═c93e55ba-62a3-4f73-b552-7ba90cb4a8fb
 # ╠═6e73dbc1-3615-4a78-8316-6c63aae62606
 # ╠═930746a7-ce5a-45fd-8963-08c9302a9685
+# ╠═2f992ed9-e6f1-4b1b-907b-9f2bd0361b04
 # ╠═dcfd8f8c-ed8d-4b44-bacb-673ff9e05c09
 # ╠═0757a4ec-aea3-4d0a-a5d7-b1ae4953db25
 # ╠═c92d71f5-fbd6-42dc-9938-303745e7a2f2
@@ -1847,11 +2013,14 @@ end
 # ╠═3d8b0b2c-005e-4294-8817-e6bd075a0fb8
 # ╠═55d1416b-d580-4112-827a-30504c21f397
 # ╠═467ed417-cf69-493d-b21c-3fc4d1fb9907
+# ╠═90bf6c60-0a64-47d7-b63a-de4fbd82b5e9
 # ╠═2040d613-0ea8-48ce-937c-9180073812ea
 # ╠═7882977c-4802-4372-ab5b-1e2e45130fed
 # ╟─40cc0919-c56b-401b-83fa-0feb263c44b0
 # ╠═5f70ab7f-f603-4c78-bddd-f60e125211ce
 # ╠═84db962e-1192-4a16-8684-5263c0d675c6
+# ╠═42995a23-e5be-49b6-a4ea-28eee592ebd0
+# ╠═c9e6f13c-0ab8-405f-a39d-656627384c67
 # ╠═e3f6be18-cae5-4048-a635-f3ab049b8e79
 # ╠═699c81ce-9043-42f4-900f-953128ac1265
 # ╠═4581ec85-5931-47ed-92c3-30d69c7ea635
