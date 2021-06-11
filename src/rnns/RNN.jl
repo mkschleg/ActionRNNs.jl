@@ -129,7 +129,9 @@ mutable struct FacMARNNCell{F, A, V, H} <: AbstractActionRNN
 end
 
 # FacMARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
-FacMARNNCell(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
+FacMARNNCell(in, actions, out, factors, activation=tanh;
+             hs_learnable=true, init=Flux.glorot_uniform,
+             initb=Flux.zeros, init_state=Flux.zeros) =
     FacMARNNCell(activation,
                 init(out, factors; ignore_dims=2),
                 init(factors, in),
@@ -174,4 +176,51 @@ end
 
 # Flux.hidden(m::FacMARNNCell) = m.h
 
+mutable struct FacTucMARNNCell{F, T, A, V, H} <: AbstractActionRNN
+    σ::F
+    Wg::T
+    Wa::A
+    Wh::A
+    Wxx::A
+    Wxh::A
+    b::V
+    state0::H
+end
 
+FacTucMARNNCell(in, actions, out, action_factors, out_factors, in_factors,
+                activation=tanh; hs_learnable=true, init=Flux.glorot_uniform,
+                initb=Flux.zeros, init_state=Flux.zeros) =
+    FacTucMARNNCell(activation,
+                init(action_factors, out_factors, in_factors),
+                init(action_factors, actions),
+                init(out_factors, out),
+                init(in_factors, in),
+                init(in_factors, out),
+                initb(out, actions),
+                init_state(out, 1))
+
+FacTucMARNN(args...; kwargs...) = Flux.Recur(FacTucMARNNCell(args...; kwargs...))
+Flux.Recur(m::FacTucMARNNCell) = Flux.Recur(m, m.state0)
+Flux.@functor FacTucMARNNCell
+
+function (m::FacTucMARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{<:Integer, 1},A<:AbstractArray{<:AbstractFloat, 2}}
+
+    Wg, Wa, Wh, Wxx, Wxh, b, σ = m.Wg, m.Wa, m.Wh, m.Wxx, m.Wxh, m.b, m.σ
+
+    a = x[1]
+    o = x[2]
+
+    wgx = tucker_compose(Wg, Wa, Wh, Wxx)
+    wgh = tucker_compose(Wg, Wa, Wh, Wxh)
+
+    wx = contract_WA(wgx, a, o)
+    wh = contract_WA(wgh, a, h)
+    ba = get_waa(b, a)
+
+    new_h = σ.(wx .+ wh .+ ba)
+
+    return new_h, new_h
+end
+
+tucker_compose(Wg, Wa::AbstractMatrix{<:Number}, Wh, Wx) =
+    @tullio ret[i, j, k] := Wg[p, q, r] * Wa[p, i] * Wh[q, j] * Wx[r, k]
