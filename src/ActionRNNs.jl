@@ -21,7 +21,7 @@ include("models/viz_backbone.jl")
 export AARNN, MARNN, FacARNN, reset!, get
 include("rnns.jl")
 
-include("action_dense_layer.jl")
+# include("action_dense_layer.jl")
 # # include("RNN.jl")
 # # include("LSTM.jl")
 # # include("GRU.jl")

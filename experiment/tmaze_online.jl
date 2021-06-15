@@ -28,7 +28,7 @@ function default_config()
         "steps" => 80000,
         "size" => 10,
 
-        "cell" => "MARNN",
+        "cell" => "FacTucMARNN",
         "numhidden" => 15,
         "factors" => 10,
 
