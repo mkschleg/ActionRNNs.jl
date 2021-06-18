@@ -193,7 +193,7 @@ FacTucMARNNCell(in, actions, out, action_factors, out_factors, in_factors,
     FacTucMARNNCell(activation,
                 init(action_factors, out_factors, in_factors),
                 init(action_factors, actions),
-                init(out_factors, out),
+                init(out, out_factors),
                 init(in_factors, in),
                 init(in_factors, out),
                 initb(out, actions),
@@ -210,17 +210,39 @@ function (m::FacTucMARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{
     a = x[1]
     o = x[2]
 
-    wgx = tucker_compose(Wg, Wa, Wh, Wxx)
-    wgh = tucker_compose(Wg, Wa, Wh, Wxh)
+#     wx = contract_tuc(Wg, waa, Wh, Wxx*o)
+#     wh = if size(h, 2) == 1
+#         contract_tuc(Wg, waa, Wh, Wxh*h[:])
+#     else
+#         contract_tuc(Wg, waa, Wh, Wxh*h)
+#     end
 
-    wx = contract_WA(wgx, a, o)
-    wh = contract_WA(wgh, a, h)
+    waa = get_waa(Wa, a)
+    wx = Wh * (contract_Wga(Wg, waa) * (Wxx*o))
+    wh = if size(h, 2) == 1
+        Wh * (contract_Wga(Wg, waa) * (Wxh*h[:]))
+    else
+        Wh * (contract_Wga(Wg, waa) * (Wxh*h))
+    end
     ba = get_waa(b, a)
 
-    new_h = σ.(wx .+ wh .+ ba)
+    new_h = if size(h, 2) == 1
+        reshape(σ.(wx .+ wh .+ ba), :, 1)
+    else
+        σ.(wx .+ wh .+ ba)
+    end
 
     return new_h, new_h
 end
 
-tucker_compose(Wg, Wa::AbstractMatrix{<:Number}, Wh, Wx) =
-    @tullio ret[i, j, k] := Wg[p, q, r] * Wa[p, i] * Wh[q, j] * Wx[r, k]
+contract_Wga(Wg, Wa::AbstractVector{<:Number}) =
+    @tullio ret[q, r] := Wg[p, q, r] * Wa[p]
+
+contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractVector{<:Number}) =
+    @tullio ret[j] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r]
+
+contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractMatrix{<:Number}) =
+    @tullio ret[j, x] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r, x]
+
+# tucker_compose(Wg, Wa::AbstractMatrix{<:Number}, Wh, Wx) =
+#     @tullio ret[i, j, k] := Wg[p, q, r] * Wa[p, i] * Wh[q, j] * Wx[r, k]
