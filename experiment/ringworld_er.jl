@@ -53,6 +53,10 @@ function default_args()
         "cell" => "MARNN",
         "numhidden" => 6,
         "hs_learnable" => true,
+
+        "action_factors" => 2,
+        "out_factors" => 15,
+        "in_factors" => 2,
         
         "outhorde" => "onestep",
         "outgamma" => 0.9,
@@ -93,6 +97,21 @@ function get_model(parsed, out_horde, fc, rng)
             initb = (dims...; kwargs...) -> Flux.zeros(dims...)
             
             Flux.Chain(rnn(fs, 2, nh, factors; init=init_func, initb=initb),
+                       Flux.Dense(nh, num_gvfs; initW=init_func))
+
+        elseif parsed["cell"] ∈ ActionRNNs.fac_tuc_rnn_types()
+
+            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+            action_factors = parsed["action_factors"]
+            out_factors = parsed["out_factors"]
+            in_factors = parsed["in_factors"]
+            init_func = (dims...; kwargs...)->
+                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+            Flux.Chain(rnn(fs, 2, nh, action_factors, out_factors, in_factors;
+                           init=init_func,
+                           initb=initb),
                        Flux.Dense(nh, num_gvfs; initW=init_func))
             
         elseif parsed["cell"] ∈ ActionRNNs.rnn_types()

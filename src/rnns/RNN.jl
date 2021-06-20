@@ -203,12 +203,14 @@ FacTucMARNN(args...; kwargs...) = Flux.Recur(FacTucMARNNCell(args...; kwargs...)
 Flux.Recur(m::FacTucMARNNCell) = Flux.Recur(m, m.state0)
 Flux.@functor FacTucMARNNCell
 
-function (m::FacTucMARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{<:Integer, 1},A<:AbstractArray{<:AbstractFloat, 2}}
+function (m::FacTucMARNNCell)(h, x::Tuple{A, X}) where {A, X}
 
     Wg, Wa, Wh, Wxx, Wxh, b, σ = m.Wg, m.Wa, m.Wh, m.Wxx, m.Wxh, m.b, m.σ
 
     a = x[1]
     o = x[2]
+
+    waa = get_Wabya(Wa, a)
 
 #     wx = contract_tuc(Wg, waa, Wh, Wxx*o)
 #     wh = if size(h, 2) == 1
@@ -217,20 +219,15 @@ function (m::FacTucMARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{
 #         contract_tuc(Wg, waa, Wh, Wxh*h)
 #     end
 
-    waa = get_waa(Wa, a)
-    wx = Wh * (contract_Wga(Wg, waa) * (Wxx*o))
-    wh = if size(h, 2) == 1
-        Wh * (contract_Wga(Wg, waa) * (Wxh*h[:]))
+    wx ,wh = if a isa Int
+        Wh * (contract_Wga(Wg, waa) * (Wxx*o)), Wh * (contract_Wga(Wg, waa) * (Wxh*h[:]))
     else
-        Wh * (contract_Wga(Wg, waa) * (Wxh*h))
+        Wh * contract_Wgax(Wg, waa, Wxx*o), Wh * contract_Wgax(Wg, waa, Wxh*h)
     end
     ba = get_waa(b, a)
 
-    new_h = if size(h, 2) == 1
-        reshape(σ.(wx .+ wh .+ ba), :, 1)
-    else
-        σ.(wx .+ wh .+ ba)
-    end
+    new_h = σ.(wx .+ wh .+ ba)
+    if a isa Int new_h = reshape(new_h , :, 1) end
 
     return new_h, new_h
 end
@@ -238,11 +235,14 @@ end
 contract_Wga(Wg, Wa::AbstractVector{<:Number}) =
     @tullio ret[q, r] := Wg[p, q, r] * Wa[p]
 
-contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractVector{<:Number}) =
-    @tullio ret[j] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r]
+contract_Wgax(Wg, Wa::AbstractMatrix{<:Number}, Wx::AbstractMatrix{<:Number}) =
+    @tullio ret[q, k] := Wg[p, q, r] * Wa[p, k] * Wx[r, k]
 
-contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractMatrix{<:Number}) =
-    @tullio ret[j, x] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r, x]
+# contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractVector{<:Number}) =
+#     @tullio ret[j] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r]
+#
+# contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractMatrix{<:Number}) =
+#     @tullio ret[j, x] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r, x]
 
 # tucker_compose(Wg, Wa::AbstractMatrix{<:Number}, Wh, Wx) =
 #     @tullio ret[i, j, k] := Wg[p, q, r] * Wa[p, i] * Wh[q, j] * Wx[r, k]
