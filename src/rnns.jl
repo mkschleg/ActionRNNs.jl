@@ -2,7 +2,7 @@ using Flux
 # using OMEinsum
 using CUDA, CUDAKernels
 using KernelAbstractions, LoopVectorization
-using OMEinsum
+# using OMEinsum
 using Tullio
 import TensorCore: ⊡
 
@@ -26,10 +26,9 @@ contract_WA(W, a::AbstractVector{Int}, x) = begin
     @tullio ret[i, k] := mid[a[k], i, k]
 end
 
-contract_WA_ein(W, a::Vector{Int}, x) = begin
-    Wa = W[a, :, :]
-    @ein ret[i, k] := Wa[k, i, j] * x[j, k]
-end
+# contract_WA(W, a::Vector{Int}, x) = begin
+#     @tullio ret[i, k] := W[a[k], i, j] * x[j, k]
+# end
 
 
 contract_WA(W, a::Vector{Int}, x::AbstractVector{<:Number}) = begin
