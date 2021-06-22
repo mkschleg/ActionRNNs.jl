@@ -725,11 +725,6 @@ git-tree-sha1 = "f57ac3fd2045b50d3db081663837ac5b4096947e"
 uuid = "929cbde3-209d-540e-8aea-75f648917ca0"
 version = "3.9.0"
 
-[[LRUCache]]
-git-tree-sha1 = "d64a0aff6691612ab9fb0117b0995270871c5dfc"
-uuid = "8ac3fa9e-de4c-5943-b1dc-09c6b5f20637"
-version = "1.3.0"
-
 [[LZO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "e5b909bcf985c5e2605737d2ce278ed791b89be6"
@@ -1364,12 +1359,6 @@ git-tree-sha1 = "efcdfcbb8cf91e859f61011de1621be34b550e69"
 uuid = "7792a7ef-975c-4747-a70f-980b88e8d1da"
 version = "0.1.13"
 
-[[Strided]]
-deps = ["LinearAlgebra", "TupleTools"]
-git-tree-sha1 = "82111d3fe7982756d98e8b6606394efc6bb8df40"
-uuid = "5e0ebb24-38b0-5f93-81fe-25c709ecae67"
-version = "1.1.1"
-
 [[StructArrays]]
 deps = ["Adapt", "DataAPI", "Tables"]
 git-tree-sha1 = "44b3afd37b17422a62aea25f04c1f7e09ce6b07f"
@@ -1428,11 +1417,11 @@ git-tree-sha1 = "1feb45f88d133a655e001435632f019a9a1bcdb6"
 uuid = "62fd8b95-f654-4bbd-a8a5-9c27f68ccd50"
 version = "0.1.1"
 
-[[TensorOperations]]
-deps = ["CUDA", "LRUCache", "LinearAlgebra", "Requires", "Strided", "TupleTools"]
-git-tree-sha1 = "5da1079f1cdfa239a16f7f05b8bb325945dffb7c"
-uuid = "6aa20fa7-93e2-5fca-9bc0-fbd0db3c71a2"
-version = "3.1.0"
+[[TensorToolbox]]
+deps = ["LinearAlgebra", "Test"]
+git-tree-sha1 = "acaa4d6c9018ac00ad3d60cba1609b42ad4625d2"
+uuid = "9c690861-8ade-587a-897e-15364bc6f718"
+version = "1.0.1"
 
 [[Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
@@ -1478,11 +1467,6 @@ deps = ["DiffRules", "LinearAlgebra", "Requires"]
 git-tree-sha1 = "4ecc3cd0744b6e4c68a4e612bfa42290dfbf7d61"
 uuid = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 version = "0.2.13"
-
-[[TupleTools]]
-git-tree-sha1 = "62a7a6cd5a608ff71cecfdb612e67a0897836069"
-uuid = "9d95972d-f1c8-5527-a6e0-b4b365fa01f6"
-version = "1.2.0"
 
 [[URIParser]]
 deps = ["Unicode"]
