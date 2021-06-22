@@ -136,6 +136,15 @@ FacARNNCell(in, actions, out, factors, activation=tanh; hs_learnable=true, init=
                 initb(out, actions),
                 init_state(out, 1))
 
+function FacARNNCell_tensor(in, actions, out, factors, activation=tanh;
+                   init=Flux.glorot_uniform,
+                   initb=Flux.zeros,
+                   init_state=Flux.zeros,
+                   hs_learnable=true) 
+
+
+end
+
 FacARNN(args...; kwargs...) = Flux.Recur(FacARNNCell(args...; kwargs...))
 Flux.Recur(cell::FacARNNCell) = Flux.Recur(cell, cell.state0)
 

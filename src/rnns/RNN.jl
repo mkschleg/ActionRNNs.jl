@@ -2,6 +2,7 @@
 # Sepcifying a action-conditional RNN Cell
 using Flux
 using Tullio
+import TensorToolbox: cp_als
 
 struct AARNNCell{F,A,V,S} <: AbstractActionRNN
     σ::F
@@ -129,28 +130,52 @@ mutable struct FacMARNNCell{F, A, V, H} <: AbstractActionRNN
 end
 
 # FacMARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
-FacMARNNCell(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
+function FacMARNNCell(args...;
+                      init_style="ignore",
+                      kwargs...)
+
+    init_cell_name = "FacMARNNCell_$(init_style)"
+    rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
+    rnn_init(args...; kwargs...)
+    
+end
+
+FacMARNNCell_standard(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
     FacMARNNCell(activation,
-                init(out, factors; ignore_dims=2),
-                init(factors, in),
-                init(factors, out),
-                init(factors, actions),
-                initb(out, actions),
+                 init(out, factors),
+                 init(factors, in),
+                 init(factors, out),
+                 init(factors, actions),
+                 initb(out, actions),
                  init_state(out, 1))
 
-function FacMARNNCell_init2(in, actions, out, factors, activation=tanh;
+FacMARNNCell_ignore(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
+    FacMARNNCell(activation,
+                 init(out, factors; ignore_dims=2),
+                 init(factors, in),
+                 init(factors, out),
+                 init(factors, actions),
+                 initb(out, actions),
+                 init_state(out, 1))
+
+function FacMARNNCell_tensor(in, actions, out, factors, activation=tanh;
                             hs_learnable=true, init=glorot_uniform,
                             initb=Flux.zeros, init_state=Flux.zeros)
-    W = init(actions, out, in)
+    W_t = init(actions, out, in+out)
+    W_d = cp_als(W_t, factors)
+
+    W_a, W_o, W_hi = W_d.fmat
+    W_o .*= W_d.lambda'
     
     FacMARNNCell(activation,
-                init(out, factors; ignore_dims=2),
-                init(factors, in),
-                init(factors, out),
-                init(factors, actions),
-                initb(out, actions),
-                init_state(out, 1))
+                 W_o,
+                 collect(transpose(W_hi[1:in, :])),
+                 collect(transpose(W_hi[(in+1):end, :])),
+                 collect(transpose(W_a)),
+                 initb(out, actions),
+                 init_state(out, 1))
 end
+
 
 FacMARNN(args...; kwargs...) = Flux.Recur(FacMARNNCell(args...; kwargs...))
 Flux.Recur(cell::FacMARNNCell) = Flux.Recur(cell, cell.state0)
