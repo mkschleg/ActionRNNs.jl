@@ -2,13 +2,10 @@
 
 using KernelAbstractions, Tullio
 
+import Zygote: dropgrad
 
 function q_learning_loss(q_t, a_t, r, terminal, γ, q_tp1)
-    target = 0.0f0
-    ignore() do
-        target = r .+ γ*(1-terminal)*maximum(q_tp1)
-    end
-
+    target = dropgrad(r .+ γ*(1-terminal)*maximum(q_tp1))
     return (q_t[a_t] - target)^2
 end
 
@@ -37,7 +34,7 @@ function update!(chain,
     grads = gradient(ps) do
         preds = map(chain, state_seq)
         q_tp1 = dropgrad(preds[end])
-        loss = q_learning_loss(collect(preds[end-1]), action_t, reward, terminal, lu.γ, q_tp1)
+        loss = q_learning_loss(preds[end-1], action_t, reward, terminal, lu.γ, q_tp1)
         ignore() do
             ℒ = loss
         end
