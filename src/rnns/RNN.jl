@@ -163,7 +163,8 @@ FacMARNNCell_ignore(in, actions, out, factors, activation=tanh; hs_learnable=tru
 function FacMARNNCell_tensor(in, actions, out, factors, activation=tanh;
                             hs_learnable=true, init=glorot_uniform,
                             initb=Flux.zeros, init_state=Flux.zeros)
-    W_t = init(actions, out, in+out)
+
+    W_t = init(actions, out, in+out; ignore_dims=1)
     W_d = cp_als(W_t, factors)
 
     W_a, W_o, W_hi = W_d.fmat
