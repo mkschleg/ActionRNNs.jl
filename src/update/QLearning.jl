@@ -42,15 +42,7 @@ function update!(chain,
     end
     
     Flux.reset!(chain)
-    # for weights in Flux.params(chain)
-    #     println(typeof(weights), typeof(grads[weights]), size(weights), chain[2].bias === weights)
-    #     if chain[2].bias === weights
-    #         print(grads[weights])
-    #     end
-    #     if !(grads[weights] === nothing) && !(weights isa Flux.Zeros)
-    #         Flux.update!(opt, weights, grads[weights])
-    #     end
-    # end
+    
     Flux.update!(opt, ps, grads)
     UpdateState(ℒ, grads, Flux.params(chain), opt)
 end
