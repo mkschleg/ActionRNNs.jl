@@ -35,7 +35,7 @@ function (m::AARNNCell)(h, x::Tuple{A, X}) where {A, X}
 
     new_h = σ.(Wi*o .+ get_waa(Wa, a) .+ Wh*h .+ b)
     sz = size(o)
-    return new_h, new_h#reshape(h, :, sz[2:end]...)
+    return new_h, reshape(new_h, :, sz[2:end]...)
 end
 
 Flux.@functor AARNNCell
@@ -97,8 +97,10 @@ function (m::MARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{<:Inte
     ba = get_waa(m.b, a)
 
     new_h = m.σ.(wx .+ wh .+ ba)
+    
+    sz = size(o)
+    return new_h, reshape(new_h, :, sz[2:end]...)
 
-    return new_h, new_h
 end
 
 function Base.show(io::IO, l::MARNNCell)

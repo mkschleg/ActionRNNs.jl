@@ -78,7 +78,7 @@ function get_ann(parsed, fs, env, rng)
             rnn(fs, na, nh;
                 init=init_func,
                 initb=initb),
-            Flux.Dense(nh, na; initW=init_func))
+            Flux.Dense(nh, na; init=init_func))
 
 
     else
@@ -126,7 +126,6 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
         
         env = ActionRNNs.DirectionalTMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
-
 
         logger = ActionRNNs.SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
