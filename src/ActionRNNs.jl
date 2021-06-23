@@ -5,7 +5,7 @@ import Reexport: @reexport
 @reexport using MinimalRLCore
 
 export glorot_uniform, glorot_normal, ExperienceReplay
-include("util.jl")
+include("Utils.jl")
 
 export
     SingleLayer,
@@ -19,10 +19,9 @@ include("models/viz_backbone.jl")
 
 
 export AARNN, MARNN, FacARNN, reset!, get
-include("rnns.jl")
+include("RNNs.jl")
 
 export QLearning, TD, update!
-include("Loss.jl")
 include("Update.jl")
 
 include("ActingPolicy.jl")
