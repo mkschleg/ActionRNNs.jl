@@ -122,7 +122,7 @@ FacMAGRUCell_standard(in, na, out, factors; init = glorot_uniform, initb = Flux.
 
 function FacMAGRUCell_tensor(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros)
 
-    W_t = init(actions, out*3, in+out; ignore_dims=out)
+    W_t = init(na, out*3, in+out; ignore_dims=1)
     W_d = cp_als(W_t, factors)
     
     W_a, W_o, W_hi = W_d.fmat
@@ -132,7 +132,7 @@ function FacMAGRUCell_tensor(in, na, out, factors; init = glorot_uniform, initb 
                  collect(transpose(W_hi[1:in, :])),
                  collect(transpose(W_hi[(in+1):end, :])),
                  collect(transpose(W_a)),
-                 initb(out*3, actions),
+                 initb(out*3, na),
                  init_state(out, 1))
     
 end
