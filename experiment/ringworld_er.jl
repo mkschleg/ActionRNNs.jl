@@ -83,7 +83,7 @@ function get_model(parsed, out_horde, fs, rng)
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         factors = parsed["factors"]
-        init_style = get(parsed, init_style, "ignore")
+        init_style = get(parsed, "init_style", "standard")
 
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
