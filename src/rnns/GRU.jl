@@ -105,13 +105,40 @@ struct FacMAGRUCell{A,V,S}  <: AbstractActionRNN
     state0::S
 end
 
-FacMAGRUCell(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
+function FacMAGRUCell(args...; init_style="standard", kwargs...)
+    init_cell_name = "FacMAGRUCell_$(init_style)"
+    rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
+    ret = rnn_init(args...; kwargs...)
+    println(typeof(ret))
+    ret
+end
+
+
+FacMAGRUCell_standard(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
     FacMAGRUCell(init(out * 3, factors),
                  init(factors, in),
                  init(factors, out),
                  init(factors, na),
                  initb(out * 3, na),
                  init_state(out,1))
+
+function FacMAGRUCell_tensor(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros)
+
+    W_t = init(na, out*3, in+out; ignore_dims=1)
+    W_d = cp_als(W_t, factors)
+    
+    W_a, W_o, W_hi = W_d.fmat
+    W_o .*= W_d.lambda'
+
+    FacMAGRUCell(Float32.(W_o),
+                 Float32.(transpose(W_hi[1:in, :])),
+                 Float32.(transpose(W_hi[(in+1):end, :])),
+                 Float32.(transpose(W_a)),
+                 initb(out*3, na),
+                 init_state(out, 1))
+    
+end
+
 
 
 function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}

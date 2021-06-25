@@ -22,24 +22,40 @@ const FLU = ActionRNNs.FluxUtils
 
 function default_config()
     Dict{String,Any}(
-        "save_dir" => "dir_tmaze_online",
+         "save_dir" => "dir_tmaze_online",
 
-        "seed" => 1,
-        "steps" => 80000,
-        "size" => 6,
+         "seed" => 2,
+         "steps" => 20000,
+         "size" => 10,
 
-        "cell" => "MARNN",
-        "numhidden" => 6,
-        
-        "opt" => "RMSProp",
-        "eta" => 0.0005,
-        "rho" => 0.99,
-        "truncation" => 8,
+         "cell" => "AARNN",
+         "numhidden" => 12,
 
-#         "hs_learnable" => true,
+         "opt" => "RMSProp",
+         "eta" => 0.001,
+         "rho" => 0.99,
+         "truncation" => 12,
 
-        "gamma"=>0.99)
+           "hs_learnable" => true,
 
+         "gamma"=>0.99)
+#         "save_dir" => "dir_tmaze_online",
+#
+#         "seed" => 1,
+#         "steps" => 80000,
+#         "size" => 6,
+#
+#         "cell" => "MARNN",
+#         "numhidden" => 6,
+#
+#         "opt" => "RMSProp",
+#         "eta" => 0.0005,
+#         "rho" => 0.99,
+#         "truncation" => 8,
+#
+# #         "hs_learnable" => true,
+#
+#         "gamma"=>0.99)
 end
 
 function get_ann(parsed, fs, env, rng)
@@ -78,7 +94,7 @@ function get_ann(parsed, fs, env, rng)
             rnn(fs, na, nh;
                 init=init_func,
                 initb=initb),
-            Flux.Dense(nh, na; initW=init_func))
+            Flux.Dense(nh, na; init=init_func))
 
 
     else
@@ -126,7 +142,6 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
         
         env = ActionRNNs.DirectionalTMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
-
 
         logger = ActionRNNs.SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),

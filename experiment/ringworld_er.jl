@@ -44,13 +44,11 @@ function default_args()
         "save_dir" => "ringworld",
 
         "seed" => 1,
-#         "steps" => 200000,
         "steps" => 200000,
         "size" => 6,
 
-        # "features" => "OneHot",
-#         "cell" => "AARNN",
         "cell" => "MARNN",
+        "factors" => 10,
         "numhidden" => 6,
         "hs_learnable" => true,
         
@@ -74,80 +72,50 @@ function default_args()
 
 end
 
-function get_model(parsed, out_horde, fc, rng)
+function get_model(parsed, out_horde, fs, rng)
 
     nh = parsed["numhidden"]
+    na = 2
     init_func = (dims...)->glorot_uniform(rng, dims...)
-    fs = size(fc)
     num_gvfs = length(out_horde)
-    
-    chain = begin
 
-        # if parsed["cell"] == "FacARNN"
-        if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
+    if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
 
-            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
-            factors = parsed["factors"]
-            init_func = (dims...; kwargs...)->
-                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-            
-            Flux.Chain(rnn(fs, 2, nh, factors; init=init_func, initb=initb),
-                       Flux.Dense(nh, num_gvfs; initW=init_func))
-            
-        elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        factors = parsed["factors"]
+        init_style = get(parsed, "init_style", "standard")
 
-            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
-            
-            init_func = (dims...; kwargs...)->
-                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-            
-            m = Flux.Chain(
-                rnn(fs, 2, nh;
-                    init=init_func,
-                    initb=initb),
-                Flux.Dense(nh, num_gvfs; initW=init_func))
-        else
-            
-            rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-            Flux.Chain(rnntype(fs, nh; init=init_func),
-                       Flux.Dense(nh,
-                                  num_gvfs;
-                                  initW=init_func))
-        end
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        Flux.Chain(rnn(fs, na, nh, factors;
+                       init_style=init_style,
+                       init=init_func,
+                       initb=initb),
+                   Flux.Dense(nh, num_gvfs; initW=init_func))
+
+    elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        m = Flux.Chain(
+            rnn(fs, na, nh;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh, num_gvfs; initW=init_func))
+    else
+
+        rnntype = getproperty(Flux, Symbol(parsed["cell"]))
+        Flux.Chain(rnntype(fs, nh; init=init_func),
+                   Flux.Dense(nh,
+                              num_gvfs;
+                              initW=init_func))
     end
-
-    chain
-end
-
-function construct_agent(parsed, rng)
-
-
-    fc = RWU.StandardFeatureCreator{parsed["action_features"]}()
-    fs = size(fc)
-
-    out_horde = RWU.get_horde(parsed, "out")
-
-    chain = get_model(parsed, out_horde, fc, rng)
-    opt = FLU.get_optimizer(parsed)
-
-    ap = ActionRNNs.RandomActingPolicy([0.5, 0.5])
-    τ = parsed["truncation"]
-
-
-    ActionRNNs.PredERAgent(out_horde,
-                           chain,
-                           opt,
-                           τ,
-                           fc,
-                           fs,
-                           1,
-                           parsed["replay_size"],
-                           parsed["warm_up"],
-                           parsed["batch_size"],
-                           ap)
-
 end
 
 function construct_new_agent(parsed, rng)
@@ -156,13 +124,14 @@ function construct_new_agent(parsed, rng)
     fs = size(fc)
 
     out_horde = RWU.get_horde(parsed, "out")
-
-    chain = get_model(parsed, out_horde, fc, rng)
-    opt = FLU.get_optimizer(parsed)
+    τ = parsed["truncation"]
 
     ap = ActionRNNs.RandomActingPolicy([0.5, 0.5])
-    τ = parsed["truncation"]
-    
+
+    opt = FLU.get_optimizer(parsed)
+
+    chain = get_model(parsed, out_horde, fs, rng)
+
     ActionRNNs.DRTDNAgent(out_horde,
                           chain,
                           opt,
