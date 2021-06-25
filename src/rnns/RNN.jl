@@ -171,10 +171,10 @@ function FacMARNNCell_tensor(in, actions, out, factors, activation=tanh;
     W_o .*= W_d.lambda'
     
     FacMARNNCell(activation,
-                 W_o,
-                 collect(transpose(W_hi[1:in, :])),
-                 collect(transpose(W_hi[(in+1):end, :])),
-                 collect(transpose(W_a)),
+                 Float32.(W_o),
+                 Float32.(transpose(W_hi[1:in, :])),
+                 Float32.(transpose(W_hi[(in+1):end, :])),
+                 Float32.(transpose(W_a)),
                  initb(out, actions),
                  init_state(out, 1))
 end

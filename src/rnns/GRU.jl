@@ -108,7 +108,9 @@ end
 function FacMAGRUCell(args...; init_style="standard", kwargs...)
     init_cell_name = "FacMAGRUCell_$(init_style)"
     rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
-    rnn_init(args...; kwargs...)
+    ret = rnn_init(args...; kwargs...)
+    println(typeof(ret))
+    ret
 end
 
 
@@ -128,10 +130,10 @@ function FacMAGRUCell_tensor(in, na, out, factors; init = glorot_uniform, initb 
     W_a, W_o, W_hi = W_d.fmat
     W_o .*= W_d.lambda'
 
-    FacMAGRUCell(W_o,
-                 collect(transpose(W_hi[1:in, :])),
-                 collect(transpose(W_hi[(in+1):end, :])),
-                 collect(transpose(W_a)),
+    FacMAGRUCell(Float32.(W_o),
+                 Float32.(transpose(W_hi[1:in, :])),
+                 Float32.(transpose(W_hi[(in+1):end, :])),
+                 Float32.(transpose(W_a)),
                  initb(out*3, na),
                  init_state(out, 1))
     
