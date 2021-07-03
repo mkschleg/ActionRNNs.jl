@@ -25,6 +25,7 @@ function default_config()
          "save_dir" => "dir_tmaze_online",
 
          "seed" => 2,
+         "init_seed"=>2,
          "steps" => 20000,
          "size" => 10,
 
@@ -36,26 +37,9 @@ function default_config()
          "rho" => 0.99,
          "truncation" => 12,
 
-           "hs_learnable" => true,
+         "hs_learnable" => true,
 
          "gamma"=>0.99)
-#         "save_dir" => "dir_tmaze_online",
-#
-#         "seed" => 1,
-#         "steps" => 80000,
-#         "size" => 6,
-#
-#         "cell" => "MARNN",
-#         "numhidden" => 6,
-#
-#         "opt" => "RMSProp",
-#         "eta" => 0.0005,
-#         "rho" => 0.99,
-#         "truncation" => 8,
-#
-# #         "hs_learnable" => true,
-#
-#         "gamma"=>0.99)
 end
 
 function get_ann(parsed, fs, env, rng)
@@ -141,7 +125,12 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
         rng = Random.MersenneTwister(seed)
         
         env = ActionRNNs.DirectionalTMaze(parsed["size"])
-        agent = construct_agent(env, parsed, rng)
+
+        agent = if "init_seed" ∈ keys(parsed)
+            construct_agent(env, parsed, Random.MersenneTwister(parsed["init_seed"]))
+        else
+            construct_agent(env, parsed, rng)
+        end
 
         logger = ActionRNNs.SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
@@ -152,20 +141,6 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
                 :successes => (rew, steps, success, usa) -> success,
                 :total_steps => (rew, steps, success, usa) -> steps,
                 :l1 => (rew, steps, success, usa) -> usa[:l1]/steps
-            )
-        )
-
-        mi_logger = ActionRNNs.SimpleLogger(
-            (:observation, :action, :reward, :loss, :weights, :gradients),
-            (AbstractArray, Int, Float32, Float32, Any, Any),
-            Dict(
-                :observation=> (observation, action, reward, loss, weights, gradients)
-                ->observation,
-                :action=> (observation, action, reward, loss, weights, gradients) -> action,
-                :reward=> (observation, action, reward, loss, weights, gradients) -> reward,
-                :loss=> (observation, action, reward, loss, weights, gradients) -> loss,
-                :weights => (observation, action, loss, reward, weights, gradients) -> weights,
-                :gradients=> (observation, action, loss, reward, weights, gradients) -> gradients
             )
         )
 
@@ -183,13 +158,6 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
             max_episode_steps = min(max((num_steps - sum(logger[:total_steps])), 2), 10000)
             n = 0
             total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
-#                 println("===================================")
-#                 println("observation: $(s)")
-#                 println("action: $(a.action)")
-#                 println("reward: $(r)")
-#                 println("loss: $(a.update_state.loss)")
-#                 println("weights: $(length(a.update_state.params))")
-#                 println("Grads_Wh: $(size(a.update_state.grads[agent.model[1].cell.Wh]))")
                 if progress
                     pr_suc = if length(logger.data.successes) <= 1000
                         mean(logger.data.successes)
@@ -208,16 +176,13 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
                 if !(a.update_state isa Nothing)
                     usa(a.update_state)
                 end
-                mi_logger(s, a.action, r, a.update_state.loss, a.update_state.params, a.update_state.grads[agent.model[1].cell.Wh])
                 n+=1
             end
             logger(total_rew, steps, success, usa)
             eps += 1
         end
         save_results = logger.data
-        more_info = mi_logger.data
-#         more_info = "test"
-        (;save_results = save_results, more_info = more_info)
+        (;save_results = save_results)
     end
 end
 
