@@ -126,7 +126,7 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
         
         env = ActionRNNs.DirectionalTMaze(parsed["size"])
 
-        agent = if "init_seed" ∈ keys(parsed)
+        agent = if "init_seed" ∈ keys(parsed) && parsed["init_seed"] != parsed["seed"]
             construct_agent(env, parsed, Random.MersenneTwister(parsed["init_seed"]))
         else
             construct_agent(env, parsed, rng)
