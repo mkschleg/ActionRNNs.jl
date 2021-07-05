@@ -1,5 +1,5 @@
 [config]
-save_dir="dir_tmaze_er_fac_rnn_rmsprop_10"
+save_dir="dir_tmaze_er_fac_rnn_init_rmsprop_10"
 exp_file="experiment/dir_tmaze_er.jl"
 exp_module_name = "DirectionalTMazeERExperiment"
 exp_func_name = "main_experiment"
