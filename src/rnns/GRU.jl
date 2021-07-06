@@ -157,6 +157,24 @@ function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
   return h′, reshape(h′, :, sz[2:end]...)
 end
 
+function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
+    o = size(h, 1)
+
+    a = x[1]
+    obs = x[2]
+
+    wa = get_Wabya(m.Wa, a)
+    gx, gh = m.W * (m.Wi*obs .* wa), m.W * (m.Wh*h .* wa)
+    b = get_waa(m.b, a)
+
+    r = σ.(gate(gx, o, 1)  .+ gate(gh, o, 1) .+ gate(b, o, 1))
+    z = σ.(gate(gx, o, 2)  .+ gate(gh, o, 2) .+ gate(b, o, 2))
+    h̃ = tanh.(gate(gx, o, 3) .+ r .* gate(gh, o, 3) .+ gate(b, o, 3))
+    h′ = (1 .- z) .* h̃ .+ z .* h
+    sz = size(obs)
+  return h′, reshape(h′, :, sz[2:end]...)
+end
+
 Flux.@functor FacMAGRUCell
 
 Base.show(io::IO, l::FacMAGRUCell) =
