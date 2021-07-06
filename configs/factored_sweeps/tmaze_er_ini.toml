@@ -12,7 +12,6 @@ arg_iter_type = "iter"
 "size" = 10
 "gamma" = 0.99
 "batch_size" = 4
-"replay_size" = 1000
 "warm_up" = 1000
 "target_update_wait" = 1000
 "hs_learnable" = true
@@ -22,6 +21,7 @@ truncation = 10
 
 [sweep_args]
 "cell" = ["FacMARNN", "FacMAGRU"]
+replay_size = [1000, 5000, 10000]
 "eta" = "0.01*(2.0.^(-11:2:-2))"
 "init_style" = ["standard", "tensor"]
 "numhidden_factors" = [[6, 21], [20, 40]]
