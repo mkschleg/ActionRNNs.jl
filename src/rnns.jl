@@ -50,6 +50,12 @@ contract_Wga(Wg, Wa::AbstractVector{<:Number}) =
 contract_Wgax(Wg, Wa::AbstractMatrix{<:Number}, Wx::AbstractMatrix{<:Number}) =
     @tullio ret[q, k] := Wg[p, q, r] * Wa[p, k] * Wx[r, k]
 
+contract_Wgax(Wg, Wa::AbstractVector{<:Number}, Wx::AbstractVector{<:Number}) =
+    @tullio ret[q] := Wg[p, q, r] * Wa[p] * Wx[r]
+
+ contract_Wgax(Wg, Wa::AbstractVector{<:Number}, Wx::AbstractMatrix{<:Number}) =
+    @tullio ret[q, j] := Wg[p, q, r] * Wa[p] * Wx[r, j]
+
 include("RNNUtil.jl")
 
 
@@ -62,4 +68,4 @@ include("rnns/LSTM.jl")
 # Keep list of all the non-specialized RNN types in ActionRNNs
 rnn_types() = ["AARNN", "MARNN", "AAGRU", "MAGRU", "AALSTM", "MALSTM"]
 fac_rnn_types() = ["FacMARNN", "FacMAGRU"]
-fac_tuc_rnn_types() = ["FacTucMARNN"]
+fac_tuc_rnn_types() = ["FacTucMARNN", "FacTucMAGRU"]

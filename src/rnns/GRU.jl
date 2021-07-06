@@ -174,13 +174,13 @@ struct FacTucMAGRUCell{T,A,V,S}  <: AbstractActionRNN
     state0::S
 end
 
-FacMAGRUCell(in, na, out, factors; action_factors, out_factors, in_factors,
+FacTucMAGRUCell(in, na, out, action_factors, out_factors, in_factors;
              init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
-    FacMAGRUCell(init(action_factors, out_factors * 3, in_factors),
+    FacTucMAGRUCell(init(action_factors, out_factors, in_factors),
                  init(action_factors, na),
-                 init(out * 3, out_factors * 3),
+                 init(out * 3, out_factors),
                  init(in_factors, in),
-                 init(in_factors, out * 3),
+                 init(in_factors, out),
                  initb(out * 3, na),
                  init_state(out,1))
 

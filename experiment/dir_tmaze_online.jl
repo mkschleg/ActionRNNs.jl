@@ -44,11 +44,6 @@ end
 
 function get_ann(parsed, fs, env, rng)
 
-    if "numhidden_factors" ∈ keys(parsed)
-        parsed["numhidden"] = parsed["numhidden_factors"][1]
-        parsed["factors"] = parsed["numhidden_factors"][2]
-    end
-    
     nh = parsed["numhidden"]
     na = length(get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
@@ -62,6 +57,21 @@ function get_ann(parsed, fs, env, rng)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
 
         Flux.Chain(rnn(fs, na, nh, factors;
+                       init=init_func,
+                       initb=initb),
+                   Flux.Dense(nh, na; initW=init_func))
+
+    elseif parsed["cell"] ∈ ActionRNNs.fac_tuc_rnn_types()
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        action_factors = parsed["action_factors"]
+        out_factors = parsed["out_factors"]
+        in_factors = parsed["in_factors"]
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        Flux.Chain(rnn(fs, na, nh, action_factors, out_factors, in_factors;
                        init=init_func,
                        initb=initb),
                    Flux.Dense(nh, na; initW=init_func))
