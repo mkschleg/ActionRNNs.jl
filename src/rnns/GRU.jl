@@ -23,6 +23,7 @@ function (m::AAGRUCell)(h, x::Tuple{A, O}) where {A, O}
     obs = x[2]
 
     gx, gh = m.Wi*obs, m.Wh*h
+
     ga = get_waa(m.Wa, a)
     
     r = σ.(gate(gx, o, 1) .+ gate(ga, o, 1) .+ gate(gh, o, 1) .+ gate(b, o, 1))
@@ -192,7 +193,11 @@ function (m::FacTucMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
     obs = x[2]
 
     waa = get_Wabya(m.Wa, a)
-    gx, gh = m.Wh * contract_Wgax(m.Wg, waa, m.Wxx*obs), m.Wh * contract_Wgax(m.Wg, waa, m.Wxh*h)
+    gx, gh = if a isa Int
+        m.Wh * (contract_Wga(m.Wg, waa) * (m.Wxx*obs)), m.Wh * (contract_Wga(m.Wg, waa) * (m.Wxh*h[:]))
+    else
+        m.Wh * contract_Wgax(m.Wg, waa, m.Wxx*obs), m.Wh * contract_Wgax(m.Wg, waa, m.Wxh*h)
+    end
     b = get_waa(m.b, a)
 
     r = σ.(gate(gx, o, 1)  .+ gate(gh, o, 1) .+ gate(b, o, 1))

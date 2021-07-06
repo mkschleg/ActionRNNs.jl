@@ -50,12 +50,6 @@ contract_Wga(Wg, Wa::AbstractVector{<:Number}) =
 contract_Wgax(Wg, Wa::AbstractMatrix{<:Number}, Wx::AbstractMatrix{<:Number}) =
     @tullio ret[q, k] := Wg[p, q, r] * Wa[p, k] * Wx[r, k]
 
-contract_Wgax(Wg, Wa::AbstractVector{<:Number}, Wx::AbstractVector{<:Number}) =
-    @tullio ret[q] := Wg[p, q, r] * Wa[p] * Wx[r]
-
- contract_Wgax(Wg, Wa::AbstractVector{<:Number}, Wx::AbstractMatrix{<:Number}) =
-    @tullio ret[q, j] := Wg[p, q, r] * Wa[p] * Wx[r, j]
-
 include("RNNUtil.jl")
 
 
