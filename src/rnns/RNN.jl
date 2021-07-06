@@ -219,7 +219,7 @@ function (m::FacTucMARNNCell)(h, x::Tuple{A, X}) where {A, X}
 #         contract_tuc(Wg, waa, Wh, Wxh*h)
 #     end
 
-    wx ,wh = if a isa Int
+    wx, wh = if a isa Int
         Wh * (contract_Wga(Wg, waa) * (Wxx*o)), Wh * (contract_Wga(Wg, waa) * (Wxh*h[:]))
     else
         Wh * contract_Wgax(Wg, waa, Wxx*o), Wh * contract_Wgax(Wg, waa, Wxh*h)
@@ -231,12 +231,6 @@ function (m::FacTucMARNNCell)(h, x::Tuple{A, X}) where {A, X}
 
     return new_h, new_h
 end
-
-contract_Wga(Wg, Wa::AbstractVector{<:Number}) =
-    @tullio ret[q, r] := Wg[p, q, r] * Wa[p]
-
-contract_Wgax(Wg, Wa::AbstractMatrix{<:Number}, Wx::AbstractMatrix{<:Number}) =
-    @tullio ret[q, k] := Wg[p, q, r] * Wa[p, k] * Wx[r, k]
 
 # contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractVector{<:Number}) =
 #     @tullio ret[j] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r]
