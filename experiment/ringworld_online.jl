@@ -49,7 +49,7 @@ function default_args()
         "cell" => "FacMARNN",
 #         "cell" => "MAGRU",
         "numhidden" => 15,
-        "numhidden_factors" => [15, 15],
+        "factors" => 15,
         # TODO: the hs_learnable parameter should not be necessary and should be removed
         "hs_learnable" => true,
         
@@ -70,12 +70,8 @@ end
 
 function get_model(parsed, out_horde, fc, rng)
 
-    if "numhidden_factors" ∈ keys(parsed)
-        parsed["numhidden"] = parsed["numhidden_factors"][1]
-        parsed["factors"] = parsed["numhidden_factors"][2]
-    end
-
     nh = parsed["numhidden"]
+    na = 2
     init_func = (dims...)->glorot_uniform(rng, dims...)
     fs = size(fc)
     num_gvfs = length(out_horde)
@@ -85,19 +81,18 @@ function get_model(parsed, out_horde, fc, rng)
 
             rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
             factors = parsed["factors"]
+            init_style = get(parsed, "init_style", "standard")
+
             init_func = (dims...; kwargs...)->
                 ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
             initb = (dims...; kwargs...) -> Flux.zeros(dims...)
 
-            Flux.Chain(rnn(fs, 2, nh, factors;
+            Flux.Chain(rnn(fs, na, nh, factors;
+                           init_style=init_style,
                            init=init_func,
                            initb=initb),
                        Flux.Dense(nh, num_gvfs; initW=init_func))
-#         if parsed["cell"] == "FacARNN"
-#
-#             factors = parsed["factors"]
-#             Flux.Chain(ActionRNNs.FacARNN(fs, 2, nh, factors,; init=init_func),
-#                        Flux.Dense(nh, num_gvfs; initW=init_func))
+
         elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
             rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
@@ -107,7 +102,7 @@ function get_model(parsed, out_horde, fc, rng)
             initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
             m = Flux.Chain(
-                rnn(fs, 2, nh;
+                rnn(fs, na, nh;
                     init=init_func,
                     initb=initb),
                 Flux.Dense(nh, num_gvfs; initW=init_func))

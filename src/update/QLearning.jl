@@ -2,10 +2,11 @@
 using CUDA, CUDAKernels, KernelAbstractions
 using LoopVectorization, Tullio
 
+import Zygote: dropgrad
 
 function q_learning_loss(q_t, a_t, r, terminal, γ, q_tp1)
     target = dropgrad(r .+ γ*(1-terminal)*maximum(q_tp1))
-    return (q_t[a_t] - target).^2
+    return (q_t[a_t] - target)^2
 end
 
 struct QLearning{F} <: ControlUpdate
@@ -28,8 +29,9 @@ function update!(chain,
 
     ℒ = 0.0f0
     reset!(chain, h_init)
+    ps = Flux.params(chain)
 
-    grads = gradient(Flux.params(chain)) do
+    grads = gradient(ps) do
         preds = map(chain, state_seq)
         q_tp1 = dropgrad(preds[end])
         loss = q_learning_loss(preds[end-1], action_t, reward, terminal, lu.γ, q_tp1)
@@ -40,12 +42,8 @@ function update!(chain,
     end
     
     Flux.reset!(chain)
-    for weights in Flux.params(chain)
-        if !(grads[weights] === nothing) && !(weights isa Flux.Zeros)
-            Flux.update!(opt, weights, grads[weights])
-        end
-    end
-
+    
+    Flux.update!(opt, ps, grads)
     UpdateState(ℒ, grads, Flux.params(chain), opt)
 end
 

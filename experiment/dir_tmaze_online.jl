@@ -22,24 +22,24 @@ const FLU = ActionRNNs.FluxUtils
 
 function default_config()
     Dict{String,Any}(
-        "save_dir" => "dir_tmaze_online",
+         "save_dir" => "dir_tmaze_online",
 
-        "seed" => 1,
-        "steps" => 80000,
-        "size" => 6,
+         "seed" => 2,
+         "init_seed"=>2,
+         "steps" => 20000,
+         "size" => 10,
 
-        "cell" => "MARNN",
-        "numhidden" => 6,
-        
-        "opt" => "RMSProp",
-        "eta" => 0.0005,
-        "rho" => 0.99,
-        "truncation" => 8,
+         "cell" => "AARNN",
+         "numhidden" => 12,
 
-#         "hs_learnable" => true,
+         "opt" => "RMSProp",
+         "eta" => 0.001,
+         "rho" => 0.99,
+         "truncation" => 12,
 
-        "gamma"=>0.99)
+         "hs_learnable" => true,
 
+         "gamma"=>0.99)
 end
 
 function get_ann(parsed, fs, env, rng)
@@ -57,11 +57,14 @@ function get_ann(parsed, fs, env, rng)
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         factors = parsed["factors"]
+        init_style = get(parsed, "init_style", "standard")
+
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
 
         Flux.Chain(rnn(fs, na, nh, factors;
+                       init_style=init_style,
                        init=init_func,
                        initb=initb),
                    Flux.Dense(nh, na; initW=init_func))
@@ -78,7 +81,7 @@ function get_ann(parsed, fs, env, rng)
             rnn(fs, na, nh;
                 init=init_func,
                 initb=initb),
-            Flux.Dense(nh, na; initW=init_func))
+            Flux.Dense(nh, na; init=init_func))
 
 
     else
@@ -125,8 +128,12 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
         rng = Random.MersenneTwister(seed)
         
         env = ActionRNNs.DirectionalTMaze(parsed["size"])
-        agent = construct_agent(env, parsed, rng)
 
+        agent = if "init_seed" ∈ keys(parsed) && parsed["init_seed"] != parsed["seed"]
+            construct_agent(env, parsed, Random.MersenneTwister(parsed["init_seed"]))
+        else
+            construct_agent(env, parsed, rng)
+        end
 
         logger = ActionRNNs.SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),

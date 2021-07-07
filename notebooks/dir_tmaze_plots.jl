@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.2
+# v0.14.8
 
 using Markdown
 using InteractiveUtils
@@ -33,7 +33,7 @@ color_scheme = [
     colorant"#DDDDDD",
 	colorant"#117733",
 	colorant"#882255",
-	colorant"#88CCEE",
+	colorant"#1E90FF",
 ]
 
 # ╔═╡ 1886bf05-f4be-4160-b61c-edf186a7f3cb
@@ -42,11 +42,11 @@ push!(RPU.stats_plot_types, :dotplot)
 # ╔═╡ fe50ffef-b691-47b5-acf8-8378fbf860a1
 cell_colors = Dict(
 	"RNN" => color_scheme[3],
-	"AARNN" => color_scheme[1],
+	"AARNN" => color_scheme[end],
 	"MARNN" => color_scheme[5],
-	"FacMARNN" => color_scheme[end-1],
+	"FacMARNN" => color_scheme[1],
 	"GRU" => color_scheme[4],
-	"AAGRU" => color_scheme[end],
+	"AAGRU" => color_scheme[2],
 	"MAGRU" => color_scheme[6],
 	"FacMAGRU" => color_scheme[end-2])
 
@@ -338,8 +338,8 @@ end
 # ╔═╡ 2dbcb518-2fda-44c4-bfc0-b422a8da9c35
 let
 	args_list = [
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10),
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU", "factors"=>10)]
+		Dict("numhidden"=>15, "replay_size"=>10000, "cell"=>"FacMARNN", "factors"=>10),
+		Dict("numhidden"=>15, "replay_size"=>10000, "cell"=>"FacMAGRU", "factors"=>10)]
 	boxplot(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
 	dotplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
 	args_list_l = [
@@ -414,6 +414,66 @@ let
 		dotplot!(data_fac_adam_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
 end
 
+# ╔═╡ 7333fe0d-02fe-4d74-9427-95826c485334
+ic_20, dd_20 = RPU.load_data("../local_data/dir_tmaze_er_rnn_rmsprop_10_20k/")
+
+# ╔═╡ 72a17826-a498-4cd5-9523-d20a1bab5c30
+data_10_dist_20 = RPU.get_line_data_for(
+	ic_20,
+	["cell"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ 55e67b77-bd4f-4841-aa16-81d5630a0f0a
+let
+	plt = plot()
+	# args_list = [
+	# 	Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10)]
+	# violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
+	# boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
+
+	args_list_l = [
+		Dict("cell"=>"GRU"),
+		Dict("cell"=>"AAGRU"),
+		Dict("cell"=>"MAGRU")]
+	violin!(data_10_dist_20, args_list_l; label_idx="cell",
+				color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :), linecolor=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
+	boxplot!(data_10_dist_20, args_list_l; 
+		label_idx="cell", 
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
+		legend=false, lw=2, ylims=(0.4, 1.0), tickdir=:out, grid=false, linecolor=:black, fillalpha=0.75)
+
+	args_list = [Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU", "factors"=>10)]
+	
+		violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMAGRU"]], linecolor = [cell_colors["FacMAGRU"]])
+	boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
+	
+	args_list_l = [		
+		Dict("cell"=>"RNN"),
+		Dict("cell"=>"AARNN"),
+		Dict("cell"=>"MARNN")]
+	violin!(data_10_dist_20, args_list_l; label_idx="cell",
+				color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :), linecolor=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
+	boxplot!(data_10_dist_20, args_list_l; 
+		label_idx="cell", 
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
+		legend=false, lw=2, ylims=(0.4, 1.0), tickdir=:out, grid=false, linecolor=:black, fillalpha=0.75)
+	
+	
+	args_list = [Dict("numhidden"=>20, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10)]
+	
+	violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"]], linecolor = [cell_colors["FacMARNN"]])
+	boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
+	
+	savefig("../plots/dir_tmaze_20k_buffer.pdf")
+	plt
+	# dotplot!(data_10_dist, args_list_l; 
+	# 	label_idx="cell", 
+	# 	color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
+end
+
 # ╔═╡ Cell order:
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
 # ╠═e0d51e67-63dc-45ea-9092-9965f97660b3
@@ -458,3 +518,6 @@ end
 # ╠═4480eb51-352d-49ff-8181-96e6bf03cab3
 # ╠═8500402b-28aa-41ed-96d7-450903bc90d0
 # ╠═20e3d6d4-bec8-4a42-8e5c-01c6f60600d7
+# ╠═7333fe0d-02fe-4d74-9427-95826c485334
+# ╠═72a17826-a498-4cd5-9523-d20a1bab5c30
+# ╠═55e67b77-bd4f-4841-aa16-81d5630a0f0a

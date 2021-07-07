@@ -105,7 +105,16 @@ struct FacMAGRUCell{A,V,S}  <: AbstractActionRNN
     state0::S
 end
 
-FacMAGRUCell(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
+function FacMAGRUCell(args...; init_style="standard", kwargs...)
+    init_cell_name = "FacMAGRUCell_$(init_style)"
+    rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
+    ret = rnn_init(args...; kwargs...)
+    println(typeof(ret))
+    ret
+end
+
+
+FacMAGRUCell_standard(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
     FacMAGRUCell(init(out * 3, factors),
                  init(factors, in),
                  init(factors, out),
@@ -113,6 +122,39 @@ FacMAGRUCell(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, in
                  initb(out * 3, na),
                  init_state(out,1))
 
+function FacMAGRUCell_tensor(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros)
+
+    W_t = init(na, out*3, in+out; ignore_dims=1)
+    W_d = cp_als(W_t, factors)
+    
+    W_a, W_o, W_hi = W_d.fmat
+    W_o .*= W_d.lambda'
+
+    FacMAGRUCell(Float32.(W_o),
+                 Float32.(transpose(W_hi[1:in, :])),
+                 Float32.(transpose(W_hi[(in+1):end, :])),
+                 Float32.(transpose(W_a)),
+                 initb(out*3, na),
+                 init_state(out, 1))
+    
+end
+
+
+# function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
+#     o = size(h, 1)
+#
+#     a = x[1]
+#     obs = x[2]
+#
+#     g = m.W * ((m.Wi*obs .+ m.Wh*h) .* get_Wabya(m.Wa, a)) .+ get_waa(m.b, a)
+#
+#     r = σ.(gate(g, o, 1))
+#     z = σ.(gate(g, o, 2))
+#     h̃ = tanh.(gate(g, o, 3))
+#     h′ = (1 .- z) .* h̃ .+ z .* h
+#     sz = size(obs)
+#   return h′, reshape(h′, :, sz[2:end]...)
+# end
 
 function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
     o = size(h, 1)
@@ -120,11 +162,13 @@ function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
     a = x[1]
     obs = x[2]
 
-    g = m.W * ((m.Wi*obs .+ m.Wh*h) .* get_Wabya(m.Wa, a)) .+ get_waa(m.b, a)
-    
-    r = σ.(gate(g, o, 1))
-    z = σ.(gate(g, o, 2))
-    h̃ = tanh.(gate(g, o, 3))
+    wa = get_Wabya(m.Wa, a)
+    gx, gh = m.W * (m.Wi*obs .* wa), m.W * (m.Wh*h .* wa)
+    b = get_waa(m.b, a)
+
+    r = σ.(gate(gx, o, 1)  .+ gate(gh, o, 1) .+ gate(b, o, 1))
+    z = σ.(gate(gx, o, 2)  .+ gate(gh, o, 2) .+ gate(b, o, 2))
+    h̃ = tanh.(gate(gx, o, 3) .+ r .* gate(gh, o, 3) .+ gate(b, o, 3))
     h′ = (1 .- z) .* h̃ .+ z .* h
     sz = size(obs)
   return h′, reshape(h′, :, sz[2:end]...)

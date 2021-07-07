@@ -33,7 +33,7 @@ color_scheme = [
     colorant"#DDDDDD",
 	colorant"#117733",
 	colorant"#882255",
-	colorant"#88CCEE",
+	colorant"#1E90FF",
 ]
 
 # ╔═╡ 1886bf05-f4be-4160-b61c-edf186a7f3cb
@@ -42,11 +42,11 @@ push!(RPU.stats_plot_types, :dotplot)
 # ╔═╡ fe50ffef-b691-47b5-acf8-8378fbf860a1
 cell_colors = Dict(
 	"RNN" => color_scheme[3],
-	"AARNN" => color_scheme[1],
+	"AARNN" => color_scheme[end],
 	"MARNN" => color_scheme[5],
-	"FacMARNN" => color_scheme[end-1],
+	"FacMARNN" => color_scheme[1],
 	"GRU" => color_scheme[4],
-	"AAGRU" => color_scheme[end],
+	"AAGRU" => color_scheme[2],
 	"MAGRU" => color_scheme[6],
 	"FacMAGRU" => color_scheme[end-2])
 
@@ -79,7 +79,7 @@ data_10 = RPU.get_line_data_for(
 	["eta"];
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 300))
+	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 500))
 
 # ╔═╡ 467ed417-cf69-493d-b21c-3fc4d1fb9907
 md"""
@@ -98,7 +98,7 @@ let
 		plt = plot!(
 			  data_10,
 			  Dict("numhidden"=>nh, "truncation"=>τ, "cell"=>cell),
-			  palette=RPU.custom_colorant, legend=:topleft)
+			  palette=RPU.custom_colorant, legend=:bottomright, lw=1)
 	end
 	plt
 end
@@ -280,14 +280,14 @@ let
 		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"RNN"),
 		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AARNN"),
 		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MARNN")]
-	boxplot(data_10_dist, args_list_l;
+	
+	violin(data_10_dist, args_list_l, label_idx="cell", legend=false, color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :), lw=2, linecolor=:black)
+	boxplot!(data_10_dist, args_list_l;
 		label_idx="cell",
 		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_10_dist, args_list_l;
-		label_idx="cell",
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+		legend=false, ylims=(0.3, 1.0), fillalpha=0.75, outliers=false, lw=2, linecolor=:black, tickfontsize=11, grid=false, tickdir=:out, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="TMaze Online")
+	dotplot!(data_10_dist, args_list_l, label_idx="cell", color=:black, tickdir=:out, grid=false)
+savefig("../data/paper_plots/tmaze_online_violin_and_box_plots_300k_steps_MUE_tau_12.pdf")
 end
 
 # ╔═╡ 305f8ac8-8f5f-4ec4-84a6-867f69a8887c
@@ -356,9 +356,9 @@ end
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
 # ╠═e0d51e67-63dc-45ea-9092-9965f97660b3
 # ╠═e53d7b29-788c-469c-9d44-573f996fa5e7
-# ╟─0c746c1e-ea39-4415-a1b1-d7124b886f98
+# ╠═0c746c1e-ea39-4415-a1b1-d7124b886f98
 # ╟─1886bf05-f4be-4160-b61c-edf186a7f3cb
-# ╟─fe50ffef-b691-47b5-acf8-8378fbf860a1
+# ╠═fe50ffef-b691-47b5-acf8-8378fbf860a1
 # ╟─834b1cf3-5b22-4e0a-abe9-61e427e6cfda
 # ╠═eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
 # ╠═eab5c7a0-8052-432d-977e-68b967baf5ca

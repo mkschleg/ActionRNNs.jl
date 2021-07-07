@@ -1,5 +1,5 @@
 [config]
-save_dir="ringworld_fac_er_rmsprop_10"
+save_dir="ringworld_fac_er_rmsprop_10_marnn"
 exp_file="experiment/ringworld_er.jl"
 exp_module_name = "RingWorldERExperiment"
 exp_func_name = "main_experiment"
@@ -27,5 +27,5 @@ update_freq = 4
 cell = ["FacMARNN"]
 eta = "0.1 .* 1.6 .^(-16:3:-2)"
 truncation = [1, 2, 4, 6, 10, 15]
-numhidden_factors = [[3, 2], [6, 3], [9, 5], [12, 6], [15, 8], [17, 9], [20, 10]]
+numhidden_factors = [[3, 3], [6, 6], [9, 9], [12, 12], [15, 15], [17, 17], [20, 20]]
 seed = "1:20"

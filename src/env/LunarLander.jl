@@ -53,19 +53,16 @@ function MinimalRLCore.get_state(env::LunarLander) # -> get state of agent
             0.0f0
         end
     end
+    if 2 in env.state_conditions
+        @assert !(5 in env.omit_states)
+        observation[5] = if -0.2356 < observation[5] < 0.2356
+            1.0f0
+        else
+            0.0f0
+        end
+    end
     observation
-#     y = pystate[2]
-#
-#     ang = if -0.05 < pystate[5] < 0.05
-#         1.0f0
-#     else
-#         0.0f0
-#     end
-#
-#     left_bumper = pystate[end-1]
-#     right_bumper = pystate[end]
-#
-#     [x_in, y, ang, left_bumper, right_bumper]
+
 end
 
 MinimalRLCore.environment_step!(env::LunarLander, action, rng=Random.GLOBAL_RNG) =
