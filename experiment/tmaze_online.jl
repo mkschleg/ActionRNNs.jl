@@ -26,15 +26,20 @@ function default_config()
 
         "seed" => 1,
         "steps" => 80000,
-        "size" => 6,
+        "size" => 10,
 
-        "cell" => "MARNN",
-        "numhidden" => 6,
+        "cell" => "FacTucMARNN",
+        "numhidden" => 15,
+        "factors" => 10,
+
+        "action_factors" => 4,
+        "out_factors" => 15,
+        "in_factors" => 15,
         
         "opt" => "RMSProp",
         "eta" => 0.0005,
         "rho" => 0.99,
-        "truncation" => 8,
+        "truncation" => 12,
 
 #         "hs_learnable" => true,
 
@@ -48,14 +53,33 @@ function get_ann(parsed, fs, env, rng)
     na = length(get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
 
-    if parsed["cell"] == "FacARNN"
+    if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
 
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         factors = parsed["factors"]
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
 
-        Flux.Chain(ActionRNNs.FacARNN(fs, na, nh, factors;
-                                      init=init_func,
-                                      initb=init_func),
-                   Flux.Dense(nh, length(get_actions(env)); initW=init_func))
+        Flux.Chain(rnn(fs, na, nh, factors;
+                       init=init_func,
+                       initb=initb),
+                   Flux.Dense(nh, na; initW=init_func))
+
+    elseif parsed["cell"] ∈ ActionRNNs.fac_tuc_rnn_types()
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        action_factors = parsed["action_factors"]
+        out_factors = parsed["out_factors"]
+        in_factors = parsed["in_factors"]
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        Flux.Chain(rnn(fs, na, nh, action_factors, out_factors, in_factors;
+                       init=init_func,
+                       initb=initb),
+                   Flux.Dense(nh, na; initW=init_func))
 
     elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
@@ -65,20 +89,17 @@ function get_ann(parsed, fs, env, rng)
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
 
-        m = Flux.Chain(
-            rnn(fs, na, nh;
+        Flux.Chain(rnn(fs, na, nh;
                 init=init_func,
                 initb=initb),
-            Flux.Dense(nh, length(get_actions(env)); initW=init_func))
+            Flux.Dense(nh, na; initW=init_func))
 
 
     else
 
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
         Flux.Chain(rnntype(fs, nh; init=init_func),
-                   Flux.Dense(nh,
-                              length(get_actions(env));
-                              initW=init_func))
+                   Flux.Dense(nh, na; initW=init_func))
     end
 
 end

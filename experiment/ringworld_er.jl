@@ -51,6 +51,10 @@ function default_args()
         "factors" => 10,
         "numhidden" => 6,
         "hs_learnable" => true,
+
+        "action_factors" => 2,
+        "out_factors" => 15,
+        "in_factors" => 2,
         
         "outhorde" => "onestep",
         "outgamma" => 0.9,
@@ -79,44 +83,64 @@ function get_model(parsed, out_horde, fs, rng)
     init_func = (dims...)->glorot_uniform(rng, dims...)
     num_gvfs = length(out_horde)
 
-    if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
+    chain = begin
+        if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
 
-        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
-        factors = parsed["factors"]
-        init_style = get(parsed, "init_style", "standard")
+            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+            factors = parsed["factors"]
+            init_style = get(parsed, "init_style", "standard")
 
-        init_func = (dims...; kwargs...)->
-            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+            init_func = (dims...; kwargs...)->
+                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+            
+            Flux.Chain(rnn(fs, na, nh, factors;
+                           init_style=init_style,
+                           init=init_func,
+                           initb=initb),
+                       Flux.Dense(nh, num_gvfs; initW=init_func))
 
-        Flux.Chain(rnn(fs, na, nh, factors;
-                       init_style=init_style,
-                       init=init_func,
-                       initb=initb),
-                   Flux.Dense(nh, num_gvfs; initW=init_func))
+        elseif parsed["cell"] ∈ ActionRNNs.fac_tuc_rnn_types()
 
-    elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
+            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+            action_factors = parsed["action_factors"]
+            out_factors = parsed["out_factors"]
+            in_factors = parsed["in_factors"]
+            init_func = (dims...; kwargs...)->
+                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
 
-        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+            Flux.Chain(rnn(fs, na, nh, action_factors, out_factors, in_factors;
+                           init=init_func,
+                           initb=initb),
+                       Flux.Dense(nh, num_gvfs; initW=init_func))
+            
+        elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
-        init_func = (dims...; kwargs...)->
-            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-
-        m = Flux.Chain(
-            rnn(fs, na, nh;
-                init=init_func,
-                initb=initb),
-            Flux.Dense(nh, num_gvfs; initW=init_func))
-    else
-
-        rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-        Flux.Chain(rnntype(fs, nh; init=init_func),
-                   Flux.Dense(nh,
-                              num_gvfs;
-                              initW=init_func))
+            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+            
+            init_func = (dims...; kwargs...)->
+                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+            
+            m = Flux.Chain(
+                rnn(fs, 2, nh;
+                    init=init_func,
+                    initb=initb),
+                Flux.Dense(nh, num_gvfs; initW=init_func))
+        else
+            
+            rnntype = getproperty(Flux, Symbol(parsed["cell"]))
+            Flux.Chain(rnntype(fs, nh; init=init_func),
+                       Flux.Dense(nh,
+                                  num_gvfs;
+                                  initW=init_func))
+        end
     end
+
+    chain
 end
+
 
 function construct_new_agent(parsed, rng)
 
