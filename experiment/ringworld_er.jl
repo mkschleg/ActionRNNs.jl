@@ -86,8 +86,6 @@ function get_model(parsed, out_horde, fc, rng)
     num_gvfs = length(out_horde)
     
     chain = begin
-
-        # if parsed["cell"] == "FacARNN"
         if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
 
             rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
