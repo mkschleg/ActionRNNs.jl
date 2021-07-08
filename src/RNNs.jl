@@ -1,5 +1,6 @@
 using Flux
 # using OMEinsum
+using CUDA, CUDAKernels
 using KernelAbstractions, LoopVectorization
 # using OMEinsum
 using Tullio

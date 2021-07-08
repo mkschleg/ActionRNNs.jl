@@ -67,11 +67,14 @@ function get_ann(parsed, fs, env, rng)
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         factors = parsed["factors"]
+        init_style = get(parsed, "init_style", "standard")
+
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
         rnn(es, na, nh, factors;
+            init_style=init_style,
             init=init_func,
             initb=initb)
         
@@ -122,7 +125,7 @@ function construct_agent(env, parsed, rng)
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed, fs, env, rng) |> gpu
+    chain = get_ann(parsed, fs, env, rng)# |> gpu
 
     ActionRNNs.DRQNAgent(chain,
                          opt,
