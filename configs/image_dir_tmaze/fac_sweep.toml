@@ -1,5 +1,5 @@
 [config]
-save_dir="image_dir_tmaze_adam_6"
+save_dir="image_dir_tmaze_adam_6_init"
 exp_file="experiment/viz_dir_tmaze.jl"
 exp_module_name = "VisualDirectionalTMazeERExperiment"
 exp_func_name = "main_experiment"
@@ -26,6 +26,7 @@ arg_iter_type = "iter"
 
 [sweep_args]
 "eta" = "(2.0.^(-20:2:-4))"
+"init_style" = ["tensor", "standard"]
 "truncation" = [10, 12]
 "numhidden_factors" = [[32, 259], [64, 350], [70, 164], [132, 208]]
 "seed" = "1:5"

@@ -30,6 +30,7 @@ function default_config()
 
 
         "cell" => "MAGRU",
+        "init_style" => "standard",
         "numhidden" => 64,
         "latent_size" => 128,
         "output_size" => 128,
@@ -69,12 +70,15 @@ function get_ann(parsed, image_dims, env, rng)
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         factors = parsed["factors"]
+        init_style = get(parsed, "init_style", "standard")
+        
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
         Flux.Chain(cl, Flux.flatten, Flux.Dense(fs, latent_size, Flux.relu; initW=init_func),
                    rnn(latent_size, na, nh, factors;
+                       init_style=init_style,
                        init=init_func,
                        initb=initb),
                    Flux.Dense(nh, na; initW=init_func))
