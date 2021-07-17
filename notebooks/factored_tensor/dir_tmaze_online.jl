@@ -45,7 +45,10 @@ cell_colors = Dict(
 push!(RPU.stats_plot_types, :dotplot)
 
 # ╔═╡ db2f42ba-7176-4fe0-8641-118ae35cbc3a
-ic_on, dd_on = RPU.load_data("../../local_data/dir_tmaze_online_rmsprop_10_fac/")
+ic_on, dd_on = RPU.load_data("../../local_data/factored_tensor/dir_tmaze_online_rmsprop_10_fac/")
+
+# ╔═╡ 1ba5ea26-4fa5-42ca-b42c-b0b8b347807f
+ic_on_f, dd_on_f = RPU.load_data("../../local_data/factored_tensor/final_dir_tmaze_online_rmsprop_10_fac_tensor/")
 
 # ╔═╡ a6eecff0-f022-4110-a9f4-5872710b93f5
 ic_bp, dd_bp = let
@@ -122,6 +125,15 @@ boxplot_data = RPU.get_line_data_for(
 	ic_on,
 	["numhidden", "factors", "cell", "init_style"],
 	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ 371d0a04-2c89-4326-b0ff-c773a3aadce7
+boxplot_data_f = RPU.get_line_data_for(
+	ic_on_f,
+	["numhidden", "factors", "cell"],
+	[];
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
 	get_data=(x)->RPU.get_MUE(x, :successes))
@@ -233,29 +245,72 @@ end
 
 # ╔═╡ 054ed0a7-df41-4857-ab30-66ce074c4cba
 let	
-	args_list = [
+	plt = plot()
+	
+	args_list_1 = [
 		Dict("cell"=>"GRU"),
 		Dict("cell"=>"AAGRU"),
 		Dict("cell"=>"MAGRU"),
+	]
+	names = ["GRU", "AAGRU", "MAGRU"]
+
+	for i in 1:length(args_list_1)
+		plt = violin!(data_bp, args_list_1[i], label=names[i], legend=false, color=cell_colors[args_list_1[i]["cell"]], lw=2, linecolor=cell_colors[args_list_1[i]["cell"]])
+		
+		plt = boxplot!(data_bp, args_list_1[i], label=names[i], color=color=cell_colors[args_list_1[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))	
+		
+		
+		#plt = dotplot!(data_bp, args_list_1[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=11, ylims=(0.4, 1.0))
+		
+	end
+	
+	args_list = [
+		Dict("cell"=>"FacMAGRU", "numhidden"=>26, "factors"=>21)	
+		]
+	names = ["FacGRU"]
+	for i in 1:length(names)
+		plt = violin!(boxplot_data_f, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
+		
+		plt = boxplot!(boxplot_data_f, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=10, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))
+		
+		#plt = dotplot!(boxplot_data_f, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=10, ylims=(0.4, 1.0))
+		
+	end	
+	
+	plt = vline!([6], linestyle=:dot, color=:white, lw=2)
+	
+	args_list_2 = [
 		Dict("cell"=>"RNN"),
 		Dict("cell"=>"AARNN"),
 		Dict("cell"=>"MARNN"),
 	]
-	names = ["GRU", "AAGRU", "MAGRU", "RNN", "AARNN", "MARNN"]
-	plt = plot()
-	for i in 1:length(names)
-		plt = violin!(data_bp, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
+	names = ["RNN", "AARNN", "MARNN"]
+
+	for i in 1:length(args_list_2)
+		plt = violin!(data_bp, args_list_2[i], label=names[i], legend=false, color=cell_colors[args_list_2[i]["cell"]], lw=2, linecolor=cell_colors[args_list_2[i]["cell"]])
 		
-		plt = boxplot!(data_bp, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))
-	if i == 3	
-		plt = vline!([6], linestyle=:dot, color=:white, lw=2)
-	end
+		plt = boxplot!(data_bp, args_list_2[i], label=names[i], color=color=cell_colors[args_list_2[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))
 		
-		plt = dotplot!(data_bp, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=11, ylims=(0.4, 1.0))
+		#plt = dotplot!(data_bp, args_list_2[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=11, ylims=(0.4, 1.0))
 		
 	end
-	plt
 	
+	args_list = [
+		Dict("cell"=>"FacMARNN", "numhidden"=>46, "factors"=>24)	
+		]
+	names = ["FacRNN"]
+	for i in 1:length(names)
+		plt = violin!(boxplot_data_f, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
+		
+		plt = boxplot!(boxplot_data_f, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=10, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))
+		
+		#plt = dotplot!(boxplot_data, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=9, ylims=(0.4, 1.0))
+		
+	end
+	
+	plt
+
+	savefig("../../data/paper_plots/factored_tensor/dir_tmaze_box_plots_300k_steps_tau_16_fac_tensor.pdf")
 end
 
 # ╔═╡ Cell order:
@@ -267,6 +322,7 @@ end
 # ╟─df7909ef-9f09-46c4-b4b1-c88a2db99dc7
 # ╠═2cb5a984-17e6-43c9-a73b-32fd074907d4
 # ╠═db2f42ba-7176-4fe0-8641-118ae35cbc3a
+# ╠═1ba5ea26-4fa5-42ca-b42c-b0b8b347807f
 # ╠═a6eecff0-f022-4110-a9f4-5872710b93f5
 # ╠═512b947a-914d-4ecc-9fa3-737cc8887d1f
 # ╠═6f0e7744-155c-41f6-8d9e-9e8091c1ec75
@@ -276,10 +332,11 @@ end
 # ╠═79fa1393-4634-4e87-b80d-6a780740b688
 # ╠═098238ac-4d65-4678-b6c0-31a14d22b7be
 # ╠═d825d218-c73f-45b6-be11-e9ad852e9fd6
+# ╠═371d0a04-2c89-4326-b0ff-c773a3aadce7
 # ╠═7453c283-c299-46f9-a585-b09abf4716c4
 # ╠═25ccbbae-21e5-46e2-954d-0b7880d49e67
 # ╠═72d01967-a96c-4ff3-9e98-b99f6d9ad728
 # ╠═18d96878-36f3-469d-bab7-014828576111
 # ╠═8f425f3b-3437-4b4c-b368-4bb2796e87bb
 # ╠═e82f0cdc-f48e-4a39-974c-982252141da9
-# ╟─054ed0a7-df41-4857-ab30-66ce074c4cba
+# ╠═054ed0a7-df41-4857-ab30-66ce074c4cba

@@ -211,7 +211,16 @@ mutable struct FacTucMARNNCell{F, T, A, V, H} <: AbstractActionRNN
     state0::H
 end
 
-FacTucMARNNCell(in, actions, out, action_factors, out_factors, in_factors,
+function FacTucMARNNCell(args...;
+                         init_style="standard",
+                         kwargs...)
+
+    init_cell_name = "FacTucMARNNCell_$(init_style)"
+    rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
+    rnn_init(args...; kwargs...)
+end
+
+FacTucMARNNCell_standard(in, actions, out, action_factors, out_factors, in_factors,
                 activation=tanh; hs_learnable=true, init=Flux.glorot_uniform,
                 initb=Flux.zeros, init_state=Flux.zeros) =
     FacTucMARNNCell(activation,
@@ -221,6 +230,18 @@ FacTucMARNNCell(in, actions, out, action_factors, out_factors, in_factors,
                 init(in_factors, in),
                 init(in_factors, out),
                 initb(out, actions),
+                init_state(out, 1))
+
+FacTucMARNNCell_ignore(in, actions, out, action_factors, out_factors, in_factors,
+                activation=tanh; hs_learnable=true, init=Flux.glorot_uniform,
+                initb=Flux.zeros, init_state=Flux.zeros) =
+    FacTucMARNNCell(activation,
+                init(action_factors, out_factors, in_factors),
+                init(action_factors, actions; ignore_dims=2),
+                init(out, out_factors),
+                init(in_factors, in),
+                init(in_factors, out),
+                initb(out, actions; ignore_dims=2),
                 init_state(out, 1))
 
 FacTucMARNN(args...; kwargs...) = Flux.Recur(FacTucMARNNCell(args...; kwargs...))

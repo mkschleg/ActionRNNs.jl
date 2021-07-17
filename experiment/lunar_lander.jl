@@ -84,11 +84,14 @@ function get_ann(parsed, fs, env, rng)
         action_factors = parsed["action_factors"]
         out_factors = parsed["out_factors"]
         in_factors = parsed["in_factors"]
+        init_style = get(parsed, "init_style", "standard")
+
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
 
         rnn(es, na, nh, action_factors, out_factors, in_factors;
+            init_style=init_style,
             init=init_func,
             initb=initb)
 
