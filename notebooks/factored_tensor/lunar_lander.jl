@@ -43,10 +43,10 @@ push!(RPU.stats_plot_types, :dotplot)
 
 # ╔═╡ 2a0b7edb-57b5-4dca-bb74-472b9592af97
 begin
-	ic_magru, dd_magru = RPU.load_data("../local_data/lunar_lander_er_relu_rmsprop_os6_sc2_magru_4M_wr/")
-	ic_facmagru64, dd_facmagru64 = RPU.load_data("../local_data/lunar_lander_er_relu_rmsprop_os6_sc2_facmagru64_4M_wr/")
-	ic_facmagru100, dd_facmagru100 = RPU.load_data("../local_data/lunar_lander_er_relu_rmsprop_os6_sc2_facmagru100_4M_wr/")
-	ic_facmagru152, dd_facmagru152 = RPU.load_data("../local_data/lunar_lander_er_relu_rmsprop_os6_sc2_facmagru152_4M_wr/")
+	ic_magru, dd_magru = RPU.load_data("../../local_data/lunar_lander_er_relu_rmsprop_os6_sc2_magru_4M_wr/")
+	ic_facmagru64, dd_facmagru64 = RPU.load_data("../../local_data/lunar_lander_er_relu_rmsprop_os6_sc2_facmagru64_4M_wr/")
+	ic_facmagru100, dd_facmagru100 = RPU.load_data("../../local_data/lunar_lander_er_relu_rmsprop_os6_sc2_facmagru100_4M_wr/")
+	ic_facmagru152, dd_facmagru152 = RPU.load_data("../../local_data/lunar_lander_er_relu_rmsprop_os6_sc2_facmagru152_4M_wr/")
 end
 
 # ╔═╡ 313041e3-05da-49e2-96d7-1aa080b22606
@@ -82,6 +82,66 @@ begin
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
 	get_data=(x)->RPU.get_rolling_mean_line(x, :total_rews, 2000))
+end
+
+# ╔═╡ 037436b3-37a6-4734-9aea-cbb7185274c4
+begin 
+	data_magru_sens = RPU.get_line_data_for(
+	ic_magru,
+	["eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+	
+	data_facmagru64_sens = RPU.get_line_data_for(
+	ic_facmagru64,
+	["init_style", "eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+	
+	data_facmagru100_sens = RPU.get_line_data_for(
+	ic_facmagru100,
+	["init_style", "eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+	
+	data_facmagru152_sens = RPU.get_line_data_for(
+	ic_facmagru152,
+	["init_style", "eta"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
+	get_data=(x)->RPU.get_MUE(x, :total_rews))
+end
+
+# ╔═╡ aad533aa-4b7b-40e3-8ebb-320eb3108426
+let
+	plt = plot()
+	
+	plt = plot!(
+		  data_magru_sens,
+		  Dict(), sort_idx="eta", xaxis=:log, label="cell: MAGRU (nh: 64)",
+			  palette=RPU.custom_colorant, legend=:bottomright, lw=3, z=1, color=cell_colors["MAGRU"], fillalpha=0.2)
+	plt = plot!(
+		  data_facmagru64_sens,
+		  Dict("init_style"=>"tensor"), sort_idx="eta", xaxis=:log, label="cell: FacMAGRU (init: tnsr, nh: 64, fac: 380)",
+			  palette=RPU.custom_colorant, legend=:bottomright, lw=3, z=1, color=cell_colors["FacMAGRU"], fillalpha=0.2)
+	
+	plt = plot!(
+		  data_facmagru100_sens,
+		  Dict("init_style"=>"tensor"), sort_idx="eta", xaxis=:log, label="cell: FacMAGRU (init: tnsr, nh: 100, fac: 265)",
+			  palette=RPU.custom_colorant, legend=:bottomright, lw=3, z=1, color=cell_colors["FacMAGRU"], linestyle=:dot, fillalpha=0.2)
+	
+	plt = plot!(
+		  data_facmagru152_sens,
+		  Dict("init_style"=>"tensor"), sort_idx="eta", xaxis=:log, label="cell: FacMAGRU (init: tnsr, nh: 152, fac: 170)",
+			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-300, 150), lw=3, z=1, color=cell_colors["FacMAGRU"], title="MUE, Episodes", grid=false, tickdir=:out, linestyle=:dash, fillalpha=0.2)
+	plt
 end
 
 # ╔═╡ 2bdc8606-ab44-47fe-a722-c10d966e4a1c
@@ -212,12 +272,12 @@ end
 
 # ╔═╡ 7f16c499-6bee-4f5f-87fc-7a6f6ec5b7f6
 begin
-	ic_dir_os6_sc2_gru_4M_relu_final, dd_dir_os6_sc2_gru_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_gru_4M/")
-	ic_dir_os6_sc2_aagru_4M_relu_final, dd_dir_os6_sc2_aagru_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_aagru_4M/")
-	ic_dir_os6_sc2_magru_4M_relu_final, dd_dir_os6_sc2_magru_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_magru_4M/")
-	ic_dir_os6_sc2_facmagru152_4M_relu_final, dd_dir_os6_sc2_facmagru152_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru152_4M/")
-	ic_dir_os6_sc2_facmagru100_4M_relu_final, dd_dir_os6_sc2_facmagru100_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru100_4M/")
-	ic_dir_os6_sc2_facmagru64_4M_relu_final, dd_dir_os6_sc2_facmagru64_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru64_4M/")
+	ic_dir_os6_sc2_gru_4M_relu_final, dd_dir_os6_sc2_gru_4M_relu_final = RPU.load_data("../../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_gru_4M/")
+	ic_dir_os6_sc2_aagru_4M_relu_final, dd_dir_os6_sc2_aagru_4M_relu_final = RPU.load_data("../../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_aagru_4M/")
+	ic_dir_os6_sc2_magru_4M_relu_final, dd_dir_os6_sc2_magru_4M_relu_final = RPU.load_data("../../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_magru_4M/")
+	ic_dir_os6_sc2_facmagru152_4M_relu_final, dd_dir_os6_sc2_facmagru152_4M_relu_final = RPU.load_data("../../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru152_4M/")
+	ic_dir_os6_sc2_facmagru100_4M_relu_final, dd_dir_os6_sc2_facmagru100_4M_relu_final = RPU.load_data("../../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru100_4M/")
+	ic_dir_os6_sc2_facmagru64_4M_relu_final, dd_dir_os6_sc2_facmagru64_4M_relu_final = RPU.load_data("../../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru64_4M/")
 end
 
 # ╔═╡ 6c672630-ccae-4934-a9fd-3139ac7740f4
@@ -564,6 +624,8 @@ end
 # ╠═5b94a3d6-d829-462b-a48e-e13ef754d8cd
 # ╠═2a0b7edb-57b5-4dca-bb74-472b9592af97
 # ╠═313041e3-05da-49e2-96d7-1aa080b22606
+# ╠═037436b3-37a6-4734-9aea-cbb7185274c4
+# ╠═aad533aa-4b7b-40e3-8ebb-320eb3108426
 # ╟─1607dbff-3b54-4963-aa2d-a72f769f261b
 # ╟─f7291063-8ec1-4c78-8a3e-9223adeb3945
 # ╟─f0987fbd-5afe-4298-997b-38646fbea411

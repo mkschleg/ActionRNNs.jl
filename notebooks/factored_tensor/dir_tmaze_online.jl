@@ -126,6 +126,36 @@ boxplot_data = RPU.get_line_data_for(
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
 	get_data=(x)->RPU.get_MUE(x, :successes))
 
+# ╔═╡ 7453c283-c299-46f9-a585-b09abf4716c4
+params_gru = Dict("cell"=>"FacMAGRU", "numhidden"=>26, "factors"=>21, "init_style"=>"tensor")
+
+# ╔═╡ 25ccbbae-21e5-46e2-954d-0b7880d49e67
+params_rnn = Dict("cell"=>"FacMARNN", "numhidden"=>46, "factors"=>24, "init_style"=>"tensor")
+
+# ╔═╡ 72d01967-a96c-4ff3-9e98-b99f6d9ad728
+let
+	idx = findall(boxplot_data.data) do ld
+        all([params_gru[i] == ld.line_params[i] for i in keys(params_gru)])
+    end
+    data_gru = if length(idx) == 1
+        boxplot_data[idx[1]]
+    else
+        boxplot_data[idx]
+    end
+end
+
+# ╔═╡ 18d96878-36f3-469d-bab7-014828576111
+let
+	idx = findall(boxplot_data.data) do ld
+        all([params_rnn[i] == ld.line_params[i] for i in keys(params_rnn)])
+    end
+    data_gru = if length(idx) == 1
+        boxplot_data[idx[1]]
+    else
+        boxplot_data[idx]
+    end
+end
+
 # ╔═╡ 8f425f3b-3437-4b4c-b368-4bb2796e87bb
 let	
 	
@@ -246,6 +276,10 @@ end
 # ╠═79fa1393-4634-4e87-b80d-6a780740b688
 # ╠═098238ac-4d65-4678-b6c0-31a14d22b7be
 # ╠═d825d218-c73f-45b6-be11-e9ad852e9fd6
-# ╟─8f425f3b-3437-4b4c-b368-4bb2796e87bb
-# ╟─e82f0cdc-f48e-4a39-974c-982252141da9
+# ╠═7453c283-c299-46f9-a585-b09abf4716c4
+# ╠═25ccbbae-21e5-46e2-954d-0b7880d49e67
+# ╠═72d01967-a96c-4ff3-9e98-b99f6d9ad728
+# ╠═18d96878-36f3-469d-bab7-014828576111
+# ╠═8f425f3b-3437-4b4c-b368-4bb2796e87bb
+# ╠═e82f0cdc-f48e-4a39-974c-982252141da9
 # ╟─054ed0a7-df41-4857-ab30-66ce074c4cba
