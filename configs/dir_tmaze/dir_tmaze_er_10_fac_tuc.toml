@@ -1,5 +1,5 @@
 [config]
-save_dir="dir_tmaze_er_rmsprop_10_fac_tuc"
+save_dir="dir_tmaze_er_rmsprop_10_fac_tuc_ignore"
 exp_file="experiment/dir_tmaze_er.jl"
 exp_module_name = "DirectionalTMazeERExperiment"
 exp_func_name = "main_experiment"
@@ -22,6 +22,6 @@ arg_iter_type = "iter"
 truncation = 12
 
 [sweep_args]
-"cell+numhidden+factors+action_factors+in_factors+out_factors" = [["MARNN", 18, 0, 0, 0, 0], ["FacMARNN", 25, 15, 0, 0, 0], ["FacTucMARNN", 30, 0, 3, 11, 11], ["FacTucMARNN", 25, 0, 3, 12, 12], ["FacTucMARNN", 18, 0, 3, 14, 14], ["MAGRU", 10, 0, 0, 0, 0], ["FacMAGRU", 15, 17, 0, 0, 0], ["FacTucMAGRU", 17, 0, 3, 10, 10], ["FacTucMAGRU", 15, 0, 3, 11, 11], ["FacTucMAGRU", 10, 0, 3, 14, 14]]
+"cell+numhidden+factors+action_factors+in_factors+out_factors+init_style" = [["MARNN", 18, 0, 0, 0, 0, "na"], ["FacMARNN", 25, 15, 0, 0, 0, "tensor"], ["FacTucMARNN", 30, 0, 3, 11, 11, "ignore"], ["FacTucMARNN", 25, 0, 3, 12, 12, "ignore"], ["FacTucMARNN", 18, 0, 3, 14, 14, "ignore"], ["MAGRU", 10, 0, 0, 0, 0, "na"], ["FacMAGRU", 15, 17, 0, 0, 0, "tensor"], ["FacTucMAGRU", 17, 0, 3, 10, 10, "ignore"], ["FacTucMAGRU", 15, 0, 3, 11, 11, "ignore"], ["FacTucMAGRU", 10, 0, 3, 14, 14, "ignore"]]
 eta = "0.1 .* 1.6 .^(-16:3:-4)"
 seed = "1:20"
