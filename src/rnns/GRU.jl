@@ -200,7 +200,13 @@ struct FacTucMAGRUCell{T,A,V,S}  <: AbstractActionRNN
     state0::S
 end
 
-FacTucMAGRUCell(in, na, out, action_factors, out_factors, in_factors;
+function FacTucMAGRUCell(args...; init_style="standard", kwargs...)
+    init_cell_name = "FacTucMAGRUCell_$(init_style)"
+    rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
+    rnn_init(args...; kwargs...)
+end
+
+FacTucMAGRUCell_standard(in, na, out, action_factors, out_factors, in_factors;
              init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
     FacTucMAGRUCell(init(action_factors, out_factors, in_factors),
                  init(action_factors, na),
@@ -210,6 +216,15 @@ FacTucMAGRUCell(in, na, out, action_factors, out_factors, in_factors;
                  initb(out * 3, na),
                  init_state(out,1))
 
+FacTucMAGRUCell_ignore(in, na, out, action_factors, out_factors, in_factors;
+             init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
+    FacTucMAGRUCell(init(action_factors, out_factors, in_factors),
+                 init(action_factors, na; ignore_dims=2),
+                 init(out * 3, out_factors),
+                 init(in_factors, in),
+                 init(in_factors, out),
+                 initb(out * 3, na; ignore_dims=2),
+                 init_state(out,1))
 
 function (m::FacTucMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
     o = size(h, 1)

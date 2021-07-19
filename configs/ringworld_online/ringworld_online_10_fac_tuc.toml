@@ -1,0 +1,25 @@
+[config]
+save_dir="ringworld_online_rmsprop_10_fac_tuc"
+exp_file="experiment/ringworld_online.jl"
+exp_module_name = "RingWorldOnlineExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iter"
+
+[static_args]
+steps = 300000
+opt = "RMSProp"
+rho = 0.9
+size = 10
+
+outgamma = 0.9
+action_features = false
+synopsis = true
+
+outhorde = "gammas_term"
+hs_learnable = true
+truncation = 12
+
+[sweep_args]
+"cell+numhidden+in_factors+out_factors+action_factors" = [["FacTucMARNN", 20, 7, 7, 2], ["FacTucMARNN", 15, 10, 10, 2], ["FacTucMAGRU", 12, 8, 8, 2], ["FacTucMAGRU", 9, 10, 10, 2]]
+eta = "0.1 .* 1.6 .^(-16:3:-4)"
+seed = "1:20"
