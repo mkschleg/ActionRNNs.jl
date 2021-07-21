@@ -1,5 +1,5 @@
 [config]
-save_dir="ringworld_online_rmsprop_10_fac"
+save_dir="final_ringworld_online_rmsprop_10_fac_tensor"
 exp_file="experiment/ringworld_online.jl"
 exp_module_name = "RingWorldOnlineExperiment"
 exp_func_name = "main_experiment"
@@ -17,9 +17,10 @@ synopsis = true
 
 outhorde = "gammas_term"
 hs_learnable = true
+truncation = 12
+eta = 0.0009094947
 
 [sweep_args]
-"cell+numhidden+factors+init_style" = [["FacMARNN", 12, 14, "tensor"], ["FacMARNN", 15, 12, "tensor"], ["FacMARNN", 12, 14, "standard"], ["FacMARNN", 15, 12, "standard"], ["FacMARNN", 12, 14, "ignore"], ["FacMARNN", 15, 12, "ignore"], ["MARNN", 12, 0, "na"], ["AARNN", 15, 0, "na"], ["FacMAGRU", 9, 12, "tensor"], ["FacMAGRU", 12, 8, "tensor"], ["FacMAGRU", 9, 12, "standard"], ["FacMAGRU", 12, 8, "standard"], ["MAGRU", 9, 0, "na"], ["AAGRU", 12, 0, "na"]]
-eta = "0.1 .* 1.6 .^(-16:3:-4)"
-truncation = [1, 2, 4, 6, 10, 15]
-seed = "1:10"
+"cell+numhidden+factors+init_style" = [["FacMARNN", 20, 10, "tensor"], ["FacMAGRU", 12, 10, "tensor"]]
+#eta = "0.1 .* 1.6 .^(-16:3:-4)"
+seed = "21:120"
