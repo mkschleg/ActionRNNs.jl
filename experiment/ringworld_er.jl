@@ -108,6 +108,22 @@ function get_model(parsed, out_horde, fs, rng)
                 init=init_func,
                 initb=initb),
             Flux.Dense(nh, num_gvfs; initW=init_func))
+    elseif parsed["cell"] ∈ ActionRNNs.gated_rnn_types()
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+
+        ninternal = parsed["internal"]
+
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        m = Flux.Chain(
+            rnn(fs, na, ninternal, nh;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh, num_gvfs; initW=init_func))
+        
     else
 
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
