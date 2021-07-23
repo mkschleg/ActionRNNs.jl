@@ -131,7 +131,6 @@ mutable struct FacMARNNCell{F, A, V, H} <: AbstractActionRNN
     state0::H
 end
 
-# FacMARNNCell(num_ext_features, num_actions, num_hidden; init=Flux.glorot_uniform, σ_int=tanh) =
 function FacMARNNCell(args...;
                       init_style="ignore",
                       kwargs...)
@@ -139,7 +138,6 @@ function FacMARNNCell(args...;
     init_cell_name = "FacMARNNCell_$(init_style)"
     rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
     rnn_init(args...; kwargs...)
-    
 end
 
 FacMARNNCell_standard(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
@@ -202,4 +200,88 @@ end
 
 # Flux.hidden(m::FacMARNNCell) = m.h
 
+mutable struct FacTucMARNNCell{F, T, A, V, H} <: AbstractActionRNN
+    σ::F
+    Wg::T
+    Wa::A
+    Wh::A
+    Wxx::A
+    Wxh::A
+    b::V
+    state0::H
+end
 
+function FacTucMARNNCell(args...;
+                         init_style="standard",
+                         kwargs...)
+
+    init_cell_name = "FacTucMARNNCell_$(init_style)"
+    rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
+    rnn_init(args...; kwargs...)
+end
+
+FacTucMARNNCell_standard(in, actions, out, action_factors, out_factors, in_factors,
+                activation=tanh; hs_learnable=true, init=Flux.glorot_uniform,
+                initb=Flux.zeros, init_state=Flux.zeros) =
+    FacTucMARNNCell(activation,
+                init(action_factors, out_factors, in_factors),
+                init(action_factors, actions),
+                init(out, out_factors),
+                init(in_factors, in),
+                init(in_factors, out),
+                initb(out, actions),
+                init_state(out, 1))
+
+FacTucMARNNCell_ignore(in, actions, out, action_factors, out_factors, in_factors,
+                activation=tanh; hs_learnable=true, init=Flux.glorot_uniform,
+                initb=Flux.zeros, init_state=Flux.zeros) =
+    FacTucMARNNCell(activation,
+                init(action_factors, out_factors, in_factors),
+                init(action_factors, actions; ignore_dims=2),
+                init(out, out_factors),
+                init(in_factors, in),
+                init(in_factors, out),
+                initb(out, actions; ignore_dims=2),
+                init_state(out, 1))
+
+FacTucMARNN(args...; kwargs...) = Flux.Recur(FacTucMARNNCell(args...; kwargs...))
+Flux.Recur(m::FacTucMARNNCell) = Flux.Recur(m, m.state0)
+Flux.@functor FacTucMARNNCell
+
+function (m::FacTucMARNNCell)(h, x::Tuple{A, X}) where {A, X}
+
+    Wg, Wa, Wh, Wxx, Wxh, b, σ = m.Wg, m.Wa, m.Wh, m.Wxx, m.Wxh, m.b, m.σ
+
+    a = x[1]
+    o = x[2]
+
+    waa = get_Wabya(Wa, a)
+
+#     wx = contract_tuc(Wg, waa, Wh, Wxx*o)
+#     wh = if size(h, 2) == 1
+#         contract_tuc(Wg, waa, Wh, Wxh*h[:])
+#     else
+#         contract_tuc(Wg, waa, Wh, Wxh*h)
+#     end
+
+    wx, wh = if a isa Int
+        Wh * (contract_Wga(Wg, waa) * (Wxx*o)), Wh * (contract_Wga(Wg, waa) * (Wxh*h[:]))
+    else
+        Wh * contract_Wgax(Wg, waa, Wxx*o), Wh * contract_Wgax(Wg, waa, Wxh*h)
+    end
+    ba = get_waa(b, a)
+
+    new_h = σ.(wx .+ wh .+ ba)
+    if a isa Int new_h = reshape(new_h , :, 1) end
+
+    return new_h, new_h
+end
+
+# contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractVector{<:Number}) =
+#     @tullio ret[j] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r]
+#
+# contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractMatrix{<:Number}) =
+#     @tullio ret[j, x] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r, x]
+
+# tucker_compose(Wg, Wa::AbstractMatrix{<:Number}, Wh, Wx) =
+#     @tullio ret[i, j, k] := Wg[p, q, r] * Wa[p, i] * Wh[q, j] * Wx[r, k]

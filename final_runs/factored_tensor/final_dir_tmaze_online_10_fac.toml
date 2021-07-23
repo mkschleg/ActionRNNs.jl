@@ -1,5 +1,5 @@
 [config]
-save_dir="dir_tmaze_online_rmsprop_10_fac_tensor"
+save_dir="final_dir_tmaze_online_rmsprop_10_fac_tensor"
 exp_file="experiment/dir_tmaze_online.jl"
 exp_module_name = "DirectionalTMazeOnlineExperiment"
 exp_func_name = "main_experiment"
@@ -15,6 +15,6 @@ gamma = 0.99
 truncation = 16
 
 [sweep_args]
-"cell+numhidden+factors+init_style" = [["FacMARNN", 46, 24, "tensor"], ["FacMAGRU", 26, 21, "tensor"]]
-eta = "0.1 .* 1.6 .^(-16:3:-4)"
-seed = "1:20"
+"cell+numhidden+factors+init_style+eta" = [["FacMARNN", 46, 24, "tensor", 0.00022204460492503115], ["FacMAGRU", 26, 21, "tensor", 0.0009094947017729278]]
+#eta = "0.1 .* 1.6 .^(-16:3:-4)"
+seed = "21:120"

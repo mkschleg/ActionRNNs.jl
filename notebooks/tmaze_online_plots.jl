@@ -69,6 +69,9 @@ cell_colors = Dict(
 # ╔═╡ eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
 ic_dir_10, dd_dir_10 = RPU.load_data("../local_data/tmaze_online_rmsprop_size10/")
 
+# ╔═╡ 526bd7da-7355-4e21-85b5-9e6001bf01e9
+ic_dir_tuc, dd_dir_tuc = RPU.load_data("../local_data/tucker_decomp/tmaze_online_rmsprop_10_tuc/")
+
 # ╔═╡ eab5c7a0-8052-432d-977e-68b967baf5ca
 ic_dir_10[1].parsed_args["steps"]
 
@@ -77,6 +80,15 @@ data_10 = RPU.get_line_data_for(
 	ic_dir_10,
 	["numhidden", "truncation", "cell"],
 	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 500))
+
+# ╔═╡ 44453403-5951-449b-9062-c97d7bf77925
+data_tuc = RPU.get_line_data_for(
+	ic_dir_tuc,
+	["out_factors", "in_factors"],
+	[];
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
 	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 500))
@@ -100,6 +112,25 @@ let
 			  Dict("numhidden"=>nh, "truncation"=>τ, "cell"=>cell),
 			  palette=RPU.custom_colorant, legend=:bottomright, lw=1)
 	end
+	plt
+end
+
+# ╔═╡ b9da24d2-e64b-44c2-b065-ac807b75b100
+md"""
+Out Factors: $(@bind out_fac_dir_10 Select(string.(dd_dir_tuc["out_factors"])))
+In Factors: $(@bind in_fac_dir_10 Select(string.(dd_dir_tuc["in_factors"])))
+"""
+
+# ╔═╡ 816d4d2a-63d3-4e44-a1f5-7c071eb677af
+let
+	# plt = nothing
+	o_f = parse(Int, out_fac_dir_10)
+	i_f = parse(Int, in_fac_dir_10)
+	plt = plot()
+	plt = plot!(
+		  data_tuc,
+		  Dict("out_factors"=>o_f, "in_factors"=>i_f),
+		  palette=RPU.custom_colorant, legend=:bottomright, lw=1)
 	plt
 end
 
@@ -361,10 +392,14 @@ end
 # ╠═fe50ffef-b691-47b5-acf8-8378fbf860a1
 # ╟─834b1cf3-5b22-4e0a-abe9-61e427e6cfda
 # ╠═eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
+# ╠═526bd7da-7355-4e21-85b5-9e6001bf01e9
 # ╠═eab5c7a0-8052-432d-977e-68b967baf5ca
 # ╠═55d1416b-d580-4112-827a-30504c21f397
+# ╠═44453403-5951-449b-9062-c97d7bf77925
 # ╟─467ed417-cf69-493d-b21c-3fc4d1fb9907
 # ╠═2040d613-0ea8-48ce-937c-9180073812ea
+# ╠═b9da24d2-e64b-44c2-b065-ac807b75b100
+# ╠═816d4d2a-63d3-4e44-a1f5-7c071eb677af
 # ╠═7c1f8e58-4bfa-4da2-833d-0cc2a4ec74a4
 # ╠═859b98dd-1024-4fec-8741-40edf72d0287
 # ╠═f5a1e45c-398a-40e3-8c5f-b1d72ead0a89

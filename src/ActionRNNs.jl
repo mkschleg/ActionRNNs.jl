@@ -19,6 +19,7 @@ include("models/viz_backbone.jl")
 
 
 export AARNN, MARNN, FacARNN, reset!, get
+
 include("RNNs.jl")
 
 export QLearning, TD, update!

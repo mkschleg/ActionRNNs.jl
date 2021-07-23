@@ -21,8 +21,9 @@ function (m::AAGRUCell)(h, x::Tuple{A, O}) where {A, O}
 
     a = x[1]
     obs = x[2]
-    
+
     gx, gh = m.Wi*obs, m.Wh*h
+
     ga = get_waa(m.Wa, a)
     
     r = σ.(gate(gx, o, 1) .+ gate(ga, o, 1) .+ gate(gh, o, 1) .+ gate(b, o, 1))
@@ -139,7 +140,6 @@ function FacMAGRUCell_tensor(in, na, out, factors; init = glorot_uniform, initb 
     
 end
 
-
 # function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
 #     o = size(h, 1)
 #
@@ -188,3 +188,77 @@ for a good overview of the internals.
 """
 FacMAGRU(a...; ka...) = Flux.Recur(FacMAGRUCell(a...; ka...))
 Flux.Recur(m::FacMAGRUCell) = Flux.Recur(m, m.state0)
+
+
+struct FacTucMAGRUCell{T,A,V,S}  <: AbstractActionRNN
+    Wg::T
+    Wa::A
+    Wh::A
+    Wxx::A
+    Wxh::A
+    b::V
+    state0::S
+end
+
+function FacTucMAGRUCell(args...; init_style="standard", kwargs...)
+    init_cell_name = "FacTucMAGRUCell_$(init_style)"
+    rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
+    rnn_init(args...; kwargs...)
+end
+
+FacTucMAGRUCell_standard(in, na, out, action_factors, out_factors, in_factors;
+             init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
+    FacTucMAGRUCell(init(action_factors, out_factors, in_factors),
+                 init(action_factors, na),
+                 init(out * 3, out_factors),
+                 init(in_factors, in),
+                 init(in_factors, out),
+                 initb(out * 3, na),
+                 init_state(out,1))
+
+FacTucMAGRUCell_ignore(in, na, out, action_factors, out_factors, in_factors;
+             init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
+    FacTucMAGRUCell(init(action_factors, out_factors, in_factors),
+                 init(action_factors, na; ignore_dims=2),
+                 init(out * 3, out_factors),
+                 init(in_factors, in),
+                 init(in_factors, out),
+                 initb(out * 3, na; ignore_dims=2),
+                 init_state(out,1))
+
+function (m::FacTucMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
+    o = size(h, 1)
+
+    a = x[1]
+    obs = x[2]
+
+    waa = get_Wabya(m.Wa, a)
+    gx, gh = if a isa Int
+        m.Wh * (contract_Wga(m.Wg, waa) * (m.Wxx*obs)), m.Wh * (contract_Wga(m.Wg, waa) * (m.Wxh*h[:]))
+    else
+        m.Wh * contract_Wgax(m.Wg, waa, m.Wxx*obs), m.Wh * contract_Wgax(m.Wg, waa, m.Wxh*h)
+    end
+    b = get_waa(m.b, a)
+
+    r = σ.(gate(gx, o, 1)  .+ gate(gh, o, 1) .+ gate(b, o, 1))
+    z = σ.(gate(gx, o, 2)  .+ gate(gh, o, 2) .+ gate(b, o, 2))
+    h̃ = tanh.(gate(gx, o, 3) .+ r .* gate(gh, o, 3) .+ gate(b, o, 3))
+    h′ = (1 .- z) .* h̃ .+ z .* h
+    sz = size(obs)
+  return h′, reshape(h′, :, sz[2:end]...)
+end
+
+Flux.@functor FacTucMAGRUCell
+
+Base.show(io::IO, l::FacTucMAGRUCell) =
+  print(io, "FacTucMAGRUCell(", size(l.Wi, 2), ", ", size(l.Wi, 1)÷3, ")")
+
+"""
+    FacTucMAGRU(in::Integer, out::Integer)
+[Multiplicative Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
+RNN but generally exhibits a longer memory span over sequences.
+See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
+for a good overview of the internals.
+"""
+FacTucMAGRU(a...; ka...) = Flux.Recur(FacTucMAGRUCell(a...; ka...))
+Flux.Recur(m::FacTucMAGRUCell) = Flux.Recur(m, m.state0)
