@@ -24,9 +24,5 @@ truncation = 12
 
 [sweep_args]
 eta = "0.1 .* 1.6 .^(-16:3:-4)"
-"cell+numhidden+factors+internal" = [["RNN", 30, 0, 0], ["AARNN", 30, 0, 0],
-["MARNN", 18, 0, 0], ["FacMARNN", 25, 15, 0], ["GRU", 17, 0, 0],
-["AAGRU", 17, 0, 0], ["MAGRU", 10, 0, 0], ["FacMAGRU", 15, 17, 0],
-["ActionGatedRNN", 10, 0, 28], ["ActionGatedRNN", 15, 0, 21],
-["ActionGatedRNN", 20, 0, 17]]
+"cell+numhidden+factors+internal" = [["RNN", 30, 0, 0], ["AARNN", 30, 0, 0], ["MARNN", 18, 0, 0], ["FacMARNN", 25, 15, 0], ["GRU", 17, 0, 0], ["AAGRU", 17, 0, 0], ["MAGRU", 10, 0, 0], ["FacMAGRU", 15, 17, 0], ["ActionGatedRNN", 10, 0, 28], ["ActionGatedRNN", 15, 0, 21], ["ActionGatedRNN", 20, 0, 17]]
 seed = "1:20"
