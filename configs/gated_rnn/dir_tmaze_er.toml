@@ -19,7 +19,6 @@ hs_learnable = true
 update_wait = 4
 target_update_wait = 1000
 
-cell = "ActionGatedRNN"
 truncation = 12
 
 [sweep_args]
