@@ -266,6 +266,8 @@ let
 			  palette=RPU.custom_colorant, legend=:bottomright, ylim=(-300, 150), lw=3, z=1, color=cell_colors["FacTucMAGRU"], title="LunarLander MUE, Episodes", grid=false, tickdir=:out, linestyle=:dash, fillalpha=0.2)
 	
 	plt
+	
+	savefig("../../data/paper_plots/tucker_decomp/lunar_lander_tuc.pdf")
 end
 
 # ╔═╡ c18b3edb-7a41-4c5a-8d76-52507d3dee36

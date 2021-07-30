@@ -136,6 +136,8 @@ let
 	
 	plt
 	
+	savefig("../../data/paper_plots/tucker_decomp/ringworld_online_rnn_lc_tuc.pdf")
+	
 end
 
 # ╔═╡ db4ed5c4-28ba-4ff7-ae0b-11c512e46acc
@@ -181,10 +183,12 @@ let
 		plt = plot!(
 			  data_on,
 			  arg_dict,
-			  palette=RPU.custom_colorant, legend=:topright, ylabel="RMSVE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online RNN Cells", grid=false, tickdir=:out, color=cell_colors[arg_dict["cell"]], fillalpha=0.2, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=8, titlefontsize=15, label=label_list[idx], lw=3, linestyle=linestyle_list[idx])
+			  palette=RPU.custom_colorant, legend=:topright, ylabel="RMSVE", xlabel="Steps (Thousands)", ylim=(0, 0.40), title="Ringworld Online GRU Cells", grid=false, tickdir=:out, color=cell_colors[arg_dict["cell"]], fillalpha=0.2, tickfontsize=12, xguidefontsize=14, yguidefontsize=14, legendfontsize=8, titlefontsize=15, label=label_list[idx], lw=3, linestyle=linestyle_list[idx])
 	end
 	
 	plt
+	
+	savefig("../../data/paper_plots/tucker_decomp/ringworld_online_gru_lc_tuc.pdf")
 	
 end
 
@@ -225,6 +229,8 @@ let
 	
 	plt
 	
+	savefig("../../data/paper_plots/tucker_decomp/ringworld_er_rnn_lc_tuc.pdf")
+	
 end
 
 # ╔═╡ 5bcee86e-2baf-40c4-8b85-966bb6bda4f4
@@ -252,6 +258,8 @@ let
 	
 	plt
 	
+	savefig("../../data/paper_plots/tucker_decomp/ringworld_er_gru_lc_tuc.pdf")
+	
 end
 
 # ╔═╡ Cell order:
@@ -268,9 +276,9 @@ end
 # ╠═18f69a35-0709-4fde-8893-a4b8870206e9
 # ╠═5bb3591f-1285-49bb-b36b-7667fbefc61f
 # ╠═b2add531-45d7-4570-8a3c-0f2e978c35a2
-# ╟─148d184f-3659-4868-92c7-0ebdaa2aa88d
-# ╟─db4ed5c4-28ba-4ff7-ae0b-11c512e46acc
+# ╠═148d184f-3659-4868-92c7-0ebdaa2aa88d
+# ╠═db4ed5c4-28ba-4ff7-ae0b-11c512e46acc
 # ╠═d1e6ec6c-ceb7-4872-8ee2-f2459381611e
 # ╠═2dcb71c9-bf0d-4ee3-8333-703f95a5a9f9
-# ╟─f406452e-e85d-46d0-9534-7599112f1f19
-# ╟─5bcee86e-2baf-40c4-8b85-966bb6bda4f4
+# ╠═f406452e-e85d-46d0-9534-7599112f1f19
+# ╠═5bcee86e-2baf-40c4-8b85-966bb6bda4f4

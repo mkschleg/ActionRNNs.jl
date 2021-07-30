@@ -87,11 +87,13 @@ let
 		
 		plt = boxplot!(boxplot_data, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=10, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="ER Directional TMaze, τ: 16", ylim=(0.3, 1))
 		
-		plt = dotplot!(boxplot_data, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=9, ylims=(0.4, 1.0))
+		#plt = dotplot!(boxplot_data, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=9, ylims=(0.4, 1.0))
 		
 	end	
 	
 	plt
+	
+	savefig("../../data/paper_plots/tucker_decomp/dir_tmaze_er_rnn_tuc.pdf")
 	
 end
 
@@ -137,11 +139,13 @@ let
 		
 		plt = boxplot!(boxplot_data, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=10, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="ER Directional TMaze, τ: 16", ylim=(0.3, 1))
 		
-		plt = dotplot!(boxplot_data, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=9, ylims=(0.4, 1.0))
+		#plt = dotplot!(boxplot_data, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=9, ylims=(0.4, 1.0))
 		
 	end	
 	
 	plt
+	
+	savefig("../../data/paper_plots/tucker_decomp/dir_tmaze_er_gru_tuc.pdf")
 	
 end
 
@@ -243,7 +247,7 @@ let
 		plt = boxplot!(data_bp, args_list_1[i], label=names[i], color=color=cell_colors[args_list_1[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))	
 		
 		
-		plt = dotplot!(data_bp, args_list_1[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=11, ylims=(0.4, 1.0))
+		#plt = dotplot!(data_bp, args_list_1[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=11, ylims=(0.4, 1.0))
 		
 	end
 	
@@ -256,7 +260,7 @@ let
 		
 		plt = boxplot!(boxplot_data_f, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=10, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))
 		
-		plt = dotplot!(boxplot_data_f, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=10, ylims=(0.4, 1.0))
+		#plt = dotplot!(boxplot_data_f, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=10, ylims=(0.4, 1.0))
 		
 	end
 	
@@ -265,17 +269,19 @@ let
 		Dict("cell"=>"FacTucMARNN", "numhidden"=>36, "out_factors"=>18, "in_factors"=>18),
 		Dict("cell"=>"FacTucMARNN", "numhidden"=>27, "out_factors"=>20, "in_factors"=>20),
 		]
-	names = ["FacTucRNN 46", "FacTucRNN 36", "FacTucRNN 27"]
+	names = ["FacTucRNN 16", "FacTucRNN 18", "FacTucRNN 20"]
 	for i in 1:length(names)
 		plt = violin!(boxplot_data_on, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
 		
 		plt = boxplot!(boxplot_data_on, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=10, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))
 		
-		plt = dotplot!(boxplot_data_on, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=10, ylims=(0.4, 1.0))
+		#plt = dotplot!(boxplot_data_on, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=10, ylims=(0.4, 1.0))
 		
 	end
 	
 	plt
+	
+	savefig("../../data/paper_plots/tucker_decomp/dir_tmaze_online_rnn_tuc.pdf")
 end
 
 # ╔═╡ eb539aba-8c2d-4737-b51f-47bc6683f66a
@@ -293,7 +299,7 @@ let
 		plt = boxplot!(data_bp, args_list_1[i], label=names[i], color=color=cell_colors[args_list_1[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))	
 		
 		
-		plt = dotplot!(data_bp, args_list_1[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=11, ylims=(0.4, 1.0))
+		#plt = dotplot!(data_bp, args_list_1[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=11, ylims=(0.4, 1.0))
 		
 	end
 	
@@ -306,7 +312,7 @@ let
 		
 		plt = boxplot!(boxplot_data_f, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=10, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))
 		
-		plt = dotplot!(boxplot_data_f, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=10, ylims=(0.4, 1.0))
+		#plt = dotplot!(boxplot_data_f, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=10, ylims=(0.4, 1.0))
 		
 	end
 	
@@ -315,17 +321,19 @@ let
 		Dict("cell"=>"FacTucMAGRU", "numhidden"=>20, "out_factors"=>17, "in_factors"=>17),
 		Dict("cell"=>"FacTucMAGRU", "numhidden"=>15, "out_factors"=>20, "in_factors"=>20),
 		]
-	names = ["FacTucGRU 26", "FacTucGRU 20", "FacTucGRU 15"]
+	names = ["FacTucGRU 15", "FacTucGRU 17", "FacTucGRU 20"]
 	for i in 1:length(names)
 		plt = violin!(boxplot_data_on, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
 		
 		plt = boxplot!(boxplot_data_on, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=10, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16", ylim=(0.3, 1))
 		
-		plt = dotplot!(boxplot_data_on, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=10, ylims=(0.4, 1.0))
+		#plt = dotplot!(boxplot_data_on, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=10, ylims=(0.4, 1.0))
 		
 	end
 	
 	plt
+	
+	savefig("../../data/paper_plots/tucker_decomp/dir_tmaze_online_gru_tuc.pdf")
 end
 
 # ╔═╡ Cell order:
@@ -340,9 +348,9 @@ end
 # ╠═bb060799-9106-4690-8726-6e4e110f965a
 # ╠═5ebad194-332f-473b-a8d4-9f367be0edd9
 # ╠═d97941d9-6e99-4655-b975-626e700c8f4e
-# ╟─fce4a562-081c-42db-9de7-567b5d203647
+# ╠═fce4a562-081c-42db-9de7-567b5d203647
 # ╟─da61bff0-1948-4c84-ba92-093af9644097
-# ╟─0942aad9-a966-46a4-9db6-742eece97a24
+# ╠═0942aad9-a966-46a4-9db6-742eece97a24
 # ╟─814640ed-7b02-4034-ba2e-71e7a3aa69cc
 # ╠═04a0149b-91ee-4819-b558-e5b3c93af276
 # ╠═85afda47-1cc6-4c85-b008-9033a9923710
@@ -352,5 +360,5 @@ end
 # ╠═862a4fed-8c77-4e17-924b-53b0e19c6a2c
 # ╠═e6c5fa5f-ebaa-43a8-86d5-f03c8a29a6bb
 # ╠═c11e13a0-98c8-45c6-9a9a-159a649dd7ef
-# ╟─994c5e63-b01b-4059-be67-b5afd5c8c91c
+# ╠═994c5e63-b01b-4059-be67-b5afd5c8c91c
 # ╠═eb539aba-8c2d-4737-b51f-47bc6683f66a
