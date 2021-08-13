@@ -4,7 +4,7 @@
     Basic DRQNAgent.
 """
 
-mutable struct DRQNAgent{LU, ER, TN, O, M, F, Φ,  Π, HS<:AbstractMatrix{Float32}} <: AbstractERAgent{LU, ER, TN}
+mutable struct DRQNAgent{LU, ER, TN, DEV, O, M, F, Φ,  Π, HS<:AbstractMatrix{Float32}} <: AbstractERAgent{LU, ER, TN, DEV}
     lu::LU
     opt::O
     model::M
@@ -35,7 +35,7 @@ mutable struct DRQNAgent{LU, ER, TN, O, M, F, Φ,  Π, HS<:AbstractMatrix{Float3
     cur_step::Int
 
     hs_tr_init::Dict{Symbol, HS}
-    device::Device
+    device::DEV
 end
 
 
@@ -60,6 +60,7 @@ function DRQNAgent(model,
     state_list, init_state = make_state_list(model, dev)
 
     hidden_state_init = get_initial_hidden_state(model, 1)
+
 
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
     replay = EpisodicSequenceReplay(replay_size+τ-1,
@@ -124,6 +125,8 @@ function ImageDRQNAgent(model,
     end
 
     hidden_state_init = get_initial_hidden_state(model, 1)
+    @show typeof(hidden_state_init)
+    # throw("oh no")
 
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
     replay = EpisodicSequenceReplay(replay_size+τ-1,
@@ -138,7 +141,7 @@ function ImageDRQNAgent(model,
     update_timer = UpdateTimer(warm_up, update_time)
     trg_update_timer = UpdateTimer(0, target_update_time)
 
-    DRQNAgent(QLearningSUM(γ),
+    DRQNAgent(QLearningHUBER(γ),
               opt,
               model,
               deepcopy(model),
@@ -171,7 +174,7 @@ add_exp!(agent::DRQNAgent, env_s_tp1, r, terminal, hs_symbol, hs) = begin
            zip(hs_symbol, hs)...))
 end
 
-add_exp!(agent::DRQNAgent{LU, ER, TN}, env_s_tp1, r, terminal, hs_symbol, hs) where {LU, ER<:ImageReplay, TN} = begin
+add_exp!(agent::DRQNAgent{LU, ER, TN, CPU}, env_s_tp1, r, terminal, hs_symbol, hs) where {LU, ER<:ImageReplay, TN} = begin
     push!(agent.replay,
           (am1 = agent.am1,
            s = agent.s_t isa Tuple ? agent.s_t[2] : agent.s_t,
@@ -181,4 +184,16 @@ add_exp!(agent::DRQNAgent{LU, ER, TN}, env_s_tp1, r, terminal, hs_symbol, hs) wh
            t = terminal,
            beg = agent.beg,
            zip(hs_symbol, hs)...))
+end
+
+add_exp!(agent::DRQNAgent{LU, ER, TN, GPU}, env_s_tp1, r, terminal, hs_symbol, hs) where {LU, ER<:ImageReplay, TN} = begin
+    push!(agent.replay,
+          (am1 = agent.am1,
+           s = agent.s_t isa Tuple ? agent.s_t[2] : agent.s_t,
+           a = agent.action,
+           sp = env_s_tp1,
+           r = r,
+           t = terminal,
+           beg = agent.beg,
+           zip(hs_symbol, to_host.(hs))...))
 end

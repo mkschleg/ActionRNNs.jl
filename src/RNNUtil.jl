@@ -290,11 +290,11 @@ function get_hs_from_experience!(model, exp::NamedTuple, d::Dict, device)
             hs_symbol = hs_symbol_layer(model[idx], idx)
             h = if :beg ∈ keys(exp)
                 # @show typeof(exp.beg), typeof(exp[hs_symbol]), typeof(init_hs)
-                device(hcat([(exp.beg[b][1] ? init_hs : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...), hs_symbol)
+                hcat([(exp.beg[b][1] ? init_hs : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...)
             else
-                device(hcat([(exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...), hs_symbol)
+                hcat([(exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...)
             end
-            int_h = get!(()->h, hs, hs_symbol)
+            int_h = get!(()->device(h, hs_symbol), hs, hs_symbol)
             copyto!(int_h, h)
         end
     end
@@ -422,13 +422,19 @@ function modify_hs_in_er!(replay::ImageReplay, model, act_exp, exp_idx, hs, grad
             else
                 hs[hs_symbol] |> cpu
             end
+
+            δh = if hs isa IdDict
+                grads[hs[model[ridx]]] |> cpu
+            else
+                grads[hs[hs_symbol]] |> cpu
+            end
             for (i, idx) ∈ enumerate(exp_idx)
 
                 if exp.beg[i][1] == true
                     if grads isa Nothing
                         init_grad  .+= h[:, i]
                     else
-                        init_grad .+= grads[h][:, i]
+                        init_grad .+= δh[:, i]
                     end
                     # init_grad .+= h[:, i]
                     init_grad_n += 1

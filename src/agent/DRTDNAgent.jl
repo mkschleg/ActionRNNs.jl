@@ -1,7 +1,7 @@
 """
     Basic DRQNAgent.
 """
-mutable struct DRTDNAgent{H, O, C, CT, F, LU, ER, Φ,  Π, HS<:AbstractMatrix{Float32}} <: AbstractERAgent{LU, ER, CT}
+mutable struct DRTDNAgent{H, O, C, CT, F, LU, ER, DEV, Φ,  Π, HS<:AbstractMatrix{Float32}} <: AbstractERAgent{LU, ER, CT, DEV}
     horde::H
     
     lu::LU
@@ -33,7 +33,7 @@ mutable struct DRTDNAgent{H, O, C, CT, F, LU, ER, Φ,  Π, HS<:AbstractMatrix{Fl
     cur_step::Int
 
     hs_tr_init::Dict{Symbol, HS}
-    device::Device
+    device::DEV
 end
 
 
@@ -109,81 +109,81 @@ function DRTDNAgent(horde,
                typeof(hidden_state_init)(), dev)
 end
 
-function ImageDRTDNAgent(model,
-                   opt,
-                   τ,
-                   γ,
-                   feature_creator,
-                   feature_size,
-                   env_state_size,
-                   replay_size,
-                   warm_up,
-                   batch_size,
-                   update_time,
-                   target_update_time,
-                   acting_policy,
-                   hs_learnable)
+# function ImageDRTDNAgent(model,
+#                    opt,
+#                    τ,
+#                    γ,
+#                    feature_creator,
+#                    feature_size,
+#                    env_state_size,
+#                    replay_size,
+#                    warm_up,
+#                    batch_size,
+#                    update_time,
+#                    target_update_time,
+#                    acting_policy,
+#                    hs_learnable)
 
-    dev = Device(model)
-    @info dev
+#     dev = Device(model)
+#     @info dev
     
-    state_list, init_state = begin
-        if dev isa CPU
-            if needs_action_input(model)
-                (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 4}}}(2), (0, zeros(Float32, 1,1,1,1)))
-            else
-                (DataStructures.CircularBuffer{Array{Float32, 4}}(2), zeros(Float32, 1,1,1,1))
-            end
-        else
-            if needs_action_input(model)
-                (DataStructures.CircularBuffer{Tuple{Int64, Flux.CUDA.CuArray{Float32, 4}}}(2), (0, zeros(Float32, 1, 1, 1, 1) |> gpu))
-                # (DataStructures.CircularBuffer{Tuple{Int64, Flux.CUDA.CuArray{Float32, 4}}}(2), (0, zeros(Float32, 1) |> gpu))
-            else
-                (DataStructures.CircularBuffer{Flux.CUDA.CuArray{Float32, 4}}(2), zeros(Float32, 1, 1, 1, 1) |> gpu)
-                # (DataStructures.CircularBuffer{Flux.CUDA.CuArray{Float32, 4}}(2), zeros(Float32, 1) |> gpu)
-            end
-        end
-    end
+#     state_list, init_state = begin
+#         if dev isa CPU
+#             if needs_action_input(model)
+#                 (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 4}}}(2), (0, zeros(Float32, 1,1,1,1)))
+#             else
+#                 (DataStructures.CircularBuffer{Array{Float32, 4}}(2), zeros(Float32, 1,1,1,1))
+#             end
+#         else
+#             if needs_action_input(model)
+#                 (DataStructures.CircularBuffer{Tuple{Int64, Flux.CUDA.CuArray{Float32, 4}}}(2), (0, zeros(Float32, 1, 1, 1, 1) |> gpu))
+#                 # (DataStructures.CircularBuffer{Tuple{Int64, Flux.CUDA.CuArray{Float32, 4}}}(2), (0, zeros(Float32, 1) |> gpu))
+#             else
+#                 (DataStructures.CircularBuffer{Flux.CUDA.CuArray{Float32, 4}}(2), zeros(Float32, 1, 1, 1, 1) |> gpu)
+#                 # (DataStructures.CircularBuffer{Flux.CUDA.CuArray{Float32, 4}}(2), zeros(Float32, 1) |> gpu)
+#             end
+#         end
+#     end
 
-    hidden_state_init = get_initial_hidden_state(model, 1)
+#     hidden_state_init = get_initial_hidden_state(model, 1)
 
-    hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
-    # replay = EpisodicSequenceReplay(replay_size+τ-1,
-    #                                 (Int, Float32, Int, Float32, Float32, Bool, Bool, hs_type...),
-    #                                 (1, feature_size, 1, feature_size, 1, 1, 1, hs_length...),
-    #                                 (:am1, :s, :a, :sp, :r, :t, :beg, hs_symbol...))
+#     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
+#     # replay = EpisodicSequenceReplay(replay_size+τ-1,
+#     #                                 (Int, Float32, Int, Float32, Float32, Bool, Bool, hs_type...),
+#     #                                 (1, feature_size, 1, feature_size, 1, 1, 1, hs_length...),
+#     #                                 (:am1, :s, :a, :sp, :r, :t, :beg, hs_symbol...))
 
-    replay = EpisodicSequenceReplay(replay_size+τ-1,
-                                    (Int, Int, Int, Int, Float32, Bool, Bool, hs_type...),
-                                    (1, 1, 1, 1, 1, 1, 1, hs_length...),
-                                    (:am1, :s, :a, :sp, :r, :t, :beg, hs_symbol...))
+#     replay = EpisodicSequenceReplay(replay_size+τ-1,
+#                                     (Int, Int, Int, Int, Float32, Bool, Bool, hs_type...),
+#                                     (1, 1, 1, 1, 1, 1, 1, hs_length...),
+#                                     (:am1, :s, :a, :sp, :r, :t, :beg, hs_symbol...))
 
-    sb = StateBuffer{env_state_type}(replay_size+τ*2, env_state_shape)
+#     sb = StateBuffer{env_state_type}(replay_size+τ*2, env_state_shape)
     
-    image_replay = ImageReplay(replay, sb, identity, (img) -> Float32.(img .// 255))
+#     image_replay = ImageReplay(replay, sb, identity, (img) -> Float32.(img .// 255))
 
-    update_timer = UpdateTimer(warm_up, update_time)
-    trg_update_timer = UpdateTimer(0, target_update_time)
+#     update_timer = UpdateTimer(warm_up, update_time)
+#     trg_update_timer = UpdateTimer(0, target_update_time)
 
-    DRTDNAgent(QLearningSUM(γ),
-              opt,
-              model,
-              deepcopy(model),
-              # nothing,
-              feature_creator,
-              state_list,
-              hidden_state_init,
-              replay,
-              update_timer,
-              trg_update_timer,
-              batch_size,
-              τ,
-              init_state,
-              acting_policy,
-              γ,
-              1, 1, 0.0, hs_learnable, true, 0,
-              typeof(hidden_state_init)(), dev)
-end
+#     DRTDNAgent(QLearningSUM(γ),
+#               opt,
+#               model,
+#               deepcopy(model),
+#               # nothing,
+#               feature_creator,
+#               state_list,
+#               hidden_state_init,
+#               replay,
+#               update_timer,
+#               trg_update_timer,
+#               batch_size,
+#               τ,
+#               init_state,
+#               acting_policy,
+#               γ,
+#               1, 1, 0.0, hs_learnable, true, 0,
+#               typeof(hidden_state_init)(), dev)
+# end
 
 
 ####

@@ -25,28 +25,31 @@ function default_config()
         "save_dir" => "tmaze",
 
         "seed" => 1,
-        "steps" => 300000,
+        "steps" => 750000,
         "size" => 10,
 
 
         "cell" => "MAGRU",
-        "numhidden" => 20,
-        "latent_size" => 64,
+        "init_style" => "standard",
+        "numhidden" => 64,
+        "latent_size" => 128,
+        "output_size" => 128,
 
         "opt" => "ADAM",
-        "eta" => 0.00001,
+        "eta" => 0.00005,
         "rho" =>0.99,
 
         "replay_size"=>50000,
         "warm_up" => 1000,
         "batch_size"=>16,
         "update_wait"=>4,
-        "target_update_wait"=>1000,
-        "truncation" => 12,
+        "target_update_wait"=>10000,
+        "truncation" => 15,
 
+ 
         "hs_learnable" => true,
         
-        "gamma"=>0.99)
+        "gamma"=>0.9)
 
     
 end
@@ -61,17 +64,21 @@ function get_ann(parsed, image_dims, env, rng)
     cl = Flux.Conv((4, 4), 1 => 4, Flux.relu; stride=2, init=init_func)
     fs = prod(Flux.outdims(cl, image_dims))
     latent_size = parsed["latent_size"]
+    output_size = parsed["output_size"]
     
     if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         factors = parsed["factors"]
+        init_style = get(parsed, "init_style", "standard")
+        
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
         Flux.Chain(cl, Flux.flatten, Flux.Dense(fs, latent_size, Flux.relu; initW=init_func),
                    rnn(latent_size, na, nh, factors;
+                       init_style=init_style,
                        init=init_func,
                        initb=initb),
                    Flux.Dense(nh, na; initW=init_func))
@@ -86,10 +93,12 @@ function get_ann(parsed, image_dims, env, rng)
         
         Flux.Chain(
             cl, Flux.flatten, Flux.Dense(fs, latent_size, Flux.relu; initW=init_func),
+            Flux.Dense(latent_size, latent_size, Flux.relu; initW=init_func),
             rnn(latent_size, na, nh;
                 init=init_func,
                 initb=initb),
-            Flux.Dense(nh, na; initW=init_func))
+            Flux.Dense(nh, output_size, Flux.relu; initW=init_func),
+            Flux.Dense(output_size, na; initW=init_func))
 
     else
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
@@ -112,10 +121,11 @@ function construct_agent(env, parsed, rng)
     τ = parsed["truncation"]
 
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+    # ap = ActionRNNs.ϵGreedyDecay((1.0, 0.05), 50000, 1000, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed, (28, 28, 1, 1), env, rng)
+    chain = get_ann(parsed, (28, 28, 1, 1), env, rng) #|> Flux.gpu
 
     ActionRNNs.ImageDRQNAgent(chain,
                          opt,
@@ -134,7 +144,18 @@ end
 
 function main_experiment(parsed = default_config(); working=false, progress=false, verbose=false)
 
+    if "cell_numhidden" ∈ keys(parsed)
+        parsed["cell"] = parsed["cell_numhidden"][1]
+        parsed["numhidden"] = parsed["cell_numhidden"][2]
+        delete!(parsed, "cell_numhidden")
+    end
 
+    if "numhidden_factors" ∈ keys(parsed)
+        parsed["numhidden"] = parsed["numhidden_factors"][1]
+        parsed["factors"] = parsed["numhidden_factors"][2]
+        delete!(parsed, "numhidden_factors")
+    end
+    
     ActionRNNs.experiment_wrapper(parsed, working) do parsed
 
         num_steps = parsed["steps"]
@@ -171,7 +192,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
                     :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
                 ))
             success = false
-            max_episode_steps = min(max((num_steps - sum(logger[:total_steps])), 2), 10000)
+            max_episode_steps = min(max((num_steps - sum(logger[:total_steps])), 2), 1000)
             n = 0
             total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
                 if progress
@@ -181,6 +202,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
                         mean(logger.data.successes[end-1000:end])
                     end
                     next!(prg_bar, showvalues=[(:episode, eps),
+                                               (:steps, n),
                                                (:successes, pr_suc),
                                                (:loss, usa[:avg_loss]),
                                                (:l1, usa[:l1]/n),

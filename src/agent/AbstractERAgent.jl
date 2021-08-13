@@ -39,7 +39,11 @@ mutable struct DRQNAgent{ER, Φ,  Π, HS<:AbstractMatrix{Float32}} <: AbstractER
 end
 
 """
-abstract type AbstractERAgent{LU, ER, TN} <: AbstractAgent end
+abstract type AbstractERAgent{LU, ER, TN, DEV} <: AbstractAgent end
+
+get_replay_buffer(agent::AbstractERAgent) = agent.replay
+get_learning_update(agent::AbstractERAgent) = agent.lu
+get_device(agent::AbstractERAgent) = agent.device
 
 
 
@@ -63,22 +67,21 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
     agent.am1 = 1
     agent.beg = true
 
-    s_t = build_new_feat(agent, s, agent.action)
-    
-    Flux.reset!(agent.model)
-    values = agent.model(s_t)
-
-    agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
-    
     empty!(agent.state_list)
 
     if agent.replay isa ImageReplay
         start_statebuffer!(agent.replay, s)
     end
 
-    push!(agent.state_list, build_new_feat(agent, s, agent.action))
-    agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
     agent.s_t = build_new_feat(agent, s, agent.action)
+    push!(agent.state_list, build_new_feat(agent, s, agent.action))
+    
+    Flux.reset!(agent.model)
+    values = agent.model.(agent.state_list)
+
+    agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
+    
+    agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
     
     return agent.action
     
@@ -155,20 +158,20 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:ControlUpdate}
     params = get_information_from_experience(agent, exp)
     
     if agent.replay isa ImageReplay
-        ActionRNNs.get_hs_from_experience!(agent.model, exp[2], agent.hs_tr_init, CPU())
+        ActionRNNs.get_hs_from_experience!(agent.model, exp[2], agent.hs_tr_init, get_device(agent))
     else
-        ActionRNNs.get_hs_from_experience!(agent.model, exp, agent.hs_tr_init, CPU())
+        ActionRNNs.get_hs_from_experience!(agent.model, exp, agent.hs_tr_init, get_device(agent))
     end
-            
+
     us = update_batch!(agent.lu,
                        agent.model,
                        agent.target_network,
                        agent.opt,
                        agent.hs_tr_init,
-                       params)
+                       params; device=get_device(agent))
     
     if agent.hs_learnable
-        modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt)
+        modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt, get_device(agent))
     end
     
     us
@@ -185,7 +188,6 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:PredictionUpdate}
 
     params = get_information_from_experience(agent, exp)
 
-
     hs = ActionRNNs.get_hs_from_experience(agent.model, exp, 1)
     for k ∈ keys(hs)
         h = get!(()->zero(hs[k]), agent.hs_tr_init, k)
@@ -198,6 +200,7 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:PredictionUpdate}
                        agent.opt,
                        agent.hs_tr_init,
                        params)
+
     
     if agent.hs_learnable
         modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt)

@@ -21,14 +21,17 @@ _needs_action_input(m::AbstractActionRNN) = true
 contract_WA(W, a::Int, x) =
     W[a, :, :]*x
 
+# Maybe fixed by new version of tullio.
 contract_WA(W, a::AbstractVector{Int}, x) = begin
     mid = W ⊡ x
     @tullio ret[i, k] := mid[a[k], i, k]
 end
 
-# contract_WA(W, a::Vector{Int}, x) = begin
-#     @tullio ret[i, k] := W[a[k], i, j] * x[j, k]
-# end
+# Maybe fixed by new version of tullio.
+contract_WA(W::CuArray, a::Vector{Int}, x) = begin
+    Wa = W[a, :, :]
+    @tullio ret[i, k] := Wa[k, i, j] * x[j, k]
+end
 
 
 contract_WA(W, a::Vector{Int}, x::AbstractVector{<:Number}) = begin

@@ -1,6 +1,6 @@
 
-
-using KernelAbstractions, Tullio
+using CUDA, CUDAKernels, KernelAbstractions
+using LoopVectorization, Tullio
 
 import Zygote: dropgrad
 
@@ -105,7 +105,7 @@ function update_batch!(lu::QLearning,
         end
         loss
     end
-
+    # throw("oh no")
     Flux.update!(opt, ps, grads)
     UpdateState(ℒ, grads, Flux.params(chain), opt)
 end
