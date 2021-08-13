@@ -50,6 +50,9 @@ ic_on, dd_on = RPU.load_data("../../local_data/factored_tensor/dir_tmaze_online_
 # ╔═╡ 1ba5ea26-4fa5-42ca-b42c-b0b8b347807f
 ic_on_f, dd_on_f = RPU.load_data("../../local_data/factored_tensor/final_dir_tmaze_online_rmsprop_10_fac_tensor/")
 
+# ╔═╡ 459fc973-7008-4a2b-9996-1a782e4a580d
+ic_on_sweep, dd_on_sweep = RPU.load_data("../../local_data/factored_tensor/dir_tmaze_online_rmsprop_10_fac_sweep/")
+
 # ╔═╡ a6eecff0-f022-4110-a9f4-5872710b93f5
 ic_bp, dd_bp = let
 	ic = ItemCollection("../../local_data/final_dir_tmaze_online_rmsprop_10_t16/")
@@ -134,6 +137,15 @@ boxplot_data_f = RPU.get_line_data_for(
 	ic_on_f,
 	["numhidden", "factors", "cell"],
 	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ dbcca96e-384e-4e92-a0e3-3858f5c11e6b
+boxplot_data_sweep = RPU.get_line_data_for(
+	ic_on_sweep,
+	["numhidden", "factors", "cell"],
+	["eta"];
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
 	get_data=(x)->RPU.get_MUE(x, :successes))
@@ -310,7 +322,69 @@ let
 	
 	plt
 
-	savefig("../../data/paper_plots/factored_tensor/dir_tmaze_box_plots_300k_steps_tau_16_fac_tensor.pdf")
+	#savefig("../../data/paper_plots/factored_tensor/dir_tmaze_box_plots_300k_steps_tau_16_fac_tensor.pdf")
+end
+
+# ╔═╡ 795988ac-55b2-4009-848f-6d1788025039
+let	
+	plt = plot()
+	
+	args_list = [
+		Dict("cell"=>"FacMARNN", "numhidden"=>27, "factors"=>40),
+		Dict("cell"=>"FacMARNN", "numhidden"=>27, "factors"=>75),
+		Dict("cell"=>"FacMARNN", "numhidden"=>27, "factors"=>100),
+		Dict("cell"=>"FacMARNN", "numhidden"=>36, "factors"=>31),
+		Dict("cell"=>"FacMARNN", "numhidden"=>36, "factors"=>75),
+		Dict("cell"=>"FacMARNN", "numhidden"=>36, "factors"=>100),
+		Dict("cell"=>"FacMARNN", "numhidden"=>46, "factors"=>24),
+		Dict("cell"=>"FacMARNN", "numhidden"=>46, "factors"=>75),
+		Dict("cell"=>"FacMARNN", "numhidden"=>46, "factors"=>100),	
+		]
+	names = ["(27, 24)", "(27, 75)", "(27, 100)", "(36, 24)", "(36, 75)", "(36, 100)", "(46, 24)", "(46, 75)", "(46, 100)"]
+	for i in 1:length(names)
+		plt = violin!(boxplot_data_sweep, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
+		
+		plt = boxplot!(boxplot_data_sweep, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=13, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="FacRNN", ylim=(0.3, 1), xlabel="(hidden size, factors)")
+		
+		plt = dotplot!(boxplot_data_sweep, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=9, ylims=(0.4, 1.0))
+		
+	end	
+	
+	plt
+	
+	#savefig("../../data/paper_plots/factored_tensor/dir_tmaze_online_facrnn_box_plot_tensor.pdf")
+	
+end
+
+# ╔═╡ f724163d-ffca-464a-aaeb-eeea8a5f8b65
+let	
+	plt = plot()
+	
+	args_list = [
+		Dict("cell"=>"FacMAGRU", "numhidden"=>15, "factors"=>37),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>15, "factors"=>75),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>15, "factors"=>100),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>20, "factors"=>28),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>20, "factors"=>75),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>20, "factors"=>100),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>26, "factors"=>21),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>26, "factors"=>75),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>26, "factors"=>100),	
+		]
+	names = ["(15, 37)", "(15, 75)", "(15, 100)", "(20, 28)", "(20, 75)", "(20, 100)", "(26, 21)", "(26, 75)", "(26, 100)"]
+	for i in 1:length(names)
+		plt = violin!(boxplot_data_sweep, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
+		
+		plt = boxplot!(boxplot_data_sweep, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=13, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="FacGRU", ylim=(0.3, 1), xlabel="(hidden size, factors)")
+		
+		plt = dotplot!(boxplot_data_sweep, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=9, ylims=(0.4, 1.0))
+		
+	end	
+	
+	plt
+	
+	#savefig("../../data/paper_plots/factored_tensor/dir_tmaze_online_facgru_box_plot_tensor.pdf")
+	
 end
 
 # ╔═╡ Cell order:
@@ -323,6 +397,7 @@ end
 # ╠═2cb5a984-17e6-43c9-a73b-32fd074907d4
 # ╠═db2f42ba-7176-4fe0-8641-118ae35cbc3a
 # ╠═1ba5ea26-4fa5-42ca-b42c-b0b8b347807f
+# ╠═459fc973-7008-4a2b-9996-1a782e4a580d
 # ╠═a6eecff0-f022-4110-a9f4-5872710b93f5
 # ╠═512b947a-914d-4ecc-9fa3-737cc8887d1f
 # ╠═6f0e7744-155c-41f6-8d9e-9e8091c1ec75
@@ -333,6 +408,7 @@ end
 # ╠═098238ac-4d65-4678-b6c0-31a14d22b7be
 # ╠═d825d218-c73f-45b6-be11-e9ad852e9fd6
 # ╠═371d0a04-2c89-4326-b0ff-c773a3aadce7
+# ╠═dbcca96e-384e-4e92-a0e3-3858f5c11e6b
 # ╠═7453c283-c299-46f9-a585-b09abf4716c4
 # ╠═25ccbbae-21e5-46e2-954d-0b7880d49e67
 # ╠═72d01967-a96c-4ff3-9e98-b99f6d9ad728
@@ -340,3 +416,5 @@ end
 # ╠═8f425f3b-3437-4b4c-b368-4bb2796e87bb
 # ╠═e82f0cdc-f48e-4a39-974c-982252141da9
 # ╠═054ed0a7-df41-4857-ab30-66ce074c4cba
+# ╠═795988ac-55b2-4009-848f-6d1788025039
+# ╠═f724163d-ffca-464a-aaeb-eeea8a5f8b65

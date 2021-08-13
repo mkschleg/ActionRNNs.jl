@@ -128,6 +128,21 @@ function get_model(parsed, out_horde, fs, rng)
                     init=init_func,
                     initb=initb),
                 Flux.Dense(nh, num_gvfs; initW=init_func))
+        elseif parsed["cell"] ∈ ActionRNNs.gated_rnn_types()
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+
+        ninternal = parsed["internal"]
+
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        m = Flux.Chain(
+            rnn(fs, na, ninternal, nh;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh, num_gvfs; initW=init_func))
         else
             
             rnntype = getproperty(Flux, Symbol(parsed["cell"]))
@@ -214,6 +229,7 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
     
     cur_step = 1
     MinimalRLCore.run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
+        GC.gc(true)
         
         out_preds = a.preds
         
