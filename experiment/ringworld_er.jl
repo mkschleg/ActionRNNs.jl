@@ -229,7 +229,6 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
     
     cur_step = 1
     MinimalRLCore.run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
-        GC.gc(true)
         
         out_preds = a.preds
         
