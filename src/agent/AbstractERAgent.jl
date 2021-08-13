@@ -62,29 +62,55 @@ end
 
 
 function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
-    
-    agent.action = 1
-    agent.am1 = 1
-    agent.beg = true
 
-    empty!(agent.state_list)
+    if true #agent.device isa GPU
+        # new probably more sensible behaviour.
+        agent.action = 1
+        agent.am1 = 1
+        agent.beg = true
 
-    if agent.replay isa ImageReplay
-        start_statebuffer!(agent.replay, s)
+        empty!(agent.state_list)
+
+        if agent.replay isa ImageReplay
+            start_statebuffer!(agent.replay, s)
+        end
+
+        agent.s_t = build_new_feat(agent, s, agent.action)
+        push!(agent.state_list, agent.s_t)
+        
+        Flux.reset!(agent.model)
+        values = [agent.model(s_t) for s_t in agent.state_list][end]
+        
+        agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
+        
+        agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
+        
+        return agent.action
+    else
+        # Old behaviour.
+        agent.action = 1
+        agent.am1 = 1
+        agent.beg = true
+
+        s_t = build_new_feat(agent, s, agent.action)
+        
+        Flux.reset!(agent.model)
+        values = agent.model(s_t)
+
+        agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
+        
+        empty!(agent.state_list)
+
+        if agent.replay isa ImageReplay
+            start_statebuffer!(agent.replay, s)
+        end
+
+        push!(agent.state_list, build_new_feat(agent, s, agent.action))
+        agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
+        agent.s_t = build_new_feat(agent, s, agent.action)
+        
+        return agent.action
     end
-
-    agent.s_t = build_new_feat(agent, s, agent.action)
-    push!(agent.state_list, build_new_feat(agent, s, agent.action))
-    
-    Flux.reset!(agent.model)
-    values = agent.model.(agent.state_list)
-
-    agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
-    
-    agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
-    
-    return agent.action
-    
 end
 
 

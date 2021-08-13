@@ -459,8 +459,11 @@ function modify_hs_in_er!(replay::ImageReplay, model, act_exp, exp_idx, hs, grad
 end
 
 
-function modify_hs_in_er!(replay, model, exp, exp_idx, hs, grads = nothing, opt = nothing)
-    
+function modify_hs_in_er!(replay, model, exp, exp_idx, hs, grads = nothing, opt = nothing, device=CPU())
+
+    if device isa GPU
+        error("GPU Not yet supported for $(typeof(replay)) in modify_hs_in_er!")
+    end
     rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
     
     for ridx in rnn_idx

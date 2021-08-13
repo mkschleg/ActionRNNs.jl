@@ -106,11 +106,10 @@ function get_information_from_experience(device, ::ImageReplay{ER}, ::ControlUpd
 end
 
 
-function get_information_from_experience(::EpisodicSequenceReplay, ::PredictionUpdate, s_t, exp)
+function get_information_from_experience(device, ::EpisodicSequenceReplay, ::PredictionUpdate, s_t, exp)
 
 
     s = get_state_from_experience(s_t, exp)
-
     
     batch_size = length(exp)
 
