@@ -324,7 +324,7 @@ let
 		plt = plot!(
 			  data,
 			  args_list[i], sort_idx="truncation", legendtitle="nh", label="$(args_list[i]["numhidden"])",
-				  palette=RPU.custom_colorant, legend=:none, lw=3, z=1, color=cell_colors[args_list[i]["cell"]], fillalpha=0.2, ylim=(0, 0.4), markershape=marker_shapes[i], markerstrokewidth=2, title="RNN Cells", xtickfontsize=12, ytickfontsize=12, linestyle=line_styles[i])
+				  palette=RPU.custom_colorant, legend=:none, lw=3, z=1, color=cell_colors[args_list[i]["cell"]], fillalpha=0.2, ylim=(0, 0.4), markershape=marker_shapes[i], markerstrokewidth=2, title="RNN Cells", xtickfontsize=12, ytickfontsize=12, linestyle=line_styles[i], grid=false, tickdir=:out)
 	end
 	
 	plt
@@ -348,7 +348,7 @@ let
 		plt = plot!(
 			  data,
 			  args_list[i], sort_idx="truncation", legendtitle="nh", label="$(args_list[i]["numhidden"])",
-				  palette=RPU.custom_colorant, legend=:none, lw=3, z=1, color=cell_colors[args_list[i]["cell"]], fillalpha=0.2, ylim=(0, 0.4), markershape=marker_shapes[i], markerstrokewidth=2, title="GRU Cells", xtickfontsize=12, ytickfontsize=12, linestyle=line_styles[i])
+				  palette=RPU.custom_colorant, legend=:none, lw=3, z=1, color=cell_colors[args_list[i]["cell"]], fillalpha=0.2, ylim=(0, 0.4), markershape=marker_shapes[i], markerstrokewidth=2, title="GRU Cells", xtickfontsize=12, ytickfontsize=12, linestyle=line_styles[i], grid=false, tickdir=:out)
 	end
 	
 	plt
@@ -372,5 +372,5 @@ end
 # ╟─2af2a195-e1cf-43b7-810a-06dbfcc17061
 # ╟─dee15259-5402-47c2-9fa2-6072f140c930
 # ╟─4ed743e9-59aa-4d43-bdb8-24d7ea6e8201
-# ╟─d7647b91-f708-4260-a1e1-b4916e87717f
-# ╟─2a2c2f16-db82-4f77-a179-b3e89bd855a3
+# ╠═d7647b91-f708-4260-a1e1-b4916e87717f
+# ╠═2a2c2f16-db82-4f77-a179-b3e89bd855a3
