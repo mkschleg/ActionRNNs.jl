@@ -64,5 +64,5 @@ include("rnns/LSTM.jl")
 # Keep list of all the non-specialized RNN types in ActionRNNs
 rnn_types() = ["AARNN", "MARNN", "AAGRU", "MAGRU", "AALSTM", "MALSTM"]
 fac_rnn_types() = ["FacMARNN", "FacMAGRU"]
-gated_rnn_types() = ["ActionGatedRNN", "GAIARNN", "GAIGRU", "GAIAGRU"]
+gated_rnn_types() = ["ActionGatedRNN", "GAIARNN", "GAIGRU", "GAIAGRU", "GAUGRU"]
 fac_tuc_rnn_types() = ["FacTucMARNN", "FacTucMAGRU"]

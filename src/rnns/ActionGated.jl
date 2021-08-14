@@ -227,3 +227,51 @@ for a good overview of the internals.
 """
 GAIAGRU(a...; ka...) = Flux.Recur(GAIAGRUCell(a...; ka...))
 Flux.Recur(m::GAIAGRUCell) = Flux.Recur(m, m.state0)
+
+
+struct GAUGRUCell{A,V,S}  <: AbstractActionRNN
+    Wi::A
+    Wa::A
+    Wh::A
+    b::V
+    state0::S
+end
+
+GAUGRUCell(in, na, internal, out; init = Flux.glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
+    GAUGRUCell(init(out * 2, in),
+               init(out * 3, na),
+               init(out * 2, out),
+               initb(out * 3),
+               init_state(out,1))
+
+function (m::GAUGRUCell)(h, x::Tuple{A, O}) where {A, O}
+    b, o = m.b, size(h, 1)
+
+    a = x[1]
+    obs = x[2]
+
+    gx, gh = m.Wi*obs, m.Wh*h
+    ga = get_waa(m.Wa, a)
+
+    r = σ.(gate(gx, o, 1) .+ gate(ga, o, 1) .+ gate(gh, o, 1) .+ gate(b, o, 1))
+    z = σ.(gate(ga, o, 2) .+ gate(b, o, 2))
+    h̃ = tanh.(gate(gx, o, 2) .+ gate(ga, o, 3) .+ r .* gate(gh, o, 2) .+ gate(b, o, 3))
+    h′ = (1 .- z) .* h̃ .+ z .* h
+    sz = size(obs)
+  return h′, reshape(h′, :, sz[2:end]...)
+end
+
+Flux.@functor GAUGRUCell
+
+Base.show(io::IO, l::GAIGRUCell) =
+  print(io, "GAUGRUCell(", size(l.Wi, 2), ", ", size(l.Wa), ", ", size(l.Wi, 1)÷3, ")")
+
+"""
+    GAUGRU(in::Integer, na::Integer, internal::Integer, out::Integer)
+[Gated Action Input Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
+RNN but generally exhibits a longer memory span over sequences.
+See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
+for a good overview of the internals.
+"""
+GAUGRU(a...; ka...) = Flux.Recur(GAUGRUCell(a...; ka...))
+Flux.Recur(m::GAUGRUCell) = Flux.Recur(m, m.state0)
