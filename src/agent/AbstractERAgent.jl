@@ -64,7 +64,12 @@ end
 function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
 
     if true #agent.device isa GPU
-        # new probably more sensible behaviour.
+        #=
+        new probably more sensible behaviour. 
+        
+        The new behaviour uses a starting action of agent.action=1 
+        in constructing the initial agent.s_t and adding to agent.state_list.
+        =#
         agent.action = 1
         agent.am1 = 1
         agent.beg = true
@@ -79,7 +84,7 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
         push!(agent.state_list, agent.s_t)
         
         Flux.reset!(agent.model)
-        values = [agent.model(s_t) for s_t in agent.state_list][end]
+        values = [agent.model(s_t) for s_t in agent.state_list][end] 
         
         agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
         
@@ -87,7 +92,14 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
         
         return agent.action
     else
-        # Old behaviour.
+        #=
+        Old behaviour.
+
+        The old behaviour uses the action sampled from the 
+        inistial state to build the agent.state_list and 
+        agent.s_t. This doesn't seem sensible, and a weird decision.
+        Kept for backward compatibility.
+        =#
         agent.action = 1
         agent.am1 = 1
         agent.beg = true
