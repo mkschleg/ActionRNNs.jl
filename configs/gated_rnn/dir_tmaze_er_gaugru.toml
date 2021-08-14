@@ -19,6 +19,7 @@ hs_learnable = true
 update_wait = 4
 target_update_wait = 1000
 
+internal = 1
 truncation = 12
 cell = "GAUGRU"
 numhidden = 20
