@@ -150,6 +150,7 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     us = if agent.update_timer(length(agent.replay))
         update!(agent, rng)
     end
+    
     if agent.target_update_timer(length(agent.replay))
         update_target_network!(agent)
     end
@@ -162,12 +163,11 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     # Get predictions and manage hidden state
     ####i
     reset!(agent.model, agent.hidden_state_init)
-    values = agent.model.(agent.state_list)[end]
+    values = [agent.model(obs) for obs in agent.state_list][end]
 
     cur_hidden_state = get_hidden_state(agent.model)
 
-    is_full = DataStructures.isfull(agent.state_list)
-    if is_full
+    if DataStructures.isfull(agent.state_list)
         agent.hidden_state_init =
             get_next_hidden_state!(agent.model, agent.hidden_state_init, agent.state_list[1])
     end
@@ -246,11 +246,10 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:PredictionUpdate}
     end
     us 
 
-
 end
 
 update_target_network!(agent::AbstractERAgent) = begin
     update_target_network!(agent.model, agent.target_network)
 end
 
-update_target_network!(agent::AbstractERAgent{LU, ER, Nothing}) where {LU, ER} = nothing
+update_target_network!(::AbstractERAgent{LU, ER, Nothing}) where {LU, ER} = nothing
