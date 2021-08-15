@@ -29,48 +29,49 @@ _needs_action_input(m::AbstractActionRNN) = true
 
 This contraction operator will take the weights `W`, action (or action vector for batches) `a`, and features.
 The weight matrix is assumed to be in `nactions × out × in`.
-
-    contract_WA(W, )
 """
-contract_WA(W, a::Int, x) =
-    W[a, :, :]*x
+contract_WA(W, a::Int, x) = W[a, :, :]*x
 
-# Maybe fixed by new version of tullio.
-contract_WA(W, a::AbstractVector{Int}, x) = begin
+function contract_WA(W, a::AbstractVector{Int}, x)
     #=
     ⊡ Generalised matrix multiplication: Contracts the last dimension of `A` with
     the first dimension of `B`, for any `ndims(A)` & `ndims(B)`.
     If both are vectors, then it returns a scalar `== sum(A .* B)`.
     =#
-    mid = W ⊡ x
-    @tullio ret[i, k] := mid[a[k], i, k]
+    # mid = W ⊡ x
+    # @tullio ret[i, k] := mid[a[k], i, k]
+    @tullio ret[i, k] := W[a[k], i, j] * x[j, k]
 end
 
 # Maybe fixed by new version of tullio.
-contract_WA(W::CuArray, a::Vector{Int}, x) = begin
+function contract_WA(W::CuArray, a::Vector{Int}, x)
     Wa = W[a, :, :]
     @tullio ret[i, k] := Wa[k, i, j] * x[j, k]
 end
 
-contract_WA(W, a::AbstractVector{Int}, x::AbstractVector) = begin
+function contract_WA(W, a::AbstractVector{Int}, x::AbstractVector)
     @tullio ret[i, k] := W[a[k], i, 1] * x[k]
 end
 
-contract_WA(W, a::AbstractVector{<:AbstractFloat}, x) =
+function contract_WA(W, a::AbstractVector{<:AbstractFloat}, x)
     @tullio ret[i] := W[k, i, j] * a[k] * x[j]
+end
 
-contract_WA(W, a::AbstractMatrix{<:AbstractFloat}, x) =
+function contract_WA(W, a::AbstractMatrix{<:AbstractFloat}, x)
     @tullio ret[i, k] := W[l, i, j] * a[l, k] * x[j, k]
+end
 
 get_waa(Wa, a::Int) = Wa[:, a]
 get_waa(Wa, a::Vector{Int}) = Wa[:, a]
 get_waa(Wa, a::AbstractArray{<:AbstractFloat}) = Wa*a
 
-contract_Wga(Wg, Wa::AbstractVector{<:Number}) =
+function contract_Wga(Wg, Wa::AbstractVector{<:Number})
     @tullio ret[q, r] := Wg[p, q, r] * Wa[p]
+end
 
-contract_Wgax(Wg, Wa::AbstractMatrix{<:Number}, Wx::AbstractMatrix{<:Number}) =
+function contract_Wgax(Wg, Wa::AbstractMatrix{<:Number}, Wx::AbstractMatrix{<:Number})
     @tullio ret[q, k] := Wg[p, q, r] * Wa[p, k] * Wx[r, k]
+end
 
 
 include("RNNUtil.jl")
