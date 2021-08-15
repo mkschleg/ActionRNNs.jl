@@ -12,9 +12,6 @@ step!(ut::UpdateTimer) = ut.t += 1
 reset!(ut::UpdateTimer) = ut.t = 0
 
 
-get_replay_buffer(agent::AbstractERAgent) = agent.replay
-get_learning_update(agent::AbstractERAgent) = agent.lu
-
 
 ####
 # Construction helper functions
@@ -73,9 +70,9 @@ function get_state_from_experience(type, exp)
 end
 
 get_information_from_experience(agent::AbstractERAgent, exp) = 
-    get_information_from_experience(get_replay_buffer(agent), get_learning_update(agent), agent.s_t, exp)
+    get_information_from_experience(get_device(agent), get_replay_buffer(agent), get_learning_update(agent), agent.s_t, exp)
 
-function get_information_from_experience(::EpisodicSequenceReplay, ::ControlUpdate, s_t, exp)
+function get_information_from_experience(device, ::EpisodicSequenceReplay, ::ControlUpdate, s_t, exp)
     s = get_state_from_experience(s_t, exp)
 
     batch_size = length(exp)
@@ -89,12 +86,12 @@ function get_information_from_experience(::EpisodicSequenceReplay, ::ControlUpda
     s, a, r, t, actual_seq_lengths
 end
 
-function get_information_from_experience(::ImageReplay{ER}, ::ControlUpdate, s_t, actllen_exp) where {ER<:EpisodicSequenceReplay}
+function get_information_from_experience(device, ::ImageReplay{ER}, ::ControlUpdate, s_t, actllen_exp) where {ER<:EpisodicSequenceReplay}
     # s = get_state_from_experience(s_t, exp)
 
     exp = actllen_exp[2]
     s = if s_t isa Tuple
-        [(exp.am1[i], exp.s[i]) for i in 1:length(exp.s)]
+        [(exp.am1[i], device(exp.s[i], Symbol("s$(i)"))) for i in 1:length(exp.s)]
     else
         device.(exp.s, [Symbol("s$(i)") for i ∈ 1:length(exp.s)])
     end
@@ -109,11 +106,10 @@ function get_information_from_experience(::ImageReplay{ER}, ::ControlUpdate, s_t
 end
 
 
-function get_information_from_experience(::EpisodicSequenceReplay, ::PredictionUpdate, s_t, exp)
+function get_information_from_experience(device, ::EpisodicSequenceReplay, ::PredictionUpdate, s_t, exp)
 
 
     s = get_state_from_experience(s_t, exp)
-
     
     batch_size = length(exp)
 

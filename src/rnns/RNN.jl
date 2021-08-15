@@ -96,7 +96,7 @@ function (m::MARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{<:Inte
     wh = contract_WA(m.Wh, a, h)
     ba = get_waa(m.b, a)
 
-    new_h = m.σ.(wx .+ wh .+ ba)
+    new_h = σ.(wx .+ wh .+ ba)
     
     sz = size(o)
     return new_h, reshape(new_h, :, sz[2:end]...)

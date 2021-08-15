@@ -39,7 +39,11 @@ mutable struct DRQNAgent{ER, Φ,  Π, HS<:AbstractMatrix{Float32}} <: AbstractER
 end
 
 """
-abstract type AbstractERAgent{LU, ER, TN} <: AbstractAgent end
+abstract type AbstractERAgent{LU, ER, TN, DEV} <: AbstractAgent end
+
+get_replay_buffer(agent::AbstractERAgent) = agent.replay
+get_learning_update(agent::AbstractERAgent) = agent.lu
+get_device(agent::AbstractERAgent) = agent.device
 
 
 
@@ -58,30 +62,67 @@ end
 
 
 function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
-    
-    agent.action = 1
-    agent.am1 = 1
-    agent.beg = true
 
-    s_t = build_new_feat(agent, s, agent.action)
-    
-    Flux.reset!(agent.model)
-    values = agent.model(s_t)
+    if true #agent.device isa GPU
+        #=
+        new probably more sensible behaviour. 
+        
+        The new behaviour uses a starting action of agent.action=1 
+        in constructing the initial agent.s_t and adding to agent.state_list.
+        =#
+        agent.action = 1
+        agent.am1 = 1
+        agent.beg = true
 
-    agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
-    
-    empty!(agent.state_list)
+        empty!(agent.state_list)
 
-    if agent.replay isa ImageReplay
-        start_statebuffer!(agent.replay, s)
+        if agent.replay isa ImageReplay
+            start_statebuffer!(agent.replay, s)
+        end
+
+        agent.s_t = build_new_feat(agent, s, agent.action)
+        push!(agent.state_list, agent.s_t)
+        
+        Flux.reset!(agent.model)
+        values = [agent.model(s_t) for s_t in agent.state_list][end] 
+        
+        agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
+        
+        agent.hidden_state_init = get_initial_hidden_state(agent.model)
+        
+        return agent.action
+    else
+        #=
+        Old behaviour.
+
+        The old behaviour uses the action sampled from the 
+        inistial state to build the agent.state_list and 
+        agent.s_t. This doesn't seem sensible, and a weird decision.
+        Kept for backward compatibility.
+        =#
+        agent.action = 1
+        agent.am1 = 1
+        agent.beg = true
+
+        s_t = build_new_feat(agent, s, agent.action)
+        
+        Flux.reset!(agent.model)
+        values = agent.model(s_t)
+
+        agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
+        
+        empty!(agent.state_list)
+
+        if agent.replay isa ImageReplay
+            start_statebuffer!(agent.replay, s)
+        end
+
+        push!(agent.state_list, build_new_feat(agent, s, agent.action))
+        agent.hidden_state_init = get_initial_hidden_state(agent.model)
+        agent.s_t = build_new_feat(agent, s, agent.action)
+        
+        return agent.action
     end
-
-    push!(agent.state_list, build_new_feat(agent, s, agent.action))
-    agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
-    agent.s_t = build_new_feat(agent, s, agent.action)
-    
-    return agent.action
-    
 end
 
 
@@ -109,6 +150,7 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     us = if agent.update_timer(length(agent.replay))
         update!(agent, rng)
     end
+    
     if agent.target_update_timer(length(agent.replay))
         update_target_network!(agent)
     end
@@ -121,14 +163,13 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     # Get predictions and manage hidden state
     ####i
     reset!(agent.model, agent.hidden_state_init)
-    values = agent.model.(agent.state_list)[end]
+    values = [agent.model(obs) for obs in agent.state_list][end]
 
     cur_hidden_state = get_hidden_state(agent.model)
 
-    is_full = DataStructures.isfull(agent.state_list)
-    if is_full
+    if DataStructures.isfull(agent.state_list)
         agent.hidden_state_init =
-            get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1], 1)
+            get_next_hidden_state!(agent.model, agent.hidden_state_init, agent.state_list[1])
     end
 
     ####
@@ -155,20 +196,20 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:ControlUpdate}
     params = get_information_from_experience(agent, exp)
     
     if agent.replay isa ImageReplay
-        ActionRNNs.get_hs_from_experience!(agent.model, exp[2], agent.hs_tr_init, CPU())
+        ActionRNNs.get_hs_from_experience!(agent.model, exp[2], agent.hs_tr_init, get_device(agent))
     else
-        ActionRNNs.get_hs_from_experience!(agent.model, exp, agent.hs_tr_init, CPU())
+        ActionRNNs.get_hs_from_experience!(agent.model, exp, agent.hs_tr_init, get_device(agent))
     end
-            
+
     us = update_batch!(agent.lu,
                        agent.model,
                        agent.target_network,
                        agent.opt,
                        agent.hs_tr_init,
-                       params)
+                       params; device=get_device(agent))
     
     if agent.hs_learnable
-        modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt)
+        modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt, get_device(agent))
     end
     
     us
@@ -185,8 +226,8 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:PredictionUpdate}
 
     params = get_information_from_experience(agent, exp)
 
-
-    hs = ActionRNNs.get_hs_from_experience(agent.model, exp, 1)
+    hs = ActionRNNs.get_hs_from_experience(agent.model, exp)
+    
     for k ∈ keys(hs)
         h = get!(()->zero(hs[k]), agent.hs_tr_init, k)
         copyto!(h, hs[k])
@@ -198,12 +239,12 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:PredictionUpdate}
                        agent.opt,
                        agent.hs_tr_init,
                        params)
+
     
     if agent.hs_learnable
         modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt)
     end
     us 
-
 
 end
 
@@ -211,4 +252,4 @@ update_target_network!(agent::AbstractERAgent) = begin
     update_target_network!(agent.model, agent.target_network)
 end
 
-update_target_network!(agent::AbstractERAgent{LU, ER, Nothing}) where {LU, ER} = nothing
+update_target_network!(::AbstractERAgent{LU, ER, Nothing}) where {LU, ER} = nothing
