@@ -25,14 +25,14 @@ function ControlOnlineAgent(model,
                             acting_policy)
 
     state_list, init_state = begin
-        if contains_rnntype(model, AbstractActionRNN)
+        if contains_rnn_type(model, AbstractActionRNN)
             (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 1}}}(τ+1), (0, zeros(Float32, 1)))
         else
             (DataStructures.CircularBuffer{Array{Float32, 1}}(τ+1), zeros(Float32, 1))
         end
     end
     
-    hidden_state_init = get_initial_hidden_state(model, 1)
+    hidden_state_init = get_initial_hidden_state(model)
     
     ControlOnlineAgent(QLearningSUM(γ),
                      opt,
@@ -86,7 +86,7 @@ function MinimalRLCore.start!(agent::ControlOnlineAgent, s, rng; kwargs...)
     empty!(agent.state_list)
 
     push!(agent.state_list, build_new_feat(agent, s, agent.action))
-    agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
+    agent.hidden_state_init = get_initial_hidden_state(agent.model)
     agent.s_t = build_new_feat(agent, s, agent.action)
     return agent.action
 end
@@ -112,14 +112,14 @@ function MinimalRLCore.step!(agent::ControlOnlineAgent, env_s_tp1, r, terminal, 
     # Get predictions and manage hidden state
     ####
     reset!(agent.model, agent.hidden_state_init)
-    values = agent.model.(agent.state_list)[end]
+    values = [agent.model(obs) for obs in agent.state_list][end]
     
-    cur_hidden_state = get_hidden_state(agent.model, 1)
+    cur_hidden_state = get_hidden_state(agent.model)
 
     is_full = DataStructures.isfull(agent.state_list)
     if is_full
         agent.hidden_state_init =
-            get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1], 1)
+            get_next_hidden_state!(agent.model, agent.hidden_state_init, agent.state_list[1])
     end
 
     ####
