@@ -61,6 +61,13 @@ function contract_WA(W, a::AbstractMatrix{<:AbstractFloat}, x)
     @tullio ret[i, k] := W[l, i, j] * a[l, k] * x[j, k]
 end
 
+# Precompile commands to reduce latency.
+precompile(contract_WA, (Matrix{Float32}, Vector{Int}, Matrix{Float32}))
+precompile(contract_WA, (Matrix{Float32}, Int, Vector{Float32}))
+precompile(contract_WA, (Matrix{Float32}, Int, Matrix{Float32}))
+
+
+
 get_waa(Wa, a::Int) = Wa[:, a]
 get_waa(Wa, a::Vector{Int}) = Wa[:, a]
 get_waa(Wa, a::AbstractArray{<:AbstractFloat}) = Wa*a

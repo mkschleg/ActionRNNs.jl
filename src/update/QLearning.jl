@@ -77,16 +77,18 @@ function update_batch!(lu::QLearning,
         reset!(target_network, h_init)
     end
 
-    m = fill(false, length(terminal), length(terminal))
-    m[CartesianIndex.(1:length(terminal), 1:length(terminal))] .= true
-    m_dev = device(m)
-    
+    # m = fill(false, length(terminal), length(terminal))
+    # m[CartesianIndex.(1:length(terminal), 1:length(terminal))] .= true
+    # m_dev = device(m)
+    # @show m_dev
     grads = gradient(ps) do
 
-        preds = map(chain, state_seq)
-        pred_view = hcat([preds[actual_seq_len[i]][action_t[i], :] for i ∈ 1:length(actual_seq_len)]...)
-        q_t = sum(pred_view .* m_dev; dims=2)[:, 1]
+        preds = [chain(state) for state in state_seq]
 
+        # pred_view = hcat([preds[actual_seq_len[i]][action_t[i], :] for i ∈ 1:length(actual_seq_len)]...)
+        # q_t = sum(pred_view .* m_dev; dims=2)[:, 1]
+        q_t = [preds[actual_seq_len[i]][action_t[i], i] for i in 1:length(actual_seq_len)]
+        
         qtrgts = typeof(q_t)()
         ignore() do
             if target_network isa Nothing
@@ -105,7 +107,7 @@ function update_batch!(lu::QLearning,
         end
         loss
     end
-    # throw("oh no")
+
     Flux.update!(opt, ps, grads)
     UpdateState(ℒ, grads, Flux.params(chain), opt)
 end
