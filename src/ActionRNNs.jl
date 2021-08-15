@@ -18,7 +18,8 @@ include("Layers.jl")
 include("models/viz_backbone.jl")
 
 
-export AARNN, MARNN, FacARNN, reset!, get
+export AARNN, MARNN, FacMARNN, AAGRU, MAGRU, FacMAGRU, reset!, get
+
 
 include("RNNs.jl")
 
