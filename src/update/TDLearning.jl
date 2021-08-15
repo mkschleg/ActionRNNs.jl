@@ -33,7 +33,7 @@ function update!(chain,
     n = length(state_seq)
     grads = gradient(Flux.params(chain)) do
 
-        preds = map(chain, state_seq)
+        preds = [chain(obs) for obs in state_seq]
         v_tp1 = dropgrad(preds[n])
         cumulants, discounts, π_prob = dropgrad(get(horde, nothing, action_t, env_state_tp1, v_tp1))
         ρ = dropgrad(Float32.(π_prob./b_prob))
@@ -72,7 +72,7 @@ function update_batch!(lu::TD,
 
     grads = gradient(ps) do
         
-        preds = map(chain, state_seq)
+        preds = [chain(obs) for obs in state_seq]
         v_tp1 = dropgrad(preds[n])
 
         ρ = zeros(Float32, size(v_tp1)...)
@@ -146,7 +146,7 @@ function update_batch!(chain,
     reset!(chain, h_init)
     grads = gradient(ps) do
         
-        preds = map(chain, state_seq)
+        preds = [chain(obs) for obs in state_seq]
         v_tp1 = dropgrad(preds[n])
 
         loss = offpolicy_tdloss(ρ, preds[n-1], cumulants, discounts, v_tp1)
