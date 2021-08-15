@@ -57,7 +57,7 @@ function update!(chain,
 end
 
 qtargets(preds, action_t, r, γ, terminal, actual_seq_len) = begin
-    @tullio (max) q_tp1[i] := preds[actual_seq_len[i] + 1][j, i]
+    @tullio q_tp1[i] := maximum(preds[actual_seq_len[i] + 1][:, i])
     r .+ γ .* (one(γ) .- terminal) .* q_tp1
 end
 
@@ -80,24 +80,26 @@ function update_batch!(lu::QLearning,
     reset!(chain, h_init)
     ps = get_params(chain, h_init, hs_learnable)
 
-    trgt_preds = if target_network isa Nothing
+    if target_network isa Nothing
         nothing
     else
         reset!(target_network, h_init)
     end
 
-    # m = fill(false, length(terminal), length(terminal))
-    # m[CartesianIndex.(1:length(terminal), 1:length(terminal))] .= true
-    # m_dev = device(m)
+
     # @show m_dev
     grads = gradient(ps) do
 
         preds = [chain(state) for state in state_seq]
 
-        # pred_view = hcat([preds[actual_seq_len[i]][action_t[i], :] for i ∈ 1:length(actual_seq_len)]...)
-        # q_t = sum(pred_view .* m_dev; dims=2)[:, 1]
-        q_t = [preds[actual_seq_len[i]][action_t[i], i] for i in 1:length(actual_seq_len)]
-        
+        if typeof(preds[1]) <: CUDA.CuArray
+            m_dev = device(I(length(terminal)))
+            pred_view = hcat([preds[actual_seq_len[i]][action_t[i], :] for i ∈ 1:length(actual_seq_len)]...)
+            q_t = sum(pred_view .* dropgrad(m_dev); dims=2)[:, 1]
+        else
+            q_t = [preds[actual_seq_len[i]][action_t[i], i] for i in 1:length(actual_seq_len)]
+        end
+
         qtrgts = typeof(q_t)()
         ignore() do
             if target_network isa Nothing

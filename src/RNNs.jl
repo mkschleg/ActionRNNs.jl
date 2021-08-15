@@ -47,6 +47,11 @@ end
 function contract_WA(W::CuArray, a::Vector{Int}, x)
     Wa = W[a, :, :]
     @tullio ret[i, k] := Wa[k, i, j] * x[j, k]
+    # a_gpu = cu(a)
+    # @tullio ret[i, k] := W[a_gpu[k], i, j] * x[j, k]
+    # a_gpu = cu(a)
+    # mid = W ⊡ x
+    # @tullio ret[i, k] := mid[a_gpu[k], i, k]
 end
 
 function contract_WA(W, a::AbstractVector{Int}, x::AbstractVector)

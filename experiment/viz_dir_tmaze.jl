@@ -1,7 +1,5 @@
 module VisualDirectionalTMazeERExperiment
 
-# include("../src/ActionRNNs.jl")
-
 import Flux
 import JLD2
 import LinearAlgebra.Diagonal
@@ -125,7 +123,7 @@ function construct_agent(env, parsed, rng)
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed, (28, 28, 1, 1), env, rng) #|> Flux.gpu
+    chain = get_ann(parsed, (28, 28, 1, 1), env, rng) |> Flux.gpu
 
     ActionRNNs.ImageDRQNAgent(chain,
                          opt,
