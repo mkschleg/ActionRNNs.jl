@@ -88,7 +88,7 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
         
         agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
         
-        agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
+        agent.hidden_state_init = get_initial_hidden_state(agent.model)
         
         return agent.action
     else
@@ -118,7 +118,7 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
         end
 
         push!(agent.state_list, build_new_feat(agent, s, agent.action))
-        agent.hidden_state_init = get_initial_hidden_state(agent.model, 1)
+        agent.hidden_state_init = get_initial_hidden_state(agent.model)
         agent.s_t = build_new_feat(agent, s, agent.action)
         
         return agent.action
@@ -169,7 +169,7 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     is_full = DataStructures.isfull(agent.state_list)
     if is_full
         agent.hidden_state_init =
-            get_next_hidden_state(agent.model, agent.hidden_state_init, agent.state_list[1], 1)
+            get_next_hidden_state!(agent.model, agent.hidden_state_init, agent.state_list[1])
     end
 
     ####
@@ -226,7 +226,8 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:PredictionUpdate}
 
     params = get_information_from_experience(agent, exp)
 
-    hs = ActionRNNs.get_hs_from_experience(agent.model, exp, 1)
+    hs = ActionRNNs.get_hs_from_experience(agent.model, exp)
+    
     for k ∈ keys(hs)
         h = get!(()->zero(hs[k]), agent.hs_tr_init, k)
         copyto!(h, hs[k])

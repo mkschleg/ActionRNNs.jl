@@ -8,14 +8,18 @@ trainable(a::Flux.Recur) = (a.cell, a.state)
 tuple_hidden_state(rnn::Flux.Recur) = rnn.state isa Tuple
 
 """
-    find_layers_with_eq(m, eq)
+    find_layers_with_eq(eq::Function, model)
 
 A function which takes a model and a function and returns the locations where the function returns true.
+This only supports composing chaings twice.
+
+    find_layers_with_recur(model)
+
+Finds layers with recur.
 """
 function find_layers_with_eq(eq::Function, model)
-    m = model
     layer_indecies = Union{Int, Tuple}[]
-    for (idx, l) in enumerate(m)
+    for (idx, l) in enumerate(model)
         if l isa Flux.Chain
             layer_idx = find_layers_with_eq(eq, l)
             for l_idx in layer_idx
@@ -28,10 +32,17 @@ function find_layers_with_eq(eq::Function, model)
     return layer_indecies
 end
 
-find_layers_with_recur(model) = find_layers_with_recur(model) do (l)
+find_layers_with_recur(model) = find_layers_with_eq(model) do (l)
     l isa Flux.Recur
 end
 
+"""
+    contains_comp(comp::Function, model)
+
+Check if a layer of a model returns true with comp.
+
+    contains_layer_type(model, type)
+"""
 function contains_comp(comp::Function, model)
     is_true = false
     foreach(x -> is_true = is_true || comp(x),
@@ -40,10 +51,16 @@ function contains_comp(comp::Function, model)
 end
 
 contains_layer_type(model, type) = contains_comp(model) do (l)
-    (l isa Flux.Recur && l.cell isa type) || (l isa type)
+     (l isa type) || (l isa Flux.Recur && l.cell isa type)
 end
 
-contains_rnntype(m, rnn_type) = contains_layer_type(m, rnn_type)
+contains_rnn_type(m, rnn_type) = begin
+    if rnn_type <: Flux.Recur
+        contains_layer_type(m, rnn_type.parameters[1])
+    else
+        contains_layer_type(m, rnn_type)
+    end
+end
 
 needs_action_input(m) = contains_comp(m) do (l)
     _needs_action_input(l)
@@ -60,7 +77,7 @@ end
 
 function get_hs_symbol_list(model)
     hs_symbol = Symbol[]
-    rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
+    rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, model)
     for idx ∈ rnn_idx
         if tuple_hidden_state(model[idx])
             hs = hs_symbol_layer(model[idx], idx)
@@ -77,11 +94,8 @@ end
 
 ########## Reset Functions ############
 
-reset!(m, h_init::IdDict) = 
-    foreach(x -> x isa Flux.Recur && reset!(x, h_init[x]), Flux.functor(m)[1])
-
 function reset!(m, h_init::Dict)
-    rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, m)
+    rnn_idx = find_layers_with_recur(m) # find_layers_with_eq((l)->l isa Flux.Recur, m)
     for idx ∈ rnn_idx
         if tuple_hidden_state(m[idx])
             h_sym = hs_symbol_layer(m[idx], idx)
@@ -100,7 +114,7 @@ end
 
 ############ Hidden State Manipulation ##########
 
-function get_next_hidden_state(rnn::Flux.Recur{T}, h_init, input) where {T}
+function get_next_hidden_state!(rnn::Flux.Recur{T}, h_init, input) where {T}
     if tuple_hidden_state(rnn)
         deepcopy(rnn.cell(h_init, input)[1])
     else
@@ -108,116 +122,74 @@ function get_next_hidden_state(rnn::Flux.Recur{T}, h_init, input) where {T}
     end
 end
 
-function get_next_hidden_state(c, h_init, input, d=nothing)
-    reset!(c, h_init)
-    c(input)
-    get_hidden_state(c, d)
+function get_next_hidden_state!(model, h_init, input)
+    reset!(model, h_init)
+    model(input)
+    get_hidden_state(model)
 end
 
-### TODO there may be extra copies here than what is actually needed. Test in the future if there is slowdown from allocations here.
-function get_hidden_state(c, d=nothing)
-    # h_state = IdDict{Any, Array{Float32, 1}}()
-    if d isa Nothing
-        h_state = IdDict()
-        foreach(x -> x isa Flux.Recur && get!(h_state, x, get_hidden_state(x)), Flux.functor(c)[1])
-        h_state
-    else
-        h_state = Dict{Symbol, AbstractMatrix{Float32}}()
-        rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, c)
-        for idx ∈ rnn_idx
-            if tuple_hidden_state(c[idx])
-                hs_sym = hs_symbol_layer(c[idx], idx)
-                h_state[hs_sym[1]], h_state[hs_sym[2]] = get_hidden_state(c[idx])
-            else
-                h_sym = hs_symbol_layer(c[idx], idx)
-                h_state[h_sym] = get_hidden_state(c[idx])
-            end
+
+function _get_hidden_state(ghs_func::Function, model)
+    
+    h_state = Dict{Symbol, AbstractMatrix{Float32}}()
+    rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, c)
+    for idx ∈ rnn_idx
+        if tuple_hidden_state(model[idx])
+            hs_sym = hs_symbol_layer(model[idx], idx)
+            h_state[hs_sym[1]], h_state[hs_sym[2]] = ghs_func(model[idx])
+        else
+            h_sym = hs_symbol_layer(model[idx], idx)
+            h_state[h_sym] = ghs_func(model[idx])
         end
-        h_state
+    end
+    h_state
+end
+
+_get_hidden_state(ghs_func::Function, rnn::Flux.Recur) = ghs_func(rnn)
+
+get_hidden_state(model) = _get_hidden_state(model) do rnn
+    if tuple_hidden_state(rnn)
+        copy(rnn.state[1]), copy(rnn.state[2])
+    else
+        copy(rnn.state)
     end
 end
 
-get_hidden_state(rnn::Flux.Recur{T}) where {T} = if tuple_hidden_state(rnn)
-    copy(rnn.state[1]), copy(rnn.state[2])
-else
-    copy(rnn.state)
-end
-# get_hidden_state(rnn::Flux.Recur{T}) where {T<:Union{Flux.LSTMCell, AALSTMCel}} = copy(rnn.state[1]), copy(rnn.state[2])
-
-
-function get_hidden_state_inplace(c, d=nothing)
-    # h_state = IdDict{Any, Array{Float32, 1}}()
-    if d isa Nothing
-        h_state = IdDict()
-        foreach(x -> x isa Flux.Recur && get!(h_state, x, get_hidden_state_inplace(x)), Flux.functor(c)[1])
-        h_state
-    else
-        h_state = Dict{Symbol, AbstractMatrix{Float32}}()
-        rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, c)
-        for idx ∈ rnn_idx
-            if tuple_hidden_state(c[idx])
-                hs_sym = hs_symbol_layer(c[idx], idx)
-                h_state[hs_sym[1]], h_state[hs_sym[2]] = get_hidden_state_inplace(c[idx])
-            else
-                h_sym = hs_symbol_layer(c[idx], idx)
-                h_state[h_sym] = get_hidden_state_inplace(c[idx])
-            end
-        end
-        h_state
-    end
+get_hidden_state_inplace(model) = _get_hidden_state(model) do rnn
+    rnn.state
 end
 
-
-get_hidden_state_inplace(rnn::Flux.Recur{T}) where {T} = rnn.state
-# get_hidden_state_inplace(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = rnn.state
-
-
-function get_initial_hidden_state(c, d=nothing)
-    if d isa Nothing
-        h_state = IdDict()
-        foreach(x -> x isa Flux.Recur && get!(h_state, x, get_initial_hidden_state(x)), Flux.functor(c)[1])
-        h_state
-    else
-        
-        h_state = Dict{Symbol, AbstractMatrix{Float32}}()
-        rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, c)
-        for idx ∈ rnn_idx
-            if tuple_hidden_state(c[idx])
-                hs_sym = hs_symbol_layer(c[idx], idx)
-                h_state[hs_sym[1]], h_state[hs_sym[2]] = get_initial_hidden_state(c[idx])
-            else
-                h_sym = hs_symbol_layer(c[idx], idx)
-                h_state[h_sym] = get_initial_hidden_state(c[idx])
-            end
-        end
-        h_state
-    end
+get_initial_hidden_state(model) = _get_hidden_state(model) do rnn
+    rnn.cell.state0
 end
 
-get_initial_hidden_state(rnn::Flux.Recur{T}) where {T} = rnn.cell.state0
-# get_initial_hidden_state(rnn::Flux.Recur{T}) where {T<:Flux.LSTMCell} = rnn.cell.state0
+#################
+#
+# Experience Replay Functions
+#
+#################
 
+"""
+    get_hs_details_for_er(model)
 
-
-###### Experience Replay Functions ########
-
+Return the types, sizes, and symbols of the hidden state for the ER buffer.
+"""
 function get_hs_details_for_er(model)
 
     # Find all the RNN layers in the model
-    rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
-
-    # get hidden state archetype from model
-    hidden_state_init = get_initial_hidden_state(model, 1)
+    rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, model)
+    hidden_state_init = get_initial_hidden_state(model)
+    
     
     hs_type = DataType[]
     hs_length = Int[]
     hs_symbol = Symbol[]
+    
     for idx ∈ rnn_idx
         hs_sym = hs_symbol_layer(model[idx], idx)
         if tuple_hidden_state(model[idx])
-            # push!(hs_type, hidden_state_init[model[idx]])
-            # throw("LSTMs not supported yet")
             hs_archtype_1, hs_archtype_2 = hidden_state_init[hs_sym[1]], hidden_state_init[hs_sym[2]]
+
             push!(hs_type, eltype(hs_archtype_1))
             push!(hs_length, length(hs_archtype_1))
             push!(hs_symbol, hs_symbol_layer(model[idx], idx)[1])
@@ -236,38 +208,22 @@ function get_hs_details_for_er(model)
     hs_type, hs_length, hs_symbol
 end
 
+"""
+    get_hs_from_experience!(model, exp::NamedTuple, hs_dict::Dict, device)
+    get_hs_from_experience!(model, exp::Vector, hs_dict::Dict, device)
 
-function get_hs_from_experience!(model, exp::NamedTuple, d::IdDict, device)
+Get hs in the appropriate formate from the experience (either a Named Tuple or a vector of tuples Named Tuples).
+"""
+function get_hs_from_experience!(model, exp::NamedTuple, hs_dict::Dict, device)
 
-    hs = d
+    hs = hs_dict
 
-    rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
+    rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, model)
     for idx in rnn_idx
-        init_hs = get_initial_hidden_state(model[idx])
-        if tuple_hidden_state(model[idx])
-            throw("How did you get here?")
-        else
-            hs_symbol = hs_symbol_layer(model[idx], idx)
-            if :beg ∈ keys(exp)
-                hs[model[idx]] .= device(hcat([(exp.beg[b][1] ? init_hs : exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...))
-            else
-                hs[model[idx]] .= device(hcat([(exp[hs_symbol][b][1]) for b in 1:length(exp.beg)]...))
-            end
-        end
-    end
-    hs
 
-end
-
-function get_hs_from_experience!(model, exp::NamedTuple, d::Dict, device)
-
-    hs = d
-
-    rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
-    for idx in rnn_idx
         init_hs = CPU()(get_initial_hidden_state(model[idx]))
         if tuple_hidden_state(model[idx])
-            # throw("How did you get here?")
+
             hs_symbol = hs_symbol_layer(model[idx], idx)
             h_1 = if :beg ∈ keys(exp)
                 device(hcat([(exp.beg[b][1] ? init_hs[1] : exp[hs_symbol[1]][b][1]) for b in 1:length(exp.beg)]...), hs_symbol[1])
@@ -302,11 +258,11 @@ function get_hs_from_experience!(model, exp::NamedTuple, d::Dict, device)
 
 end
 
-function get_hs_from_experience!(model, exp::Vector, d::Dict, device)
+function get_hs_from_experience!(model, exp::Vector, hs_dict::Dict, device)
 
-    hs = d
+    hs = hs_dict
 
-    rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
+    rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, model)
     for idx in rnn_idx
         init_hs = CPU()(get_initial_hidden_state(model[idx]))
         if tuple_hidden_state(model[idx])
@@ -357,57 +313,37 @@ function get_hs_from_experience!(model, exp::Vector, d::Dict, device)
     hs
 end
 
-function get_hs_from_experience(model, exp, d=nothing)
-    if d isa Nothing
-        hs = IdDict()
-        rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
-        for idx in rnn_idx
-            if tuple_hidden_state(model[idx])
-                throw("How did you get here?")
+function get_hs_from_experience(model, exp)
+    hs = Dict{Symbol, Array{Float32}}()
+    rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, model)
+    for idx in rnn_idx
+        if tuple_hidden_state(model[idx])
+            throw("How did you get here?")
+        else
+            hs_symbol = hs_symbol_layer(model[idx], idx)
+            init_hs = get_initial_hidden_state(model[idx])
+            if :beg ∈ keys(exp[1][1])
+                hs[hs_symbol] = hcat([(seq[1].beg[1] ? init_hs : getindex(seq[1], hs_symbol)) for seq in exp]...)
             else
-                hs_symbol = hs_symbol_layer(model[idx], idx)
-                init_hs = get_initial_hidden_state(model[idx])
-                if :beg ∈ keys(exp[1][1])
-                    hs[model[idx]] = hcat([(seq[1].beg[1] ? init_hs : getindex(seq[1], hs_symbol)) for seq in exp]...)
+                if exp[1] isa NamedTuple
+                    hs[hs_symbol] = getindex(exp[1], hs_symbol)
                 else
-                    if exp[1] isa NamedTuple
-                        hs[model[idx]] = getindex(exp[1], hs_symbol)
-                    else
-                        hs[model[idx]] = hcat([(getindex(seq[1], hs_symbol)) for seq in exp]...)
-                    end
+                    hs[hs_symbol] = hcat([(getindex(seq[1], hs_symbol)) for seq in exp]...)
                 end
             end
         end
-        hs
-    else
-        hs = Dict{Symbol, Array{Float32}}()
-        rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
-        for idx in rnn_idx
-            if tuple_hidden_state(model[idx])
-                throw("How did you get here?")
-            else
-                hs_symbol = hs_symbol_layer(model[idx], idx)
-                init_hs = get_initial_hidden_state(model[idx])
-                if :beg ∈ keys(exp[1][1])
-                    hs[hs_symbol] = hcat([(seq[1].beg[1] ? init_hs : getindex(seq[1], hs_symbol)) for seq in exp]...)
-                else
-                    if exp[1] isa NamedTuple
-                        hs[hs_symbol] = getindex(exp[1], hs_symbol)
-                    else
-                        hs[hs_symbol] = hcat([(getindex(seq[1], hs_symbol)) for seq in exp]...)
-                    end
-                end
-            end
-        end
-        hs
     end
+    hs
 end
 
+"""
+    modify_hs_in_er!
 
-
+Updating hidden state in the experience replay buffer.
+"""
 function modify_hs_in_er!(replay::ImageReplay, model, act_exp, exp_idx, hs, grads=nothing, opt=nothing, device=CPU())
     
-    rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
+    rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, model)
     exp = act_exp[2]
     
     for ridx in rnn_idx
@@ -415,19 +351,13 @@ function modify_hs_in_er!(replay::ImageReplay, model, act_exp, exp_idx, hs, grad
             throw("How did you get here?")
         else
             hs_symbol = ActionRNNs.hs_symbol_layer(model[ridx], ridx)
+            
             init_grad = zero(get_initial_hidden_state(model[ridx])) |> cpu
             init_grad_n = 0
-            h = if hs isa IdDict
-                hs[model[ridx]] |> cpu
-            else
-                hs[hs_symbol] |> cpu
-            end
+            
+            h = hs[hs_symbol] |> cpu
+            δh = grads[hs[hs_symbol]] |> cpu
 
-            δh = if hs isa IdDict
-                grads[hs[model[ridx]]] |> cpu
-            else
-                grads[hs[hs_symbol]] |> cpu
-            end
             for (i, idx) ∈ enumerate(exp_idx)
 
                 if exp.beg[i][1] == true
@@ -436,7 +366,6 @@ function modify_hs_in_er!(replay::ImageReplay, model, act_exp, exp_idx, hs, grad
                     else
                         init_grad .+= δh[:, i]
                     end
-                    # init_grad .+= h[:, i]
                     init_grad_n += 1
                 else
                     if getindex(replay.replay.buffer._stg_tuple, hs_symbol) isa Vector
@@ -464,20 +393,17 @@ function modify_hs_in_er!(replay, model, exp, exp_idx, hs, grads = nothing, opt 
     if device isa GPU
         error("GPU Not yet supported for $(typeof(replay)) in modify_hs_in_er!")
     end
-    rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
+    
+    rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, model)
     
     for ridx in rnn_idx
         if tuple_hidden_state(model[ridx])
-            # throw("How did you get here?")
             hs_symbols = ActionRNNs.hs_symbol_layer(model[ridx], ridx)
             for (idx, hs_symbol) ∈ enumerate(hs_symbols)
                 init_grad = zero(get_initial_hidden_state(model[ridx])[idx])
                 init_grad_n = 0
-                h = if hs isa IdDict
-                    hs[model[ridx]]
-                else
-                    hs[hs_symbol]
-                end
+                h = hs[hs_symbol]
+
                 for (i, idx) ∈ enumerate(exp_idx)
                     if exp[i][1].beg[] == true
                         if grads isa Nothing
@@ -540,49 +466,8 @@ function modify_hs_in_er!(replay, model, exp, exp_idx, hs, grads = nothing, opt 
     end
 end
 
-
-function modify_hs_in_er!(replay::SequenceReplay, model, exp, exp_idx, hs, grads = nothing, opt = nothing)
+function modify_hs_in_er!(::SequenceReplay, args...)
     throw("Please don't be here.")
-    # rnn_idx = find_layers_with_eq((l)->l isa Flux.Recur, model)
-    
-    # for ridx in rnn_idx
-    #     if tuple_hidden_state(model[ridx])
-    #         throw("How did you get here?")
-    #     else
-    #         hs_symbol = ActionRNNs.hs_symbol_layer(model[ridx], ridx)
-    #         init_grad = zero(get_initial_hidden_state(model[ridx]))
-    #         init_grad_n = 0
-    #         h = if hs isa IdDict
-    #             hs[model[ridx]]
-    #         else
-    #             hs[hs_symbol]
-    #         end
-    #         for (i, idx) ∈ enumerate(exp_idx)
-    #             if exp[i][1].beg[] == true
-    #                 if grads isa Nothing
-    #                     init_grad  .+= h[:, i]
-    #                 else
-    #                     init_grad .+= grads[h][:, i]
-    #                 end
-    #                 init_grad_n += 1
-    #             else
-    #                 if getindex(replay.buffer._stg_tuple, hs_symbol) isa Vector
-    #                     getindex(replay.buffer._stg_tuple, hs_symbol)[idx] = h[i]
-    #                 else
-    #                     getindex(replay.buffer._stg_tuple, hs_symbol)[:, idx] .= h[:, i]
-    #                 end
-    #             end
-    #         end
-    #         if init_grad_n != 0
-    #             g = init_grad ./ init_grad_n
-    #             if grads isa Nothing
-    #                 model[ridx].cell.state0 .= g
-    #             else
-    #                 Flux.update!(opt, model[ridx].cell.state0, g)
-    #             end
-    #         end
-    #     end
-    # end
 end
 
-
+include("RNNUtil_deprec.jl")

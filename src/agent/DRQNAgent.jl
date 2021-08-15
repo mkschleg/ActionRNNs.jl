@@ -59,7 +59,7 @@ function DRQNAgent(model,
     
     state_list, init_state = make_state_list(model, dev)
 
-    hidden_state_init = get_initial_hidden_state(model, 1)
+    hidden_state_init = get_initial_hidden_state(model)
 
 
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
@@ -124,7 +124,7 @@ function ImageDRQNAgent(model,
         end
     end
 
-    hidden_state_init = get_initial_hidden_state(model, 1)
+    hidden_state_init = get_initial_hidden_state(model)
     @show typeof(hidden_state_init)
     # throw("oh no")
 

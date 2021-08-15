@@ -73,7 +73,7 @@ function DRTDNAgent(horde,
         end
     end
 
-    hidden_state_init = get_initial_hidden_state(model, 1)
+    hidden_state_init = get_initial_hidden_state(model)
 
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
     replay = EpisodicSequenceReplay(replay_size+τ-1,
