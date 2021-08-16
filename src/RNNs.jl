@@ -38,20 +38,14 @@ function contract_WA(W, a::AbstractVector{Int}, x)
     the first dimension of `B`, for any `ndims(A)` & `ndims(B)`.
     If both are vectors, then it returns a scalar `== sum(A .* B)`.
     =#
-    # mid = W ⊡ x
-    # @tullio ret[i, k] := mid[a[k], i, k]
-    @tullio ret[i, k] := W[a[k], i, j] * x[j, k]
+    mid = W ⊡ x
+    @tullio ret[i, k] := mid[a[k], i, k]
 end
 
 # Maybe fixed by new version of tullio.
 function contract_WA(W::CuArray, a::Vector{Int}, x)
-    Wa = W[a, :, :]
-    @tullio ret[i, k] := Wa[k, i, j] * x[j, k]
-    # a_gpu = cu(a)
-    # @tullio ret[i, k] := W[a_gpu[k], i, j] * x[j, k]
-    # a_gpu = cu(a)
-    # mid = W ⊡ x
-    # @tullio ret[i, k] := mid[a_gpu[k], i, k]
+    mid = @view (W ⊡ x)[a, :, :]
+    @tullio ret[i, k] := mid[k, i, k]
 end
 
 function contract_WA(W, a::AbstractVector{Int}, x::AbstractVector)

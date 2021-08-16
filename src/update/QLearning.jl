@@ -56,9 +56,11 @@ function update!(chain,
     UpdateState(ℒ, grads, Flux.params(chain), opt)
 end
 
-qtargets(preds, action_t, r, γ, terminal, actual_seq_len) = begin
-    @tullio q_tp1[i] := maximum(preds[actual_seq_len[i] + 1][:, i])
+function qtargets(preds, action_t, r, γ, terminal, actual_seq_len)
+    preds_cpu = preds |> cpu
+    @tullio q_tp1[i] := maximum(preds_cpu[actual_seq_len[i] + 1][:, i])
     r .+ γ .* (one(γ) .- terminal) .* q_tp1
+    # @tullio ret[i] := r[i] + γ * (one(γ) - terminal[i]) * maximum(preds[actual_seq_len[i] + 1][:, i])
 end
 
 function update_batch!(lu::QLearning,
@@ -80,10 +82,11 @@ function update_batch!(lu::QLearning,
     reset!(chain, h_init)
     ps = get_params(chain, h_init, hs_learnable)
 
-    if target_network isa Nothing
+    trgt_preds = if target_network isa Nothing
         nothing
     else
         reset!(target_network, h_init)
+        [target_network(obs) for obs in state_seq]
     end
 
 
@@ -92,31 +95,33 @@ function update_batch!(lu::QLearning,
 
         preds = [chain(state) for state in state_seq]
 
-        if typeof(preds[1]) <: CUDA.CuArray
+        # sum(preds[end])
+        q_t = if typeof(preds[1]) <: CUDA.CuArray
             m_dev = device(I(length(terminal)))
             pred_view = hcat([preds[actual_seq_len[i]][action_t[i], :] for i ∈ 1:length(actual_seq_len)]...)
-            q_t = sum(pred_view .* dropgrad(m_dev); dims=2)[:, 1]
+            sum(pred_view .* dropgrad(m_dev); dims=2)[:, 1]
         else
-            q_t = [preds[actual_seq_len[i]][action_t[i], i] for i in 1:length(actual_seq_len)]
+            [preds[actual_seq_len[i]][action_t[i], i] for i in 1:length(actual_seq_len)]
         end
 
+        # sum(q_t)
         qtrgts = typeof(q_t)()
         ignore() do
             if target_network isa Nothing
                 qtrgts = device(dropgrad(qtargets(preds, action_t, reward, γ, terminal, actual_seq_len)), :qtargets)
             else
-                trgt_preds = [target_network(obs) for obs in state_seq]
                 x = qtargets(trgt_preds, action_t, reward, γ, terminal, actual_seq_len)
                 qtrgts = device(x, :qtargets)
             end
         end
 
-        loss = lu.loss(q_t, qtrgts)
+        sum(q_t)
+        # loss = lu.loss(q_t, qtrgts)
         
-        ignore() do
-            ℒ = loss
-        end
-        loss
+        # ignore() do
+        #     ℒ = loss
+        # end
+        # loss
     end
 
     Flux.update!(opt, ps, grads)
