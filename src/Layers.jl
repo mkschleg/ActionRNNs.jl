@@ -44,8 +44,6 @@ end
 Flux.@functor DualStreams
 (l::DualStreams)(x) = (l.m1(x), l.m2(x))
 
-
-
 struct ConcatStreams{M1, M2}
     m1::M1
     m2::M2
@@ -62,7 +60,7 @@ end
 struct ActionStateStreams{AM, SM}
     action_model::AM
     state_model::SM
-    num_actins::Int
+    num_actions::Int
 end
 
 Flux.@functor ActionStateStreams
@@ -79,11 +77,6 @@ function make_action_matrix(actions, na)
     end
     action_matrix
 end
-
-# function (l::ActionStateStreams)(x::Tuple{Vector, Matrix})
-#     println("action size_: $(make_action_matrix(x[1], 4)), state size_: $(x[2])")
-#     (l.action_model(make_action_matrix(x[1], 4)), l.state_model(x[2]))
-# end
 
 function Base.show(io::IO, l::ActionStateStreams)
   print(io, "ActionStateStream(", string(l.action_model), ", ", string(l.state_model), ")")

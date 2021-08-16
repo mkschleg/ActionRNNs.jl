@@ -7,21 +7,16 @@ import Reexport: @reexport
 export glorot_uniform, glorot_normal, ExperienceReplay
 include("Utils.jl")
 
-export
-    SingleLayer,
-    Linear,
-    deriv,
-    sigmoid,
-    sigmoid′
 
-include("Layers.jl")
-include("models/viz_backbone.jl")
+
 
 
 export AARNN, MARNN, FacMARNN, AAGRU, MAGRU, FacMAGRU, reset!, get
-
-
 include("RNNs.jl")
+
+include("Layers.jl")
+include("models/viz_backbone.jl")
+include("action_dense_layer.jl")
 
 export QLearning, TD, update!
 include("Update.jl")

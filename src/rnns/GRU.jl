@@ -140,22 +140,6 @@ function FacMAGRUCell_tensor(in, na, out, factors; init = glorot_uniform, initb 
     
 end
 
-# function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
-#     o = size(h, 1)
-#
-#     a = x[1]
-#     obs = x[2]
-#
-#     g = m.W * ((m.Wi*obs .+ m.Wh*h) .* get_Wabya(m.Wa, a)) .+ get_waa(m.b, a)
-#
-#     r = σ.(gate(g, o, 1))
-#     z = σ.(gate(g, o, 2))
-#     h̃ = tanh.(gate(g, o, 3))
-#     h′ = (1 .- z) .* h̃ .+ z .* h
-#     sz = size(obs)
-#   return h′, reshape(h′, :, sz[2:end]...)
-# end
-
 function (m::FacMAGRUCell)(h, x::Tuple{A, O}) where {A, O}
     o = size(h, 1)
 

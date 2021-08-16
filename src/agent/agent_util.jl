@@ -1,3 +1,13 @@
+
+
+
+import CUDA
+
+"""
+    UpdateTimer
+
+Keeps track of timer for doing things in the agent.
+"""
 mutable struct UpdateTimer
     warm_up::Int
     update_wait::Int
@@ -12,31 +22,33 @@ step!(ut::UpdateTimer) = ut.t += 1
 reset!(ut::UpdateTimer) = ut.t = 0
 
 
-
 ####
 # Construction helper functions
 ####
 
+"""
+    make_obs_list
 
-function make_state_list(model, dev)
-    state_list, init_state = begin
-        if dev isa CPU
-            if needs_action_input(model)
-                (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 1}}}(2), (0, zeros(Float32, 1)))
-            else
-                (DataStructures.CircularBuffer{Array{Float32, 1}}(2), zeros(Float32, 1))
-            end
-        else
-            if needs_action_input(model)
-                (DataStructures.CircularBuffer{Tuple{Int64, Flux.CUDA.CuArray{Float32, 4}}}(2), (0, zeros(Float32, 1) |> gpu))
-            else
-                (DataStructures.CircularBuffer{Flux.CUDA.CuArray{Float32, 4}}(2), zeros(Float32, 1) |> gpu)
-            end
-        end
+Makes the obs list and initial state used for recurrent networks in an agent. 
+Uses an init function to define the init tuple.
+"""
+function make_obs_list(model, dev; size=2, act_init=(dev)->0, obs_init=obs_init)
+    init = if needs_action_input(model)
+        (act_init(dev), obs_init(dev))
+    else
+        obs_init(dev)
     end
+    DataStructures.CircularBuffer{typeof(init)}(size), init
 end
 
-function make_replay(model, feature_size, feature_type=Float32)
+make_image_obs_list(args...; kwargs...) = make_obs_list(args...; obs_init=image_init, kwargs...)
+
+obs_init(::CPU) = zeros(Float32, 1)
+obs_init(::GPU) = zeros(Float32, 1) |> gpu
+image_init(::CPU) = zeros(Float32, 1,1,1,1)
+image_init(::GPU) = zeros(Float32, 1,1,1,1) |> gpu
+
+function make_replay(model, feature_size, replay_size, τ, feature_type=Float32)
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
     replay = EpisodicSequenceReplay(replay_size+τ-1,
                                     (Int, feature_type, Int, feature_type, Float32, Bool, Bool, hs_type...),
@@ -49,9 +61,6 @@ end
 ####
 # Get info from experience
 ####
-
-get_state_from_experience(agent::AbstractERAgent, exp) =
-    get_state_from_experience(agent.state_list[1], exp)
 
 function get_state_from_experience(::Tuple, exp)
     get_state(seq) = seq.s
@@ -69,6 +78,11 @@ function get_state_from_experience(type, exp)
     end
 end
 
+"""
+    get_information_from_experiment(agent, exp)
+
+Gets the tuple of required details for the update of the agent.
+"""
 get_information_from_experience(agent::AbstractERAgent, exp) = 
     get_information_from_experience(get_device(agent), get_replay_buffer(agent), get_learning_update(agent), agent.s_t, exp)
 
@@ -151,7 +165,11 @@ end
 ####
 # Build features for the model
 ####
+"""
+    build_new_feat(agent, state, action)
 
+convenience for building new feature vector
+"""
 build_new_feat(agent::AbstractERAgent, state, action) = begin
     if eltype(agent.state_list) <: Tuple
         (action, agent.build_features(state, action))

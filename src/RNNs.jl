@@ -43,7 +43,7 @@ function contract_WA(W, a::AbstractVector{Int}, x)
 end
 
 # Maybe fixed by new version of tullio.
-function contract_WA(W::CuArray, a::Vector{Int}, x)
+function contract_WA(W::CuArray, a::AbstractVector{Int}, x)
     mid = @view (W ⊡ x)[a, :, :]
     @tullio ret[i, k] := mid[k, i, k]
 end

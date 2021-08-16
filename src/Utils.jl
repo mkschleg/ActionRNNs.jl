@@ -3,7 +3,6 @@
 using Flux
 import Random
 
-
 glorot_uniform(args...; kwargs...) = glorot_uniform(Random.GLOBAL_RNG, args...; kwargs...)
 glorot_normal(args...; kwargs...) = glorot_normal(Random.GLOBAL_RNG, args...; kwargs...)
 

@@ -57,10 +57,9 @@ function DRQNAgent(model,
     dev = Device(model)
     @info dev
     
-    state_list, init_state = make_state_list(model, dev)
+    state_list, init_state = make_obs_list(model, dev)
 
     hidden_state_init = get_initial_hidden_state(model)
-
 
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
     replay = EpisodicSequenceReplay(replay_size+τ-1,
@@ -75,7 +74,6 @@ function DRQNAgent(model,
               opt,
               model,
               deepcopy(model),
-              # nothing,
               feature_creator,
               state_list,
               hidden_state_init,
@@ -107,26 +105,11 @@ function ImageDRQNAgent(model,
 
     dev = Device(model)
     @info dev
-    
-    state_list, init_state = begin
-        if dev isa CPU
-            if needs_action_input(model)
-                (DataStructures.CircularBuffer{Tuple{Int64, Array{Float32, 4}}}(2), (0, zeros(Float32, 1,1,1,1)))
-            else
-                (DataStructures.CircularBuffer{Array{Float32, 4}}(2), zeros(Float32, 1,1,1,1))
-            end
-        else
-            if needs_action_input(model)
-                (DataStructures.CircularBuffer{Tuple{Int64, Flux.CUDA.CuArray{Float32, 4}}}(2), (0, zeros(Float32, 1, 1, 1, 1) |> gpu))
-            else
-                (DataStructures.CircularBuffer{Flux.CUDA.CuArray{Float32, 4}}(2), zeros(Float32, 1, 1, 1, 1) |> gpu)
-            end
-        end
-    end
+
+    state_list, init_state = make_image_obs_list(model, dev)
 
     hidden_state_init = get_initial_hidden_state(model)
     @show typeof(hidden_state_init)
-    # throw("oh no")
 
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
     replay = EpisodicSequenceReplay(replay_size+τ-1,

@@ -1,5 +1,6 @@
 
 
+
 struct ActionDense{F, M<:AbstractMatrix, B}
     weight::M
     weight_a::M
@@ -13,9 +14,14 @@ end
 
 _needs_action_input(m::ActionDense) = true
 
+"""
+    ActionDense(in, na, out, σ; init, bias)
+
+Create an actions Dense layer. This layer takes in a tuple (action, observaiton) and returns the dense layer using and additive approach. This can be used for previous actions or current actions.
+"""
 function ActionDense(in::Integer, na::Integer, out::Integer, σ = identity;
-               initW = nothing, initb = nothing,
-               init = glorot_uniform, bias=true)
+                     initW = nothing, initb = nothing,
+                     init = Flux.glorot_uniform, bias=true)
 
   W, Wa = if initW !== nothing
       Base.depwarn("keyword initW is deprecated, please use init (which similarly accepts a funtion like randn)", :Dense)
@@ -42,12 +48,9 @@ function (a::ActionDense)(x::Tuple{A, X}) where {A, X}
     return σ.(W*x .+ get_waa(Wa, a) .+ b)
 end
 
-# (a::ActionDense)(x::AbstractArray) = 
-#   reshape(a(reshape(x, size(x,1), :)), :, size(x)[2:end]...)
-
 function Base.show(io::IO, l::ActionDense)
   print(io, "Dense(", size(l.weight, 2), ", ", size(l.weight, 1))
   l.σ == identity || print(io, ", ", l.σ)
-  l.bias == Zeros() && print(io, "; bias=false")
+  l.bias == Flux.Zeros() && print(io, "; bias=false")
   print(io, ")")
 end

@@ -1,6 +1,6 @@
 using Flux, Adapt
 using Flux.CUDA: CuArray
-
+import KernelAbstractions
 
 abstract type Device end
 
@@ -34,11 +34,11 @@ function Device(model)
     is_gpu(model) ? GPU() : CPU()
 end
 
-to_device(device::CPU, x::CuArray, args...) = to_host(x)
-to_device(device::CPU, x, args...) = x
+to_device(::CPU, x::CuArray, args...) = to_host(x)
+to_device(::CPU, x, args...) = x
 
-to_device(device::GPU, x) = to_gpu(x)
-to_device(device::GPU, x::CuArray) = begin
+to_device(::GPU, x) = to_gpu(x)
+to_device(::GPU, x::CuArray) = begin
     @warn "Extra call to to_device."
     x
 end
@@ -54,10 +54,8 @@ function to_device(device::GPU, x, sym::Symbol)
     end
 end
 
-to_device(use_cuda::Val{:cpu}, x) = to_host(x)
-to_device(use_cuda::Val{:gpu}, x) = to_gpu(x)
-
-
+to_device(::Val{:cpu}, x) = to_host(x)
+to_device(::Val{:gpu}, x) = to_gpu(x)
 
 to_host(m) = fmap(x -> adapt(Array, x), m)
 to_host(x::Array) = x
