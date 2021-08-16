@@ -1,0 +1,28 @@
+[config]
+save_dir="dir_tmaze_er_rmsprop_10_gaigru"
+exp_file="experiment/dir_tmaze_er.jl"
+exp_module_name = "DirectionalTMazeERExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iter"
+
+[static_args]
+steps = 300000
+opt = "RMSProp"
+rho = 0.99
+
+size = 10
+gamma = 0.99
+batch_size = 8
+replay_size = 10000
+warm_up = 1000
+hs_learnable = true
+update_wait = 4
+target_update_wait = 1000
+
+truncation = 12
+cell = "GAIGRU"
+
+[sweep_args]
+eta = "0.1 .* 1.6 .^(-16:3:-4)"
+"numhidden+internal" = [[6, 33], [8, 25], [10, 17], [13, 9], [10, 30], [20, 40]]
+seed = "1:20"

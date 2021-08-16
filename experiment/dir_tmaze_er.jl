@@ -22,7 +22,7 @@ const FLU = ActionRNNs.FluxUtils
 
 function default_config()
     Dict{String,Any}(
-        "save_dir" => "tmaze",
+        "save_dir" => "dit_tmaze_er",
 
         "seed" => 1,
         "steps" => 80000,
