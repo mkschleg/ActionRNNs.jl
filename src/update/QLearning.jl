@@ -115,13 +115,13 @@ function update_batch!(lu::QLearning,
             end
         end
 
-        sum(q_t)
-        # loss = lu.loss(q_t, qtrgts)
+        # sum(q_t)
+        loss = lu.loss(q_t, qtrgts)
         
-        # ignore() do
-        #     ℒ = loss
-        # end
-        # loss
+        ignore() do
+            ℒ = loss
+        end
+        loss
     end
 
     Flux.update!(opt, ps, grads)
