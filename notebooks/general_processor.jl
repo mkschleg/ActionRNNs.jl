@@ -4,59 +4,519 @@
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ b0ac2798-0207-11ec-0ad8-996165989a17
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        el
+    end
+end
+
+# ╔═╡ 278b9e82-43da-4670-ac5e-9cec326689ca
 begin
-	using StatsPlots
+	using Reproduce
+	using ReproducePlotUtils
 	using DataFrames
+	using StatsPlots
 	using FileIO
-	using JLD2
 	using Statistics
-	using Query
+	using InvertedIndices # Not(1)
+	using PlutoUI
 end
 
-# ╔═╡ ddcecb8a-155b-4fcd-9ff5-03bc867a96ab
-data_df = FileIO.load("../processed_data/dir_tmaze_10.jld2")["data"]
+# ╔═╡ 9bb2ff09-3364-4f31-9d07-29ffa47d716a
+const RPU = ReproducePlotUtils
 
-# ╔═╡ c08d37af-fabd-46a1-bc5a-c91f9897bf3f
-FileIO.load("../processed_data/dir_tmaze_10.jld2")["line_params"]
+# ╔═╡ 8aa844f8-ec57-47d3-9745-86fc8482c826
+md"""
+# Data Analysis Notebook.
 
-# ╔═╡ 8b3a880a-41d0-4286-a93d-b471a5193ccb
-df_view = data_df[(data_df.numhidden .== 10) .& (data_df.truncation .== 12), :]
+Hopefully this can be used as a better template for making plots in the future.
+"""
 
-# ╔═╡ 4b8784a9-8ae6-4d3a-b022-9b693b8efa0c
-@df df_view boxplot(reshape(:cell, 1, :), :data_mue)
+# ╔═╡ 3175d098-1e6c-4ad5-872c-ce1f6e49409a
+md"""
+Choose location of data:
+"""
 
-# ╔═╡ 271ff72a-79ab-4cb8-825b-5fae6cf5195a
-q3 = @from i in data_df begin
-	@where i.numhidden .== 10 && i.truncation .== 12
-	@select i.cell, i.data_mue
-	@collect
-end
+# ╔═╡ 71cff3f1-3b58-42d9-a1c9-acbfba9a5e2d
+local_data = "../local_data"
 
-# ╔═╡ 597e10e4-625d-4f42-9fc8-c3475ae0bce0
-let
-	plt = plot()
-	for q in q3
-		boxplot!([q[1]], q[2])
+# ╔═╡ e2db63ec-9ba7-472c-bca0-bf8892f134c1
+exp_folders, deeper_folders = let
+	folders = readdir(local_data)
+	filter!(folders) do f
+		splitext(f)[end] != ".gz" && 
+		splitext(f)[end] != ".tar" && 
+		splitext(f)[end] != ".pdf" && 
+		splitext(f)[end] != "tar.gz"
 	end
-	plt
+	exp_folders = folders[isdir.(joinpath.((local_data,), folders, ("data",)))]
+	deeper_folders = folders[Not(isdir.(joinpath.((local_data,), folders, ("data",))))]
+	push!(deeper_folders, ".")
+	exp_folders, sort!(deeper_folders)
+end;
+
+# ╔═╡ 6d62de45-71f0-4783-bea3-9224ac2499e0
+md"""
+view experiment folders: 
+$(@bind view_folder PlutoUI.Select(deeper_folders))
+
+"""
+
+# ╔═╡ a54d5cf6-7725-497e-b6c5-530fbc49cfbf
+let
+	if view_folder == "."
+		exp_folders
+	else
+		deeper_local_data = joinpath(local_data, view_folder)
+		folders = readdir(deeper_local_data)
+		filter!(folders) do f
+			splitext(f)[end] != ".gz" && 
+			splitext(f)[end] != ".tar" && 
+			splitext(f)[end] != ".pdf" && 
+			splitext(f)[end] != "tar.gz"
+		end
+		folders[isdir.(joinpath.((deeper_local_data,), folders, ("data",)))]
+	end
+end
+
+# ╔═╡ 3c3aa346-3911-4a73-b1e4-11ad8c9cccc4
+md"view processed data folder"
+
+# ╔═╡ 36f540ea-b945-4b2f-825f-f97a7ce2fb9b
+readdir("../processed_data/")
+
+# ╔═╡ f999a721-f26e-4cc5-8cc1-1732bb69b134
+begin
+	load_at = local_data
+	save_at = "../processed_data/dir_tmaze_10.jld2"
+	results_folders = ["dir_tmaze_er/dir_tmaze_er_rnn_rmsprop_10/", 
+				   	   "dir_tmaze_er/dir_tmaze_er_rnn_rmsprop_10_p2/"]
+	settings_filter = ["_GIT_INFO", "_SAVE", "save_dir"]
+end;
+
+# ╔═╡ 67d58fe0-6b1f-43a9-8c48-321bd9c5c518
+begin
+	line_params = ["numhidden", "truncation", "cell"]
+	sweep_params = ["eta"]
+end;
+
+# ╔═╡ 36bc2210-9b37-48f5-b0b1-7089576e1a64
+if isfile(save_at)
+	cur_save = FileIO.load(save_at)
+	md"""
+	The current data at **$(save_at)** uses:
+	
+	**Comparitor**: $(cur_save["comparedirection"]), 
+	**Get Data**: $(cur_save["compare_get"]),
+	**Key**: $(cur_save["compare_key"]),
+	**Custom?**: $(cur_save["custom_compare"]) \
+	
+	**CompareFunc**: $(cur_save["cust_compare_code"])
+	
+	**LineParams**: $(string(cur_save["line_params"])) \
+	**SweepParams**: $(string(cur_save["sweep_params"]))
+	"""
+else
+	"No Save file at current location"
+end
+
+# ╔═╡ 9769195c-5075-4ad7-af6c-572dc433ca3a
+cust_compare_code = quote
+	error("Not Implemented")
+end
+
+# ╔═╡ a211294b-852d-447f-b538-66b50c531374
+md"""
+### Processing the best settings:
+
+Implement the below function to process the best settings as found by the compare.
+"""
+
+# ╔═╡ 759eca80-b113-4d88-887e-6c762016ad72
+function get_data(x)
+	(all=RPU.get_rolling_mean_line(x, :successes, 300), 
+	 mue=RPU.get_MUE(x, :successes))
+end
+
+# ╔═╡ 607a92d2-5d70-4ff5-89a9-9a0fb638a3db
+begin
+	results_folders, save_at, load_at
+	md"""
+	#### Saving data
+	save? $(@bind save_results_df CheckBox()) force new save? $(@bind force_save CheckBox(false))
+
+	"""
 end	
+
+# ╔═╡ c24aa3ab-d9de-47c9-b4b0-6b642e2333f0
+md"""
+#### Inspect
+
+Which data frame? $(@bind inspect_df PlutoUI.Select(["settings", "processed"]))
+"""
+
+# ╔═╡ 65a3b91e-5a3f-4db9-a89e-017b893a7a38
+md"#### Loading stuff"
+
+# ╔═╡ 31bf6622-1a98-41fe-b7fc-5d66be759f65
+md"""
+# Appendix 
+
+Eventually we will want to move these out of this notebook and into RPU
+"""
+
+# ╔═╡ f54091b2-795c-417c-8baa-2e05d0edbde6
+@eval function custom_compare(x)
+	$cust_compare_code
+end
+
+# ╔═╡ e5794ea6-5a5f-49ea-98c3-7d4b28c48dd3
+function ic_to_df(ic::Reproduce.ItemCollection; filter=["_GIT_INFO", "_SAVE", "save_dir"])
+	
+	dlist = [merge(item.parsed_args, Dict("folder_str"=>item.folder_str)) for item in ic]
+	doa = Dict()
+	for k in keys(dlist[1])
+		if filter isa Nothing || !(k in filter)
+			doa[k] = [datum[k] for datum in dlist]
+		end
+	end
+	DataFrame(doa)
+end
+
+# ╔═╡ 6893793b-20be-4907-8b3c-3e8143ee40f8
+function files_to_ic_to_df(files::Vector{String}; kwargs...)
+	ic_arr = [ItemCollection(at(file)) for file in files]
+	ic_to_df(ItemCollection(vcat(getfield.(ic_arr, :items)...)); kwargs...)
+end
+
+# ╔═╡ e68631ea-1488-4afe-9996-ccbb8e16ded9
+function load_runs(df::DataFrame, get_data)
+	
+    tmp = get_data(FileIO.load(joinpath(df[1, :folder_str], "results.jld2")))
+    d = typeof(tmp)[]
+	
+	diff_arr = [k=>unique(sort(col)) for (k, col) in zip(names(df), eachcol(df))]
+	diff_dict = Dict(diff_arr[[(length(a[2]) > 1) for a in diff_arr]])
+	
+	pms = @static if VERSION <= v"1.5"
+		(; Symbol(k)=>df[:, k] for k ∈ keys(diff_dict))
+	else
+		NamedTuple(Symbol(k)=>df[:, k] for k ∈ keys(diff_dict))
+	end
+	
+    for (idx, row) ∈ enumerate(eachrow(df))
+        push!(d, get_data(FileIO.load(joinpath(row.folder_str, "results.jld2"))))
+    end
+    d, pms
+end
+
+# ╔═╡ d635d06a-8f39-4306-bcf3-de77664394c9
+function find_best_params(df::DataFrame,
+	                  	  param_keys,
+		          		  comp,
+		          		  get_comp_data,
+		          		  get_data=RPU.get_comp_data)
+
+    comp_func = if comp isa Symbol
+        RPU.get_comp_function(comp)
+	else
+		comp
+    end
+
+	params = if param_keys isa String
+		unique(sort!(df[:, param_keys]))
+	else
+		collect(Iterators.product([unique(sort!(df[:, k])) for k in param_keys]...))
+	end
+
+    values = zeros(length(params))
+    for (p_idx, p) ∈ enumerate(params)
+		df_view = filter(df; view=false) do row
+			all([row[param_keys[i]] == p[i] for i ∈ 1:length(p)])
+		end
+        values[p_idx] = mean(load_runs(df_view, get_comp_data)[1])
+    end
+
+    v, idx = comp_func(values)
+	
+	df_view = filter(df; view=false) do row
+		all([row[pk] == params[idx][i] for (i, pk) ∈ enumerate(param_keys)])
+	end
+	
+    data, data_pms = load_runs(df_view, get_data)
+
+	data, data_pms, v, params[idx], values, params
+	
+end
+
+# ╔═╡ 51851161-5cde-4011-856f-2da11e398e21
+function get_data_for(
+		get_data::Function,
+    	df::DataFrame,
+    	line_keys,
+    	param_keys;
+    	comp,
+    	get_comp_data)
+
+	ks = union(line_keys, param_keys)
+	nsks = filter!((k)->k ∉ ks, names(df))
+
+	params_outer, params_inner, kouter, kinner = if line_keys isa String
+		unique(sort!(df[:, line_keys])), nothing
+	else
+		ps = [unique(sort!(df[:, k])) for k in line_keys]
+		_, idx = findmax(length.(ps))
+		iter = Iterators.product(ps[Not(idx)]...)
+		ps[idx], iter, line_keys[idx], line_keys[Not(idx)]
+	end
+	
+	df_ret_th = Vector{DataFrame}(undef, Threads.nthreads())
+    
+    Threads.@threads for po ∈ params_outer
+		tid = Threads.threadid()
+			
+		for pi in params_inner
+			df_view = filter(df; view=false) do row
+				row[kouter] == po && all(row[k] == pi[i] for (i, k) ∈ enumerate(kinner))
+			end
+			
+			if !isempty(df_view)
+				fbp_ret = find_best_params(df_view,
+				  					   	   param_keys,
+										   comp,
+										   get_comp_data,
+										   get_data)
+				data, data_params, v_best, vb_param, values, value_pms = fbp_ret
+				df_viewier = filter(df_view) do row
+					all(row[k] == vb_param[i] for (i, k) in enumerate(param_keys))
+				end
+
+				d_kinner = Dict(k=>pi[i] for (i, k) in enumerate(kinner))
+				d_kinner[kouter] = po
+				d_sk_b = Dict(param_keys[i]=>vb_param[i] 
+					for i in 1:length(param_keys))
+				d_sk = Dict("sweep_"*param_keys[i]=>getindex.(value_pms, i)
+					for i in 1:length(param_keys))
+				d_nsk = Dict(k => let
+						if Symbol(k) ∉ keys(data_params)
+							ret_u = unique(sort!(df_viewier[:, k]))
+							if length(ret_u) == 1
+								ret_u[1]
+							else
+								[ret_u]
+							end
+						else
+							data_params[Symbol(k)]
+						end
+					end for k in nsks)
+				d = merge(d_kinner, d_sk, d_sk_b, d_nsk)
+				
+				if eltype(data) <: AbstractDict || eltype(data) <: NamedTuple
+					for k in keys(data[1])
+						d["data_" * string(k)] = getindex.(data, (k, ))
+					end
+				else
+					d["data"] = data
+				end
+				d["sweep_value_best"] = v_best
+				d["sweep_values"] = values
+
+				if !isassigned(df_ret_th,tid)
+					df_ret_th[tid] = DataFrame((k=>Vector{typeof(d[k])}() for k in keys(d))...)
+				end
+				push!(df_ret_th[tid], d)
+			end
+		end
+	end
+	as_df_ret_th = df_ret_th[isassigned.([df_ret_th], 1:length(df_ret_th))]
+	if length(as_df_ret_th) != 1
+		for _df in as_df_ret_th[2:end]
+			append!(as_df_ret_th[1], _df)
+		end
+	end
+	as_df_ret_th[1]
+end
+
+# ╔═╡ cfeb98f2-a4e0-4218-bb95-947f76e9d09b
+function datacol_to_df(dc::RPU.DataCollection, sp::Vector{String})
+	dict = Dict()
+	for k in keys(dc[1].line_params)
+		dict[k] = [data.line_params[k] for data in dc.data]
+	end
+	for (i, k) in enumerate(sp)
+		dict[k] = [data.swept_params[i] for data in dc.data]
+	end
+	dict["z_data"] = [data.data for data in dc.data]
+	dict["z_data_pms"] = [data.data_pms for data in dc.data]
+	dict["z_c"] = [data.c for data in dc.data]
+	
+	DataFrame(dict)
+end
+
+# ╔═╡ 74fce7a9-bbd2-40b1-976e-3cc1e8c7a72b
+function build_dataframe(folders::Vector{String}; kwargs...)
+	dfs = [build_dataframe(folder; kwargs...) for folder in folders]
+	for i in 2:length(dfs)
+		append!(dfs[1], dfs[i])
+	end
+	dfs[1]
+end
+
+# ╔═╡ 685dd309-710c-431c-9591-80afd57e9ac2
+function build_dataframe(folder::String; 
+						 filter=nothing, 
+						 force=false, 
+						 settings_file="settings.jld2")
+    
+	dir = splitpath(folder)[end] == "data" ? folder : joinpath(folder, "data")
+    dir_list = readdir(dir)
+
+    cache_loc = joinpath(dir, "data_frame.jld2")
+    id = hash(string(dir_list))
+    if isfile(cache_loc)
+        data = FileIO.load(cache_loc)
+        if id == data["id"] && !force
+            return data["data"]
+        end
+    end
+
+    # df = DataFrame()
+    doa = Dict()
+    item = Reproduce.Item(joinpath(dir, dir_list[1], settings_file))
+    dlist = merge(item.parsed_args, Dict("folder_str"=>item.folder_str))
+    
+    for (k,v) in dlist
+        if isnothing(filter) || k ∉ filter
+            doa[k] = [v]
+        end
+    end
+    
+    for p in dir_list
+		if basename(p) ∈ ["item_col.jld2", "data_frame.jld2"]
+			continue
+		end
+        item = Reproduce.Item(joinpath(dir, p, settings_file))
+        dlist = merge(item.parsed_args, Dict("folder_str"=>item.folder_str))
+        for k in keys(doa)
+           push!(doa[k], dlist[k])
+        end
+    end
+
+    df = DataFrame(doa)
+    FileIO.save(cache_loc, "data", df, "id", id)
+    
+    return df
+end
+
+# ╔═╡ faa9e0f2-ba96-42cf-b8be-3b2387cbdc3c
+settings_df = build_dataframe(joinpath.((load_at,), results_folders); 
+							  filter=settings_filter);
+
+# ╔═╡ e4f91cd2-f9d1-4434-af07-614e6d7fc27c
+begin
+
+	results_keys = collect(keys(FileIO.load(joinpath(settings_df[1, :folder_str], "results.jld2"))["results"]))	
+	
+	md"""
+	#### Comparing Data
+	**A(M)UC**: Area (mean) under the curve, **A(M)UE**: Area (mean) under end
+	
+	Compare:
+	$(@bind comparedirection PlutoUI.Select(["max", "min"], default="max"))
+	Get data:
+	$(@bind compare_get PlutoUI.Select(["AUC", "MUC", "AUE", "MUE"], default="MUE"))
+	Compare key:
+	$(@bind compare_key PlutoUI.Select(string.(results_keys)))
+	custom compare?: $(@bind cust_compare PlutoUI.CheckBox(false))
+	"""
+	
+end
+
+# ╔═╡ 0cb55aa5-0b84-432a-9235-4d9db6b86bf2
+if cust_compare
+	md"Please implement `custom_compare`"
+elseif compare_get == "AUE" || compare_get == "MUE"
+	md"""
+	Please specify the percentage of data: $(@bind comp_perc PlutoUI.NumberField(0.00: 0.1 : 1.00, default=0.1))
+	"""
+end
+
+# ╔═╡ 77b723ce-fa57-4050-9616-20433de02ca2
+function get_comp_data(x)
+	key = eltype(results_keys)(compare_key)
+	if cust_compare
+		return custom_compare(x)
+	end
+	if compare_get == "AUC"
+		RPU.get_AUC(x, key)
+	elseif compare_get == "MUC"
+		RPU.get_MEAN(x, key)
+	elseif compare_get == "AUE"
+		RPU.get_MUE(x, key, comp_perc)
+	elseif compare_get == "MUE"
+		RPU.get_MUE(x, key, comp_perc)
+	end
+end
+
+# ╔═╡ 5a03146e-5264-423b-ad14-b0dae69b0fff
+data_df = get_data_for(settings_df,
+					line_params,
+					sweep_params;
+					comp=Symbol(comparedirection),
+					get_comp_data=get_comp_data) do x
+	get_data(x)
+end;
+
+# ╔═╡ a6fcd030-9486-409b-89df-1c0e1e43c76b
+if save_results_df
+	if isfile(save_at) && !force_save
+		md"File $(save_at) already exists. Either force or use a different file name"
+	else
+		FileIO.save(save_at, 
+					"data", data_df, 
+					"comparedirection", comparedirection, 
+					"compare_get", compare_get, 
+					"compare_key", compare_key, 
+					"custom_compare", cust_compare, 
+					"cust_compare_code", cust_compare_code,
+					"line_params", line_params,
+					"sweep_params", sweep_params,
+					"results_folders", results_folders)
+		md"Saved Successfully ✅"
+	end
+else
+	md"Saving turned off"
+end
+
+# ╔═╡ 420a1872-873e-4270-adc2-d01f32dc2003
+if inspect_df == "settings"
+	settings_df
+else
+	data_df
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
-Query = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"
+InvertedIndices = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Reproduce = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
+ReproducePlotUtils = "c4339a9b-a0bc-4ed5-8923-5e6db10394ac"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
 [compat]
 DataFrames = "~1.2.2"
-FileIO = "~1.11.0"
-JLD2 = "~0.4.13"
-Query = "~1.0.0"
+FileIO = "~1.10.1"
+InvertedIndices = "~1.0.0"
+PlutoUI = "~0.7.9"
+Reproduce = "~0.9.6"
+ReproducePlotUtils = "~0.1.0"
 StatsPlots = "~0.14.26"
 """
 
@@ -75,6 +535,12 @@ deps = ["LinearAlgebra"]
 git-tree-sha1 = "84918055d15b3114ede17ac6a7182f68870c16f7"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
 version = "3.3.1"
+
+[[ArgParse]]
+deps = ["Logging", "TextWrap"]
+git-tree-sha1 = "3102bce13da501c9104df33549f511cd25264d7d"
+uuid = "c7e460c6-2fb9-53a9-8c5b-16f535851c63"
+version = "1.1.4"
 
 [[ArgTools]]
 uuid = "0dad84c5-d112-42e6-8d28-ef12dabb789f"
@@ -100,8 +566,25 @@ git-tree-sha1 = "a4d07a1c313392a77042855df46c5f534076fab9"
 uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
 version = "1.0.0"
 
+[[BSON]]
+git-tree-sha1 = "92b8a8479128367aaab2620b8e73dff632f5ae69"
+uuid = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+version = "0.3.3"
+
 [[Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+
+[[Blosc]]
+deps = ["Blosc_jll"]
+git-tree-sha1 = "84cf7d0f8fd46ca6f1b3e0305b4b4a37afe50fd6"
+uuid = "a74b3585-a348-5f62-a45c-50e91977d574"
+version = "0.7.0"
+
+[[Blosc_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Lz4_jll", "Pkg", "Zlib_jll", "Zstd_jll"]
+git-tree-sha1 = "e747dac84f39c62aff6956651ec359686490134e"
+uuid = "0b7ba130-8d10-5ba8-a3d6-c5182647fed9"
+version = "1.21.0+0"
 
 [[Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -117,9 +600,9 @@ version = "1.16.0+6"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "bdc0937269321858ab2a4f288486cb258b9a0af7"
+git-tree-sha1 = "f53ca8d41e4753c41cdafa6ec5f7ce914b34be54"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.3.0"
+version = "0.10.13"
 
 [[Clustering]]
 deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "SparseArrays", "Statistics", "StatsBase"]
@@ -127,11 +610,17 @@ git-tree-sha1 = "75479b7df4167267d75294d14b58244695beb2ac"
 uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 version = "0.14.2"
 
+[[CodeTracking]]
+deps = ["InteractiveUtils", "UUIDs"]
+git-tree-sha1 = "9aa8a5ebb6b5bf469a7e0e2b5202cf6f8c291104"
+uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
+version = "1.0.6"
+
 [[ColorSchemes]]
-deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random"]
-git-tree-sha1 = "9995eb3977fbf67b86d0a0a0508e83017ded03f2"
+deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random", "StaticArrays"]
+git-tree-sha1 = "ed268efe58512df8c7e224d2e170afd76dd6a417"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.14.0"
+version = "3.13.0"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -147,9 +636,9 @@ version = "0.12.8"
 
 [[Compat]]
 deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
-git-tree-sha1 = "727e463cfebd0c7b999bbf3e9e7e16f254b94193"
+git-tree-sha1 = "344f143fa0ec67e47917848795ab19c6a455f32c"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "3.34.0"
+version = "3.32.0"
 
 [[CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -179,9 +668,9 @@ version = "1.2.2"
 
 [[DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "7d9d316f04214f7efdbb6398d545446e246eff02"
+git-tree-sha1 = "4437b64df1e0adccc3e5d1adbc3ac741095e4677"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.10"
+version = "0.18.9"
 
 [[DataValueInterfaces]]
 git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
@@ -240,6 +729,11 @@ git-tree-sha1 = "b3bfd02e98aedfa5cf885665493c5598c350cd2f"
 uuid = "2e619515-83b5-522b-bb60-26c02a35a201"
 version = "2.2.10+0"
 
+[[ExprTools]]
+git-tree-sha1 = "b7e3d17636b348f005f11040025ae8c6f645fe92"
+uuid = "e2ba6199-217a-4e67-a87a-7c52f15ade04"
+version = "0.1.6"
+
 [[FFMPEG]]
 deps = ["FFMPEG_jll"]
 git-tree-sha1 = "b57e3acbe22f8484b4b5ff66a7499717fe1a9cc8"
@@ -266,15 +760,15 @@ version = "3.3.9+8"
 
 [[FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
-git-tree-sha1 = "937c29268e405b6808d958a9ac41bfe1a31b08e7"
+git-tree-sha1 = "256d8e6188f3f1ebfa1a5d17e072a0efafa8c5bf"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.11.0"
+version = "1.10.1"
 
 [[FillArrays]]
 deps = ["LinearAlgebra", "Random", "SparseArrays", "Statistics"]
-git-tree-sha1 = "7c365bdef6380b29cfc5caaf99688cd7489f9b87"
+git-tree-sha1 = "8c8eac2af06ce35973c3eadb4ab3243076a408e7"
 uuid = "1a297f60-69ca-5386-bcde-b61e274b549b"
-version = "0.12.2"
+version = "0.12.1"
 
 [[FixedPointNumbers]]
 deps = ["Statistics"]
@@ -335,21 +829,45 @@ uuid = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 version = "0.4.1"
 
 [[Gettext_jll]]
-deps = ["Artifacts", "CompilerSupportLibraries_jll", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
-git-tree-sha1 = "9b02998aba7bf074d14de89f9d37ca24a1a0b046"
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Libiconv_jll", "Pkg", "XML2_jll"]
+git-tree-sha1 = "8c14294a079216000a0bdca5ec5a447f073ddc9d"
 uuid = "78b55507-aeef-58d4-861c-77aaff3498b1"
-version = "0.21.0+0"
+version = "0.20.1+7"
+
+[[Git]]
+deps = ["Git_jll"]
+git-tree-sha1 = "d7bffc3fe097e9589145493c08c41297b457e5d0"
+uuid = "d7ba0133-e1db-5d97-8f8c-041e4b3a1eb2"
+version = "1.2.1"
+
+[[Git_jll]]
+deps = ["Artifacts", "Expat_jll", "Gettext_jll", "JLLWrappers", "LibCURL_jll", "Libdl", "Libiconv_jll", "OpenSSL_jll", "PCRE2_jll", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "33be385f3432a5a5b7f6965af9592d4407f3167f"
+uuid = "f8c6e375-362e-5223-8a59-34ff63f689eb"
+version = "2.31.0+0"
 
 [[Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE_jll", "Pkg", "Zlib_jll"]
-git-tree-sha1 = "7bf67e9a481712b3dbe9cb3dac852dc4b1162e02"
+git-tree-sha1 = "04690cc5008b38ecbdfede949220bc7d9ba26397"
 uuid = "7746bdde-850d-59dc-9ae8-88ece973131d"
-version = "2.68.3+0"
+version = "2.59.0+4"
 
 [[Grisu]]
 git-tree-sha1 = "53bb909d1151e57e2484c3d1b53e19552b887fb2"
 uuid = "42e2da0e-8278-4e71-bc24-59509adca0fe"
 version = "1.0.2"
+
+[[HDF5]]
+deps = ["Blosc", "Compat", "HDF5_jll", "Libdl", "Mmap", "Random", "Requires"]
+git-tree-sha1 = "83173193dc242ce4b037f0263a7cc45afb5a0b85"
+uuid = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+version = "0.15.6"
+
+[[HDF5_jll]]
+deps = ["Artifacts", "JLLWrappers", "LibCURL_jll", "Libdl", "OpenSSL_jll", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "fd83fa0bde42e01952757f01149dd968c06c4dba"
+uuid = "0234f1f7-429e-5d53-9886-15a909be8d59"
+version = "1.12.0+1"
 
 [[HTTP]]
 deps = ["Base64", "Dates", "IniFile", "Logging", "MbedTLS", "NetworkOptions", "Sockets", "URIs"]
@@ -375,9 +893,9 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[Interpolations]]
 deps = ["AxisAlgorithms", "ChainRulesCore", "LinearAlgebra", "OffsetArrays", "Random", "Ratios", "Requires", "SharedArrays", "SparseArrays", "StaticArrays", "WoodburyMatrices"]
-git-tree-sha1 = "61aa005707ea2cebf47c8d780da8dc9bc4e0c512"
+git-tree-sha1 = "1470c80592cf1f0a35566ee5e93c5f8221ebc33a"
 uuid = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
-version = "0.13.4"
+version = "0.13.3"
 
 [[InvertedIndices]]
 deps = ["Test"]
@@ -385,21 +903,10 @@ git-tree-sha1 = "15732c475062348b0165684ffe28e85ea8396afc"
 uuid = "41ab1584-1d38-5bbf-9106-f11c6c58b48f"
 version = "1.0.0"
 
-[[IrrationalConstants]]
-git-tree-sha1 = "f76424439413893a832026ca355fe273e93bce94"
-uuid = "92d709cd-6900-40b7-9082-c6be49f344b6"
-version = "0.1.0"
-
 [[IterTools]]
 git-tree-sha1 = "05110a2ab1fc5f932622ffea2a003221f4782c18"
 uuid = "c8e1da08-722c-5040-9ed9-7db0dc04731e"
 version = "1.3.0"
-
-[[IterableTables]]
-deps = ["DataValues", "IteratorInterfaceExtensions", "Requires", "TableTraits", "TableTraitsUtils"]
-git-tree-sha1 = "70300b876b2cebde43ebc0df42bc8c94a144e1b4"
-uuid = "1c8ee90f-4401-5389-894e-7a04a3dc0f4d"
-version = "1.0.0"
 
 [[IteratorInterfaceExtensions]]
 git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
@@ -541,13 +1048,19 @@ deps = ["Libdl"]
 uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[LogExpFunctions]]
-deps = ["DocStringExtensions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "3d682c07e6dd250ed082f883dc88aee7996bf2cc"
+deps = ["DocStringExtensions", "LinearAlgebra"]
+git-tree-sha1 = "7bd5f6565d80b6bf753738d2bc40a5dfea072070"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.0"
+version = "0.2.5"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
+
+[[Lz4_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "5d494bc6e85c4c9b626ee0cab05daa4085486ab1"
+uuid = "5ced341a-0733-55b8-9ab6-a4889d929147"
+version = "1.9.3+0"
 
 [[MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
@@ -580,14 +1093,26 @@ git-tree-sha1 = "e498ddeee6f9fdb4551ce855a46f54dbd900245f"
 uuid = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
 version = "0.3.1"
 
+[[Memento]]
+deps = ["Dates", "Distributed", "JSON", "Serialization", "Sockets", "Syslogs", "Test", "TimeZones", "UUIDs"]
+git-tree-sha1 = "19650888f97362a2ae6c84f0f5f6cda84c30ac38"
+uuid = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
+version = "1.2.0"
+
 [[Missings]]
 deps = ["DataAPI"]
-git-tree-sha1 = "f8c673ccc215eb50fcadb285f522420e29e69e1c"
+git-tree-sha1 = "4ea90bd5d3985ae1f9a908bd4500ae88921c5ce7"
 uuid = "e1d29d7a-bbdc-5cf2-9ac0-f12de2c33e28"
-version = "0.4.5"
+version = "1.0.0"
 
 [[Mmap]]
 uuid = "a63ad114-7e13-5084-954f-fe012c677804"
+
+[[Mocking]]
+deps = ["ExprTools"]
+git-tree-sha1 = "748f6e1e4de814b101911e64cc12d83a6af66782"
+uuid = "78c3b35d-d492-501b-9361-3d52fe80e533"
+version = "0.7.2"
 
 [[MozillaCACerts_jll]]
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
@@ -656,6 +1181,10 @@ git-tree-sha1 = "85f8e6578bf1f9ee0d11e7bb1b1456435479d47c"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.4.1"
 
+[[PCRE2_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
+
 [[PCRE_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "b2a7af664e098055a7529ad1a900ded962bca488"
@@ -668,11 +1197,17 @@ git-tree-sha1 = "4dd403333bcf0909341cfe57ec115152f937d7d8"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
 version = "0.11.1"
 
+[[Parallelism]]
+deps = ["Distributed", "LinearAlgebra", "Memento"]
+git-tree-sha1 = "2d672911d884a29330e95856fc99498b07875c12"
+uuid = "c8c83da1-e5f9-4e2c-a857-b8617bac3554"
+version = "0.1.2"
+
 [[Parsers]]
 deps = ["Dates"]
-git-tree-sha1 = "438d35d2d95ae2c5e8780b330592b6de8494e779"
+git-tree-sha1 = "477bf42b4d1496b454c10cce46645bb5b8a0cf2c"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.0.3"
+version = "2.0.2"
 
 [[Pixman_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -698,9 +1233,15 @@ version = "1.0.11"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs"]
-git-tree-sha1 = "8365fa7758e2e8e4443ce866d6106d8ecbb4474e"
+git-tree-sha1 = "e39bea10478c6aff5495ab522517fae5134b40e3"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.20.1"
+version = "1.20.0"
+
+[[PlutoUI]]
+deps = ["Base64", "Dates", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "Suppressor"]
+git-tree-sha1 = "44e225d5837e2a2345e69a1d1e01ac2443ff9fcb"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.9"
 
 [[PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -724,29 +1265,23 @@ version = "1.1.0"
 deps = ["Unicode"]
 uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
+[[ProgressMeter]]
+deps = ["Distributed", "Printf"]
+git-tree-sha1 = "afadeba63d90ff223a6a48d2009434ecee2ec9e8"
+uuid = "92933f4c-e287-5a05-a399-4b506db050ca"
+version = "1.7.1"
+
 [[Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
-git-tree-sha1 = "ad368663a5e20dbb8d6dc2fddeefe4dae0781ae8"
+git-tree-sha1 = "16626cfabbf7206d60d84f2bf4725af7b37d4a77"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
-version = "5.15.3+0"
+version = "5.15.2+0"
 
 [[QuadGK]]
 deps = ["DataStructures", "LinearAlgebra"]
 git-tree-sha1 = "12fbe86da16df6679be7521dfb39fbc861e1dc7b"
 uuid = "1fd47b50-473d-5c70-9696-f719f8f3bcdc"
 version = "2.4.1"
-
-[[Query]]
-deps = ["DataValues", "IterableTables", "MacroTools", "QueryOperators", "Statistics"]
-git-tree-sha1 = "a66aa7ca6f5c29f0e303ccef5c8bd55067df9bbe"
-uuid = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"
-version = "1.0.0"
-
-[[QueryOperators]]
-deps = ["DataStructures", "DataValues", "IteratorInterfaceExtensions", "TableShowUtils"]
-git-tree-sha1 = "911c64c204e7ecabfd1872eb93c49b4e7c701f02"
-uuid = "2aef5ad7-51ca-5a8f-8e88-e75cf067b44b"
-version = "0.9.3"
 
 [[REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
@@ -757,15 +1292,14 @@ deps = ["Serialization"]
 uuid = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 
 [[Ratios]]
-deps = ["Requires"]
-git-tree-sha1 = "7dff99fbc740e2f8228c6878e2aad6d7c2678098"
+git-tree-sha1 = "37d210f612d70f3f7d57d488cb3b6eff56ad4e41"
 uuid = "c84ed2f1-dad5-54f0-aa8e-dbefe2724439"
-version = "0.4.1"
+version = "0.4.0"
 
 [[RecipesBase]]
-git-tree-sha1 = "44a75aa7a527910ee3d1751d1f0e4148698add9e"
+git-tree-sha1 = "b3fb709f3c97bfc6e948be68beeecb55a0b340ae"
 uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
-version = "1.1.2"
+version = "1.1.1"
 
 [[RecipesPipeline]]
 deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase"]
@@ -777,6 +1311,20 @@ version = "0.3.4"
 git-tree-sha1 = "5f6c21241f0f655da3952fd60aa18477cf96c220"
 uuid = "189a3867-3050-52da-a836-e630ba90ab69"
 version = "1.1.0"
+
+[[Reproduce]]
+deps = ["ArgParse", "BSON", "CodeTracking", "Dates", "Distributed", "FileIO", "Git", "HDF5", "JLD2", "JSON", "Logging", "Parallelism", "Pkg", "ProgressMeter", "Random", "Reexport", "SharedArrays", "Sockets"]
+git-tree-sha1 = "c8d07aa38f4569f6937d0a5a1763cfc479a4ab26"
+uuid = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
+version = "0.9.6"
+
+[[ReproducePlotUtils]]
+deps = ["DataFrames", "FileIO", "PlotUtils", "Plots", "RecipesBase", "Reproduce", "RollingFunctions", "Statistics", "StatsPlots"]
+git-tree-sha1 = "f83fa9f3a037081608e4607dc7582913c2e19f3f"
+repo-rev = "master"
+repo-url = "https://github.com/mkschleg/ReproducePlotUtils.jl.git"
+uuid = "c4339a9b-a0bc-4ed5-8923-5e6db10394ac"
+version = "0.1.0"
 
 [[Requires]]
 deps = ["UUIDs"]
@@ -796,6 +1344,12 @@ git-tree-sha1 = "68db32dff12bb6127bac73c209881191bf0efbb7"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.3.0+0"
 
+[[RollingFunctions]]
+deps = ["LinearAlgebra", "Statistics", "StatsBase", "Test"]
+git-tree-sha1 = "cdf9158377f81470b1b73c630d0853a3ec0c7445"
+uuid = "b0e4dd01-7b14-53d8-9b45-175a3e362653"
+version = "0.6.2"
+
 [[SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
@@ -807,9 +1361,9 @@ version = "1.1.0"
 
 [[SentinelArrays]]
 deps = ["Dates", "Random"]
-git-tree-sha1 = "54f37736d8934a12a200edea2f9206b03bdf3159"
+git-tree-sha1 = "a3a337914a035b2d59c9cbe7f1a38aaba1265b02"
 uuid = "91c51154-3ec4-41a3-a24f-3f23e20d615c"
-version = "1.3.7"
+version = "1.3.6"
 
 [[Serialization]]
 uuid = "9e88b42a-f829-5b0c-bbe9-9e923198166b"
@@ -839,15 +1393,15 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[SpecialFunctions]]
 deps = ["ChainRulesCore", "LogExpFunctions", "OpenSpecFun_jll"]
-git-tree-sha1 = "a322a9493e49c5f3a10b50df3aedaf1cdb3244b7"
+git-tree-sha1 = "508822dca004bf62e210609148511ad03ce8f1d8"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "1.6.1"
+version = "1.6.0"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
-git-tree-sha1 = "3240808c6d463ac46f1c1cd7638375cd22abbccb"
+git-tree-sha1 = "b28f39450421d07d89ab5d126fd15e5246350e8a"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.2.12"
+version = "1.2.11"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -865,10 +1419,10 @@ uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 version = "0.33.9"
 
 [[StatsFuns]]
-deps = ["IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
-git-tree-sha1 = "20d1bb720b9b27636280f751746ba4abb465f19d"
+deps = ["LogExpFunctions", "Rmath", "SpecialFunctions"]
+git-tree-sha1 = "30cd8c360c54081f806b1ee14d2eecbef3c04c49"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
-version = "0.9.9"
+version = "0.9.8"
 
 [[StatsPlots]]
 deps = ["Clustering", "DataStructures", "DataValues", "Distributions", "Interpolations", "KernelDensity", "LinearAlgebra", "MultivariateStats", "Observables", "Plots", "RecipesBase", "RecipesPipeline", "Reexport", "StatsBase", "TableOperations", "Tables", "Widgets"]
@@ -886,32 +1440,31 @@ version = "0.6.0"
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
 uuid = "4607b0f0-06f3-5cda-b6b1-a6196a1729e9"
 
+[[Suppressor]]
+git-tree-sha1 = "a819d77f31f83e5792a76081eee1ea6342ab8787"
+uuid = "fd094767-a336-5f1f-9728-57cf17d0bbfb"
+version = "0.2.0"
+
+[[Syslogs]]
+deps = ["Printf", "Sockets"]
+git-tree-sha1 = "46badfcc7c6e74535cc7d833a91f4ac4f805f86d"
+uuid = "cea106d9-e007-5e6c-ad93-58fe2094e9c4"
+version = "0.3.0"
+
 [[TOML]]
 deps = ["Dates"]
 uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [[TableOperations]]
 deps = ["SentinelArrays", "Tables", "Test"]
-git-tree-sha1 = "019acfd5a4a6c5f0f38de69f2ff7ed527f1881da"
+git-tree-sha1 = "a7cf690d0ac3f5b53dd09b5d613540b230233647"
 uuid = "ab02a1b2-a7df-11e8-156e-fb1833f50b87"
-version = "1.1.0"
-
-[[TableShowUtils]]
-deps = ["DataValues", "Dates", "JSON", "Markdown", "Test"]
-git-tree-sha1 = "14c54e1e96431fb87f0d2f5983f090f1b9d06457"
-uuid = "5e66a065-1f0a-5976-b372-e0b8c017ca10"
-version = "0.2.5"
+version = "1.0.0"
 
 [[TableTraits]]
 deps = ["IteratorInterfaceExtensions"]
 git-tree-sha1 = "c06b2f539df1c6efa794486abfb6ed2022561a39"
 uuid = "3783bdb8-4a98-5b6b-af9a-565f29a5fe9c"
-version = "1.0.1"
-
-[[TableTraitsUtils]]
-deps = ["DataValues", "IteratorInterfaceExtensions", "Missings", "TableTraits"]
-git-tree-sha1 = "8fc12ae66deac83e44454e61b02c37b326493233"
-uuid = "382cd787-c1b6-5bf2-a167-d5b971a19bda"
 version = "1.0.1"
 
 [[Tables]]
@@ -927,6 +1480,17 @@ uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 [[Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[[TextWrap]]
+git-tree-sha1 = "9250ef9b01b66667380cf3275b3f7488d0e25faf"
+uuid = "b718987f-49a8-5099-9789-dcd902bef87d"
+version = "1.0.1"
+
+[[TimeZones]]
+deps = ["Dates", "Future", "LazyArtifacts", "Mocking", "Pkg", "Printf", "RecipesBase", "Serialization", "Unicode"]
+git-tree-sha1 = "81753f400872e5074768c9a77d4c44e70d409ef0"
+uuid = "f269a46b-ccf7-5d73-abea-4c690281aa53"
+version = "1.5.6"
 
 [[TranscodingStreams]]
 deps = ["Random", "Test"]
@@ -1170,12 +1734,41 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╠═b0ac2798-0207-11ec-0ad8-996165989a17
-# ╠═ddcecb8a-155b-4fcd-9ff5-03bc867a96ab
-# ╠═c08d37af-fabd-46a1-bc5a-c91f9897bf3f
-# ╠═8b3a880a-41d0-4286-a93d-b471a5193ccb
-# ╠═4b8784a9-8ae6-4d3a-b022-9b693b8efa0c
-# ╠═271ff72a-79ab-4cb8-825b-5fae6cf5195a
-# ╠═597e10e4-625d-4f42-9fc8-c3475ae0bce0
+# ╠═278b9e82-43da-4670-ac5e-9cec326689ca
+# ╠═9bb2ff09-3364-4f31-9d07-29ffa47d716a
+# ╟─8aa844f8-ec57-47d3-9745-86fc8482c826
+# ╟─3175d098-1e6c-4ad5-872c-ce1f6e49409a
+# ╠═71cff3f1-3b58-42d9-a1c9-acbfba9a5e2d
+# ╟─e2db63ec-9ba7-472c-bca0-bf8892f134c1
+# ╟─6d62de45-71f0-4783-bea3-9224ac2499e0
+# ╟─a54d5cf6-7725-497e-b6c5-530fbc49cfbf
+# ╟─3c3aa346-3911-4a73-b1e4-11ad8c9cccc4
+# ╟─36f540ea-b945-4b2f-825f-f97a7ce2fb9b
+# ╠═f999a721-f26e-4cc5-8cc1-1732bb69b134
+# ╟─e4f91cd2-f9d1-4434-af07-614e6d7fc27c
+# ╟─0cb55aa5-0b84-432a-9235-4d9db6b86bf2
+# ╠═67d58fe0-6b1f-43a9-8c48-321bd9c5c518
+# ╟─36bc2210-9b37-48f5-b0b1-7089576e1a64
+# ╠═9769195c-5075-4ad7-af6c-572dc433ca3a
+# ╟─a211294b-852d-447f-b538-66b50c531374
+# ╟─759eca80-b113-4d88-887e-6c762016ad72
+# ╟─607a92d2-5d70-4ff5-89a9-9a0fb638a3db
+# ╟─a6fcd030-9486-409b-89df-1c0e1e43c76b
+# ╟─c24aa3ab-d9de-47c9-b4b0-6b642e2333f0
+# ╟─420a1872-873e-4270-adc2-d01f32dc2003
+# ╟─65a3b91e-5a3f-4db9-a89e-017b893a7a38
+# ╠═faa9e0f2-ba96-42cf-b8be-3b2387cbdc3c
+# ╠═5a03146e-5264-423b-ad14-b0dae69b0fff
+# ╟─31bf6622-1a98-41fe-b7fc-5d66be759f65
+# ╠═f54091b2-795c-417c-8baa-2e05d0edbde6
+# ╠═77b723ce-fa57-4050-9616-20433de02ca2
+# ╠═e5794ea6-5a5f-49ea-98c3-7d4b28c48dd3
+# ╠═6893793b-20be-4907-8b3c-3e8143ee40f8
+# ╠═51851161-5cde-4011-856f-2da11e398e21
+# ╠═d635d06a-8f39-4306-bcf3-de77664394c9
+# ╠═e68631ea-1488-4afe-9996-ccbb8e16ded9
+# ╠═cfeb98f2-a4e0-4218-bb95-947f76e9d09b
+# ╠═74fce7a9-bbd2-40b1-976e-3cc1e8c7a72b
+# ╠═685dd309-710c-431c-9591-80afd57e9ac2
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
