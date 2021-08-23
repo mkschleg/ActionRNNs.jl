@@ -42,7 +42,7 @@ struct DualStreams{M1, M2}
 end
 
 Flux.@functor DualStreams
-(l::DualStreams)(x) = (l.m1(x), l.m2(x))
+(l::DualStreams)(x) = (l.m1(x[1]), l.m2(x[2]))
 
 struct ConcatStreams{M1, M2}
     m1::M1
