@@ -543,8 +543,8 @@ version = "3.24.29+0"
 [[GVFHordes]]
 deps = ["Lazy", "Random", "StatsBase"]
 git-tree-sha1 = "fd4a61cd6fd974f78d661c98daad3570099683cf"
-repo-rev = "master"
-repo-url = "git@github.com:mkschleg/GVFHordes.jl.git"
+repo-rev = "actionrnns"
+repo-url = "https://github.com/mkschleg/GVFHordes.jl.git"
 uuid = "f93fb47c-41e6-11e9-1959-65f988fdca41"
 version = "0.1.0"
 
@@ -1111,8 +1111,8 @@ version = "1.3.5+0"
 [[OpenAIGym]]
 deps = ["MinimalRLCore", "PyCall", "Reexport"]
 git-tree-sha1 = "a4e107581f371c242f046361122ae1c33c8057d4"
-repo-rev = "master"
-repo-url = "https://github.com/mkschleg/OpenAIGym.jl"
+repo-rev = "actionrnns"
+repo-url = "https://github.com/mkschleg/OpenAIGym.jl.git"
 uuid = "41d6fcb8-dd24-11e8-2536-c3dc023218b5"
 version = "0.1.0"
 
@@ -1341,8 +1341,8 @@ version = "0.9.6"
 
 [[ReproducePlotUtils]]
 deps = ["DataFrames", "FileIO", "PlotUtils", "Plots", "RecipesBase", "Reproduce", "RollingFunctions", "Statistics", "StatsPlots"]
-git-tree-sha1 = "f83fa9f3a037081608e4607dc7582913c2e19f3f"
-repo-rev = "master"
+git-tree-sha1 = "e8103ea2b3e21fede116a1548360d2d605fcdeab"
+repo-rev = "actionrnns"
 repo-url = "https://github.com/mkschleg/ReproducePlotUtils.jl.git"
 uuid = "c4339a9b-a0bc-4ed5-8923-5e6db10394ac"
 version = "0.1.0"

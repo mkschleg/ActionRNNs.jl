@@ -50,10 +50,12 @@ function default_config()
     
 end
 
-function get_ann(parsed, fs, env, rng)
+get_ann(parsed, fs, env, rng) = get_ann(parsed, fs, length(get_actions(env)), rng)
+
+function get_ann(parsed, fs::Int, na::Int, rng)
 
     nh = parsed["numhidden"]
-    na = length(get_actions(env))
+    # na = length(get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
     
     
@@ -91,7 +93,7 @@ function get_ann(parsed, fs, env, rng)
                        initb=initb),
                    Flux.Dense(nh, na; initW=init_func))
         
-    elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
+    elseif parsed["cell"] ∈ ActionRNNs.rnn_types() && !get(parsed, "deep", false)
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         
@@ -117,6 +119,30 @@ function get_ann(parsed, fs, env, rng)
 
         m = Flux.Chain(
             rnn(fs, na, ninternal, nh;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh, na; initW=init_func))
+    elseif parsed["cell"]  ∈ ActionRNNs.rnn_types() && get(parsed, "deep", true)
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        ninternal = parsed["internal"]
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        action_stream = Flux.Chain(
+            (a)->Flux.onehotbatch(a, 1:na),
+            Flux.Dense(na, ninternal, Flux.relu, initW=init_func),
+        )
+
+        obs_stream = Flux.Chain(
+            Flux.Dense(fs, ninternal, Flux.relu, initW=init_func)
+        )
+        
+        m = Flux.Chain(
+            ActionRNNs.DualStreams(action_stream, obs_stream),
+            rnn(ninternal, ninternal, nh;
                 init=init_func,
                 initb=initb),
             Flux.Dense(nh, na; initW=init_func))
@@ -218,8 +244,8 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
                                                (:loss, usa[:avg_loss]),
                                                (:l1, usa[:l1]/n),
                                                (:action, a.action),
-                                               (:preds, a.preds),
-                                               (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
+                                               (:preds, a.preds)])
+                                               # (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
                 end
                 success = success || (r == 4.0)
                 if !(a.update_state isa Nothing)
