@@ -63,6 +63,9 @@ push!(RPU.stats_plot_types, :dotplot)
 # ╔═╡ a67aba27-40ef-4ba2-816a-6da61a1d523b
 ic, dd = RPU.load_data("../../local_data/gated_rnns/dir_tmaze_gated_er_rmsprop_10/")
 
+# ╔═╡ 3cbac04f-0e89-4601-8952-5b35ffecc915
+ic_1M, dd_1M = RPU.load_data("../../local_data/gated_rnns/dir_tmaze_gated_er_rmsprop_10_1M/")
+
 # ╔═╡ f9c41407-995c-4ca5-b5d4-46bce5f9585a
 ic_gaigru, dd_gaigru = RPU.load_data("../../local_data/gated_rnns/dir_tmaze_er_rmsprop_10_gaigru/")
 
@@ -78,6 +81,15 @@ ic_gaugru, dd_gaugru = RPU.load_data("../../local_data/gated_rnns/dir_tmaze_er_r
 # ╔═╡ be2a5e97-a857-4c7b-bb50-ef3248cdd54f
 data_gairnn = RPU.get_line_data_for(
 	ic,
+	["cell", "numhidden", "factors", "internal"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_rolling_mean_line(x, :successes, 1000))
+
+# ╔═╡ e8083b57-a071-4ef2-9674-e4b56a1efad2
+data_gairnn_1M = RPU.get_line_data_for(
+	ic_1M,
 	["cell", "numhidden", "factors", "internal"],
 	["eta"];
 	comp=findmax,
@@ -129,6 +141,15 @@ data_steps_gairnn = RPU.get_line_data_for(
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
 	get_data=(x)->RPU.get_rolling_mean_line(x, :total_steps, 1000))
 
+# ╔═╡ 400231b5-2d74-4b85-ae58-19d7c5d24489
+data_steps_gairnn_1M = RPU.get_line_data_for(
+	ic_1M,
+	["cell", "numhidden", "factors", "internal"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_rolling_mean_line(x, :total_steps, 1000))
+
 # ╔═╡ c36d3791-8828-48c7-adcd-fb0c0d5547b7
 data_steps_gaigru = RPU.get_line_data_for(
 	ic_gaigru,
@@ -168,6 +189,15 @@ data_steps_gaugru = RPU.get_line_data_for(
 # ╔═╡ d944303f-cdf4-413e-8932-a04507168eab
 boxplot_data = RPU.get_line_data_for(
 	ic,
+	["cell", "numhidden", "factors", "internal"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ 677d3963-0500-4d67-9967-35a323c2d0f6
+boxplot_data_1M = RPU.get_line_data_for(
+	ic_1M,
 	["cell", "numhidden", "factors", "internal"],
 	["eta"];
 	comp=findmax,
@@ -254,6 +284,42 @@ let
 	plt
 end
 
+# ╔═╡ 7488d7a7-818f-41cb-94cc-f4d259885524
+let	
+	args_list = [
+		Dict("cell"=>"RNN", "numhidden"=>30, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"AARNN", "numhidden"=>30, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"MARNN", "numhidden"=>18, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"FacMARNN", "numhidden"=>25, "factors"=>15, "internal"=>0),
+	]
+	
+	color_list = ["RNN", "AARNN", "MARNN", "FacMARNN", "GRU", "AAGRU"]
+	marker_shapes = [:circle, :rect, :star5, :diamond, :hexagon, :cross, :xcross]
+	plt = plot()
+	for i ∈ 1:length(args_list)
+		plt = plot!(data_gairnn_1M, args_list[i], z=1.97, lw=3, fillalpha=0.2, label="$(args_list[i]["cell"]) (nh: $(args_list[i]["numhidden"]))", palette=RPU.custom_colorant,legend=:topright, ylabel="Success Rate", xlabel="Episode", title="Dir TMaze ER, Size: 10, 300K Steps", grid=false, tickdir=:out, color=cell_colors[args_list[i]["cell"]], ylim=(0.5, 1))
+	end
+	plt
+end
+
+# ╔═╡ dec68d41-58f4-4097-b02e-418cd2d85338
+let	
+	args_list = [
+		Dict("cell"=>"RNN", "numhidden"=>30, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"AARNN", "numhidden"=>30, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"MARNN", "numhidden"=>18, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"FacMARNN", "numhidden"=>25, "factors"=>15, "internal"=>0),
+	]
+	
+	color_list = ["RNN", "AARNN", "MARNN", "FacMARNN", "GRU", "AAGRU"]
+	marker_shapes = [:circle, :rect, :star5, :diamond, :hexagon, :cross, :xcross]
+	plt = plot()
+	for i ∈ 1:length(args_list)
+		plt = plot!(data_steps_gairnn_1M, args_list[i], z=1.97, lw=3, fillalpha=0.2, label="$(args_list[i]["cell"]) (nh: $(args_list[i]["numhidden"]))", palette=RPU.custom_colorant,legend=:topright, ylabel="Steps", xlabel="Episode", title="Dir TMaze ER, Size: 10, 300K Steps", grid=false, tickdir=:out, color=cell_colors[args_list[i]["cell"]])
+	end
+	plt
+end
+
 # ╔═╡ 6b1e0070-edf6-4125-80f6-45aa497ece18
 let
 	nh = parse(Int, nh_gairnn)
@@ -298,6 +364,50 @@ let
 	plt
 end
 
+# ╔═╡ 8612dc8e-2780-4491-9020-11c9ea2a6604
+let
+	nh = parse(Int, nh_gairnn)
+	factors = parse(Int, facs_gairnn)
+	internal = parse(Int, internal_gairnn)
+	
+	args_list = [
+		Dict("cell"=>"GRU", "numhidden"=>17, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"AAGRU", "numhidden"=>17, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"MAGRU", "numhidden"=>10, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>15, "factors"=>17, "internal"=>0),
+	]
+	
+	color_list = ["RNN", "AARNN", "MARNN", "FacMARNN", "GRU", "AAGRU"]
+	marker_shapes = [:circle, :rect, :star5, :diamond, :hexagon, :cross, :xcross]
+	plt = plot()
+	for i ∈ 1:length(args_list)
+		plt = plot!(data_gairnn_1M, args_list[i], z=1.97, lw=3, fillalpha=0.2, label="$(args_list[i]["cell"]) (nh: $(args_list[i]["numhidden"]))", palette=RPU.custom_colorant,legend=:topright, ylabel="Success Rate", xlabel="Episode", title="Dir TMaze ER, Size: 10, 300K Steps", grid=false, tickdir=:out, color=cell_colors[args_list[i]["cell"]], ylim=(0.5, 1))
+	end
+	plt
+end
+
+# ╔═╡ 261acb73-cb48-487d-9643-7eaba253e8f0
+let
+	nh = parse(Int, nh_gairnn)
+	factors = parse(Int, facs_gairnn)
+	internal = parse(Int, internal_gairnn)
+	
+	args_list = [
+		Dict("cell"=>"GRU", "numhidden"=>17, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"AAGRU", "numhidden"=>17, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"MAGRU", "numhidden"=>10, "factors"=>0, "internal"=>0),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>15, "factors"=>17, "internal"=>0),
+	]
+	
+	color_list = ["RNN", "AARNN", "MARNN", "FacMARNN", "GRU", "AAGRU"]
+	marker_shapes = [:circle, :rect, :star5, :diamond, :hexagon, :cross, :xcross]
+	plt = plot()
+	for i ∈ 1:length(args_list)
+		plt = plot!(data_steps_gairnn_1M, args_list[i], z=1.97, lw=3, fillalpha=0.2, label="$(args_list[i]["cell"]) (nh: $(args_list[i]["numhidden"]))", palette=RPU.custom_colorant,legend=:topright, ylabel="Steps", xlabel="Episode", title="Dir TMaze ER, Size: 10, 300K Steps", grid=false, tickdir=:out, color=cell_colors[args_list[i]["cell"]])
+	end
+	plt
+end
+
 # ╔═╡ 14ad8703-dca4-42a4-9bdc-36ad0fb2e3b5
 let
 	nh = parse(Int, nh_gairnn)
@@ -337,7 +447,51 @@ let
 	linestyles = [:solid, :dash, :dot]
 	plt = plot()
 	for i ∈ 1:length(args_list)
-		plt = plot!(data_steps_gairnn, args_list[i], z=1.97, lw=3, fillalpha=0.2, label="$(args_list[i]["cell"]) (nh: $(args_list[i]["numhidden"]))", palette=RPU.custom_colorant,legend=:topright, ylabel="Success Rate", xlabel="Episode", title="Dir TMaze ER, Size: 10, 300K Steps", grid=false, tickdir=:out, color=cell_colors[args_list[i]["cell"]], ylim=(0, 200), linestyle=linestyles[i])
+		plt = plot!(data_steps_gairnn, args_list[i], z=1.97, lw=3, fillalpha=0.2, label="$(args_list[i]["cell"]) (nh: $(args_list[i]["numhidden"]))", palette=RPU.custom_colorant,legend=:topright, ylabel="Steps", xlabel="Episode", title="Dir TMaze ER, Size: 10, 300K Steps", grid=false, tickdir=:out, color=cell_colors[args_list[i]["cell"]], ylim=(0, 200), linestyle=linestyles[i])
+	end
+	plt
+end
+
+# ╔═╡ e984acc6-159f-4ec6-a66e-2dff2c117fb0
+let
+	nh = parse(Int, nh_gairnn)
+	factors = parse(Int, facs_gairnn)
+	internal = parse(Int, internal_gairnn)
+	
+	args_list = [
+		Dict("cell"=>"ActionGatedRNN", "numhidden"=>10, "factors"=>0, "internal"=>28),
+		Dict("cell"=>"ActionGatedRNN", "numhidden"=>15, "factors"=>0, "internal"=>21),
+		Dict("cell"=>"ActionGatedRNN", "numhidden"=>20, "factors"=>0, "internal"=>17),
+	]
+	
+	color_list = ["RNN", "AARNN", "MARNN", "FacMARNN", "GRU", "AAGRU"]
+	marker_shapes = [:circle, :rect, :star5, :diamond, :hexagon, :cross, :xcross]
+	linestyles = [:solid, :dash, :dot]
+	plt = plot()
+	for i ∈ 1:length(args_list)
+		plt = plot!(data_gairnn_1M, args_list[i], z=1.97, lw=3, fillalpha=0.2, label="$(args_list[i]["cell"]) (nh: $(args_list[i]["numhidden"]))", palette=RPU.custom_colorant,legend=:topright, ylabel="Success Rate", xlabel="Episode", title="Dir TMaze ER, Size: 10, 300K Steps", grid=false, tickdir=:out, color=cell_colors[args_list[i]["cell"]], ylim=(0.5, 1), linestyle=linestyles[i])
+	end
+	plt
+end
+
+# ╔═╡ 956f8c22-67d4-43e7-8eab-dd1822976d3d
+let
+	nh = parse(Int, nh_gairnn)
+	factors = parse(Int, facs_gairnn)
+	internal = parse(Int, internal_gairnn)
+	
+	args_list = [
+		Dict("cell"=>"ActionGatedRNN", "numhidden"=>10, "factors"=>0, "internal"=>28),
+		Dict("cell"=>"ActionGatedRNN", "numhidden"=>15, "factors"=>0, "internal"=>21),
+		Dict("cell"=>"ActionGatedRNN", "numhidden"=>20, "factors"=>0, "internal"=>17),
+	]
+	
+	color_list = ["RNN", "AARNN", "MARNN", "FacMARNN", "GRU", "AAGRU"]
+	marker_shapes = [:circle, :rect, :star5, :diamond, :hexagon, :cross, :xcross]
+	linestyles = [:solid, :dash, :dot]
+	plt = plot()
+	for i ∈ 1:length(args_list)
+		plt = plot!(data_steps_gairnn_1M, args_list[i], z=1.97, lw=3, fillalpha=0.2, label="$(args_list[i]["cell"]) (nh: $(args_list[i]["numhidden"]))", palette=RPU.custom_colorant,legend=:topright, ylabel="Steps", xlabel="Episode", title="Dir TMaze ER, Size: 10, 300K Steps", grid=false, tickdir=:out, color=cell_colors[args_list[i]["cell"]], linestyle=linestyles[i])
 	end
 	plt
 end
@@ -571,6 +725,39 @@ let
 	#savefig("../../data/paper_plots/factored_tensor/dir_tmaze_box_plots_300k_steps_tau_16_fac_tensor.pdf")
 end
 
+# ╔═╡ 392bc17c-9f6c-4d55-9d2e-53b01a711eb3
+let	
+	plt = plot()
+	
+	args_list = [
+		Dict("cell"=>"GRU", "numhidden"=>17, "factors"=> 0, "internal"=>0),
+		Dict("cell"=>"AAGRU", "numhidden"=>17, "factors"=> 0, "internal"=>0),
+		Dict("cell"=>"MAGRU", "numhidden"=>10, "factors"=> 0, "internal"=>0),
+		Dict("cell"=>"FacMAGRU", "numhidden"=>15, "factors"=> 17, "internal"=>0),
+		Dict("cell"=>"RNN", "numhidden"=>30, "factors"=> 0, "internal"=>0),
+		Dict("cell"=>"AARNN", "numhidden"=>30, "factors"=> 0, "internal"=>0),
+		Dict("cell"=>"MARNN", "numhidden"=>18, "factors"=> 0, "internal"=>0),
+		Dict("cell"=>"FacMARNN", "numhidden"=>25, "factors"=> 15, "internal"=>0),
+		Dict("cell"=>"ActionGatedRNN", "numhidden"=>10, "factors"=> 0, "internal"=>28),
+		]
+	names = ["GRU", "AAGRU", "MAGRU", "FacGRU", "RNN", "AARNN", "MARNN", "FacRNN",  "GatedRNN 10"]
+	for i in 1:length(args_list)
+		if i == 5
+			plt = vline!([6], linestyle=:dot, color=:white, lw=2)
+		end
+		plt = violin!(boxplot_data_1M, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
+		
+	plt = boxplot!(boxplot_data, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=7, grid=false, tickdir=:out, xguidefontsize=8, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="ER Directional TMaze, τ: 12", ylim=(0.3, 1))
+		
+		#plt = dotplot!(boxplot_data, args_list[i], label=names[i], color=:black, tickdir=:out, grid=false, tickfontsize=9, ylims=(0.4, 1.0))
+		
+	end
+	
+	plt
+
+	#savefig("../../data/paper_plots/factored_tensor/dir_tmaze_box_plots_300k_steps_tau_16_fac_tensor.pdf")
+end
+
 # ╔═╡ 74be388f-528d-4f56-bcde-a86dc2bdb756
 let	
 	plt = plot()
@@ -683,32 +870,42 @@ end
 # ╠═1c2a5244-0999-44f2-a952-3f495a8ec136
 # ╠═f197d16b-eb04-408c-a020-9023f2eb02b2
 # ╠═a67aba27-40ef-4ba2-816a-6da61a1d523b
+# ╠═3cbac04f-0e89-4601-8952-5b35ffecc915
 # ╠═f9c41407-995c-4ca5-b5d4-46bce5f9585a
 # ╠═3a1b767e-d09b-4079-b2a5-7e2e189a1600
 # ╠═606b1f70-976d-4adc-9d1b-a34835b947e4
 # ╠═a1bde34d-7216-4dc0-a08e-eae8a03148a6
 # ╠═be2a5e97-a857-4c7b-bb50-ef3248cdd54f
+# ╠═e8083b57-a071-4ef2-9674-e4b56a1efad2
 # ╠═2e0ff5cc-6758-4cf1-930b-c55f88255e15
 # ╠═54cae2a9-e112-4b61-8f39-0dd68deca36f
 # ╠═1b39ba62-7603-450c-a41c-5c67c786ef73
 # ╠═6e13f656-5db2-4913-ae77-232f4d1cc770
 # ╠═e3c83d46-f6f0-4d8a-969a-11579c3ca3ce
+# ╠═400231b5-2d74-4b85-ae58-19d7c5d24489
 # ╠═c36d3791-8828-48c7-adcd-fb0c0d5547b7
 # ╠═357622c5-491f-400d-ac29-2f3a312a7f8c
 # ╠═eb740dd2-b236-4f98-9a32-db0e12887595
 # ╠═e29dbabe-be8a-45c5-9b01-68c7d49c306d
 # ╠═d944303f-cdf4-413e-8932-a04507168eab
+# ╠═677d3963-0500-4d67-9967-35a323c2d0f6
 # ╠═9e8614a4-7e20-404b-a025-77ef51947dde
 # ╠═a41a0df4-670a-474b-8453-2130d67137ba
 # ╠═41d54ec8-aeac-40b2-a682-f9724baf4c64
 # ╠═8c206951-8f90-4a68-be21-12100ba713c1
 # ╠═01462edf-e99c-4b7a-9f5b-3db66954b77b
-# ╟─90b1ae5e-43f6-498b-9a00-7979b651935e
-# ╟─a8c37334-01c6-484a-8e77-e7d023db891d
-# ╟─6b1e0070-edf6-4125-80f6-45aa497ece18
-# ╟─3d9d5add-a484-4fbc-9d0c-54b06936485d
-# ╟─14ad8703-dca4-42a4-9bdc-36ad0fb2e3b5
-# ╟─14e4845e-c8f1-46c1-805f-1cf2b8c2ab52
+# ╠═90b1ae5e-43f6-498b-9a00-7979b651935e
+# ╠═a8c37334-01c6-484a-8e77-e7d023db891d
+# ╠═7488d7a7-818f-41cb-94cc-f4d259885524
+# ╠═dec68d41-58f4-4097-b02e-418cd2d85338
+# ╠═6b1e0070-edf6-4125-80f6-45aa497ece18
+# ╠═3d9d5add-a484-4fbc-9d0c-54b06936485d
+# ╠═8612dc8e-2780-4491-9020-11c9ea2a6604
+# ╠═261acb73-cb48-487d-9643-7eaba253e8f0
+# ╠═14ad8703-dca4-42a4-9bdc-36ad0fb2e3b5
+# ╠═14e4845e-c8f1-46c1-805f-1cf2b8c2ab52
+# ╠═e984acc6-159f-4ec6-a66e-2dff2c117fb0
+# ╠═956f8c22-67d4-43e7-8eab-dd1822976d3d
 # ╠═89216650-6460-414f-abf1-8dab7010f419
 # ╟─089b0539-4157-4bed-ad99-010c380953e1
 # ╟─462ec3bb-4e31-4b3b-bdf1-b00216809e99
@@ -719,7 +916,8 @@ end
 # ╟─c5cb2048-33b1-4e42-ab14-cc8a79d494ac
 # ╟─c2da275f-3c50-4eeb-9eff-5363329e68ec
 # ╟─864a5575-58dd-486a-a274-327a82d7c261
-# ╟─9b18dc96-50d0-4668-ad99-320502902ec4
+# ╠═9b18dc96-50d0-4668-ad99-320502902ec4
+# ╠═392bc17c-9f6c-4d55-9d2e-53b01a711eb3
 # ╟─74be388f-528d-4f56-bcde-a86dc2bdb756
 # ╟─4d73f8cb-3848-4848-9894-a9c46ed44594
 # ╟─be41bdf6-6c72-4b0a-97b0-0926c3020d22

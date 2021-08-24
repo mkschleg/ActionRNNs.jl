@@ -1,3 +1,6 @@
+using Flux
+using Flux: gate
+
 struct AALSTMCell{A,V,S} <: AbstractActionRNN
     Wi::A
     Wa::A
@@ -7,7 +10,7 @@ struct AALSTMCell{A,V,S} <: AbstractActionRNN
 end
 
 function AALSTMCell(in::Integer, na::Integer, out::Integer;
-                  init = glorot_uniform,
+                  init = Flux.glorot_uniform,
                   initb = Flux.zeros,
                   init_state = Flux.zeros)
     cell = AALSTMCell(init(out * 4, in),
@@ -21,9 +24,12 @@ end
 
 function (m::AALSTMCell)((h, c), x::Tuple{A, O}) where {A, O}
     b, o = m.b, size(h, 1)
+
     a = x[1]
     obs = x[2]
+
     g = m.Wi*obs .+ m.Wh*h .+ get_waa(m.Wa, a) .+ b
+
     input = σ.(gate(g, o, 1))
     forget = σ.(gate(g, o, 2))
     cell = tanh.(gate(g, o, 3))
@@ -31,7 +37,7 @@ function (m::AALSTMCell)((h, c), x::Tuple{A, O}) where {A, O}
     c = forget .* c .+ input .* cell
     h′ = output .* tanh.(c)
     sz = size(obs)
-    return (h′, c), h′ #reshape(h′, :, sz[2:end]...)
+    return (h′, c), reshape(h′, :, sz[2:end]...) # h′
 end
 
 Flux.@functor AALSTMCell
@@ -72,10 +78,12 @@ end
 
 function (m::MALSTMCell)((h, c), x::Tuple{A, O}) where {A, O}
     o = size(h, 1)
+
     a = x[1]
     obs = x[2]
     
     g = contract_WA(m.Wi, a, obs) .+ contract_WA(m.Wh, a, h) .+ get_waa(m.b, a)
+
     input = σ.(gate(g, o, 1))
     forget = σ.(gate(g, o, 2))
     cell = tanh.(gate(g, o, 3))
@@ -83,7 +91,7 @@ function (m::MALSTMCell)((h, c), x::Tuple{A, O}) where {A, O}
     c = forget .* c .+ input .* cell
     h′ = output .* tanh.(c)
     sz = size(obs)
-    return (h′, c), h′ #reshape(h′, :, sz[2:end]...)
+    return (h′, c), reshape(h′, :, sz[2:end]...) # h′
 end
 
 Flux.@functor MALSTMCell

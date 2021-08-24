@@ -275,3 +275,69 @@ for a good overview of the internals.
 """
 GAUGRU(a...; ka...) = Flux.Recur(GAUGRUCell(a...; ka...))
 Flux.Recur(m::GAUGRUCell) = Flux.Recur(m, m.state0)
+
+
+struct GAIALSTMCell{A,V,S} <: AbstractActionRNN
+    Wi::A
+    Wa::A
+    Wh::A
+    bi::V
+    ba::V
+    W::A
+    state0::S
+end
+
+function GAIALSTMCell(in::Integer, na::Integer, internal::Integer, out::Integer;
+                  init = glorot_uniform,
+                  initb = Flux.zeros,
+                  init_state = Flux.zeros)
+    cell = GAIALSTMCell(init(4*internal, in),
+                        init(4*internal, na),
+                        init(4*internal, out),
+                        initb(4*internal),
+                        initb(4*internal),
+                        init(4*out, 4*internal),
+                        (init_state(out,1), init_state(out,1)))
+    cell.bi[gate(internal, 2)] .= 1
+  return cell
+end
+
+function (m::GAIALSTMCell)((h, c), x::Tuple{A, O}) where {A, O}
+    o = size(h, 1)
+
+    a = x[1]
+    obs = x[2]
+
+    gx_, gh_ = m.Wi*obs, m.Wh*h
+    ga_ = get_waa(m.Wa, a)
+
+    c_ = gh_ .+ gx_ .+ m.bi
+    r_ = σ.(ga_ .+ m.ba)
+    g = m.W*(r_ .* c_)
+#     g = contract_WA(m.Wi, a, obs) .+ contract_WA(m.Wh, a, h) .+ get_waa(m.b, a)
+
+    input = σ.(gate(g, o, 1))
+    forget = σ.(gate(g, o, 2))
+    cell = tanh.(gate(g, o, 3))
+    output = σ.(gate(g, o, 4))
+    c = forget .* c .+ input .* cell
+    h′ = output .* tanh.(c)
+    sz = size(obs)
+    return (h′, c), reshape(h′, :, sz[2:end]...) # h′
+end
+
+Flux.@functor GAIALSTMCell
+
+Base.show(io::IO, l::GAIALSTMCell) =
+  print(io, "GAIALSTMCell(", size(l.W, 2), ", ", size(l.W, 1)÷4, ")")
+
+"""
+    GAIALSTM(in::Integer, na::Integer, out::Integer)
+[Gated Action Input by Action Long Short Term Memory](https://www.researchgate
+.net/publication/13853244_Long_Short-term_Memory)
+recurrent layer. Behaves like an RNN but generally exhibits a longer memory span over sequences.
+See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
+for a good overview of the internals.
+"""
+GAIALSTM(a...; ka...) = Flux.Recur(GAIALSTMCell(a...; ka...))
+Flux.Recur(m::GAIALSTMCell) = Flux.Recur(m, m.state0)
