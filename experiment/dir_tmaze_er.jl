@@ -150,7 +150,7 @@ function get_ann(parsed, fs::Int, na::Int, rng)
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
         Flux.Chain(rnntype(fs, nh; init=init_func),
                    Flux.Dense(nh,
-                              length(get_actions(env));
+                              na;
                               initW=init_func))
     end
 end
