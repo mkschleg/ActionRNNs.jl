@@ -41,7 +41,7 @@ function default_args()
     Dict{String,Any}(
 
         "agent"=>"new",
-        "save_dir" => "ringworld",
+        "save_dir" => "tmp/ringworld",
 
         "seed" => 1,
         "steps" => 200000,

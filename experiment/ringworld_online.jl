@@ -38,7 +38,7 @@ results_synopsis(res, ::Val{false}) = res
 function default_args()
     Dict{String,Any}(
 
-        "save_dir" => "ringworld_online",
+        "save_dir" => "tmp/ringworld_online",
 
         "seed" => 1,
         "steps" => 100000,
