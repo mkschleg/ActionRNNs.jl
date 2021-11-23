@@ -1,17 +1,15 @@
 
 module RingWorldUtils
 
-using ..ActionRNNs
-using ..MinimalRLCore
-using ..GVFHordes
+import ..RingWorld
+import ..RingWorldConst
 
-import GVFHordes.GVFParamFuncs: FeatureCumulant, PredictionCumulant, ConstantDiscount, StateTerminationDiscount, PersistentPolicy
+import MinimalRLCore: MinimalRLCore, AbstractFeatureConstructor
 
-const RWC = ActionRNNs.RingWorldConst
+import GVFHordes: GVFHordes, GVF, Horde, GVFParamFuncs
+import .GVFParamFuncs: FeatureCumulant, PredictionCumulant, ConstantDiscount, StateTerminationDiscount, PersistentPolicy
 
-
-ActionRNNs.RingWorld(parsed::Dict) = ActionRNNs.RingWorld(parsed["size"])
-
+const RWC = RingWorldConst
 
 
 function onestep()
@@ -129,7 +127,7 @@ end
 get_horde(parsed::Dict, prefix="", pred_offset::Integer=0) =
     get_horde(parsed["$(prefix)horde"], parsed["size"], parsed["$(prefix)gamma"], pred_offset)
 
-function oracle(env::ActionRNNs.RingWorld, horde_str, γ=0.9)
+function oracle(env::RingWorld, horde_str, γ=0.9)
     chain_length = env.ring_size
     state = env.agent_state
     ret = Array{Float64,1}()

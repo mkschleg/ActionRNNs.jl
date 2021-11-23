@@ -1,20 +1,13 @@
 
 module CycleWorldUtils
 
-using ..ActionRNNs
+import ..CycleWorld
+import ..MinimalRLCore
+using GVFHordes
 
-# export settings!, onestep, chain, gamma_chain, get_horde, oracle
+# import ..ActionRNNs: ActionRNNs, CycleWorld
+# using ..ActionRNNs.GVFHordes
 
-# function horde_settings!(as::ArgParseSettings, prefix::AbstractString="")
-#     add_arg_table(as,
-#                   "--$(prefix)gamma",
-#                   Dict(:help=>"The gamma value for the gamma_chain horde",
-#                        :arg_type=>Float64,
-#                        :default=>0.9),
-#                   "--$(prefix)horde",
-#                   Dict(:help=>"The horde used for training",
-#                        :default=>"gamma_chain"))
-# end
 
 function onestep(chain_length::Integer)
     gvfs = [GVF(FeatureCumulant(1), ConstantDiscount(0.0), NullPolicy())]

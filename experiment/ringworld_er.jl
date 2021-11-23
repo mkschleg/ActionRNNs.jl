@@ -1,18 +1,18 @@
 module RingWorldERExperiment
 
+using MinimalRLCore
+
+import ActionRNNs: ActionRNNs, ExpUtils, RingWorld, glorot_uniform
+
+import .ExpUtils: RingWorldUtils, FluxUtils, experiment_wrapper
+
+
 import Flux
-# import Flux.Tracker
 import JLD2
 import LinearAlgebra.Diagonal
 
-# include("../src/ActionRNNs.jl")
-import ActionRNNs
-import MinimalRLCore
+# using DataStructures: CircularBuffer
 
-using DataStructures: CircularBuffer
-using ActionRNNs: RingWorld, step!, start!, glorot_uniform
-
-# using ActionRNNs
 using Statistics
 using Random
 using ProgressMeter
@@ -22,8 +22,8 @@ using Random
 
 # using Plots
 
-const RWU = ActionRNNs.RingWorldUtils
-const FLU = ActionRNNs.FluxUtils
+const RWU = RingWorldUtils
+const FLU = FluxUtils
 
 function results_synopsis(res, ::Val{true})
     rmse = sqrt.(mean(res["err"].^2; dims=2))
@@ -195,19 +195,14 @@ function main_experiment(parsed=default_args(); working=false, progress=false, o
         parsed["factors"] = parsed["numhidden_factors"][2]
     end
     
-    ActionRNNs.experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
+    experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
         
         num_steps = parsed["steps"]
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = RingWorld(parsed)
+        env = RingWorld(parsed["size"])
         agent = construct_new_agent(parsed, rng)
-        # if parsed["agent"] == "new"
-        #     construct_new_agent(parsed, rng)
-        # else
-        #     construct_agent(parsed, rng)
-        # end
 
         out_pred_strg, out_err_strg =
             experiment_loop(env, agent, parsed["outhorde"], num_steps, rng; prgs=progress)
