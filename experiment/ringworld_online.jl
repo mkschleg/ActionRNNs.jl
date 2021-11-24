@@ -35,6 +35,12 @@ function results_synopsis(res, ::Val{true})
 end
 results_synopsis(res, ::Val{false}) = res
 
+#=
+Time: 0:01:28
+Dict{String, Matrix{Float32}} with 2 entries:
+  "err"  => [0.0 0.0; -1.0 0.0; … ; -0.00895289 0.00520104; 0.00517368 -0.0150787]
+  "pred" => [0.0 0.0; 0.0 0.0; … ; -0.00895289 0.00520104; 1.00517 -0.0150787]
+=#
 function default_args()
     Dict{String,Any}(
 
@@ -83,7 +89,7 @@ function get_model(parsed, out_horde, fc, rng)
                            init_style=init_style,
                            init=initW,
                            initb=initb),
-                       Flux.Dense(nh, num_gvfs; initW=init_func))
+                       Flux.Dense(nh, num_gvfs; initW=initW))
 
         elseif parsed["cell"] ∈ ActionRNNs.fac_tuc_rnn_types()
 
@@ -95,7 +101,7 @@ function get_model(parsed, out_horde, fc, rng)
             Flux.Chain(rnn(fs, 2, nh, action_factors, out_factors, in_factors;
                            init=initW,
                            initb=initb),
-                       Flux.Dense(nh, num_gvfs; initW=init_func))
+                       Flux.Dense(nh, num_gvfs; initW=initW))
 
         elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
@@ -105,13 +111,13 @@ function get_model(parsed, out_horde, fc, rng)
                 rnn(fs, na, nh;
                     init=initW,
                     initb=initb),
-                Flux.Dense(nh, num_gvfs; initW=init_func))
+                Flux.Dense(nh, num_gvfs; initW=initW))
         else
             rnntype = getproperty(Flux, Symbol(parsed["cell"]))
             Flux.Chain(rnntype(fs, nh; init=initW),
                        Flux.Dense(nh,
                                   num_gvfs;
-                                  initW=init_func))
+                                  initW=initW))
         end
     end
 

@@ -37,42 +37,47 @@ function results_synopsis(res, ::Val{true})
 end
 results_synopsis(res, ::Val{false}) = res
 
+#=
+
+Time: 0:00:56
+Dict{String, Matrix{Float32}} with 2 entries:
+  "err"  => [0.0 0.0; 0.0 0.0; … ; 0.0128746 -0.000129551; 0.00117147 -0.00140008]
+  "pred" => [0.0 0.0; 0.0 0.0; … ; 0.0128746 -0.000129551; 1.00117 -0.00140008]
+
+=#
 function default_args()
     Dict{String,Any}(
 
-        "agent"=>"new",
         "save_dir" => "tmp/ringworld",
-
         "seed" => 1,
+        "synopsis" => false,
+        
         "steps" => 200000,
         "size" => 6,
 
+        # Network
         "cell" => "MARNN",
-        "factors" => 10,
         "numhidden" => 6,
-        "hs_learnable" => true,
 
-        "action_factors" => 2,
-        "out_factors" => 15,
-        "in_factors" => 2,
-        
+        # Problem
         "outhorde" => "onestep",
         "outgamma" => 0.9,
-        
+
+        # Opt
         "opt" => "RMSProp",
         "eta" => 0.001,
         "rho" => 0.9,
+
+        # BPTT
         "truncation" => 3,
 
-        "action_features"=>false,
-
+        # Replay
         "replay_size"=>1000,
         "warm_up" => 1000,
         "batch_size"=>4,
         "update_freq"=>4,
         "target_update_freq"=>1000,
-
-        "synopsis" => false)
+        "hs_learnable"=>true)
 
 end
 
@@ -159,7 +164,7 @@ end
 
 function construct_new_agent(parsed, rng)
 
-    fc = RWU.StandardFeatureCreator{parsed["action_features"]}()
+    fc = RWU.StandardFeatureCreator{false}()
     fs = size(fc)
 
     out_horde = RWU.get_horde(parsed, "out")
