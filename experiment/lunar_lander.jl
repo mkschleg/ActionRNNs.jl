@@ -2,13 +2,15 @@ module LunarLanderExperiment
 
 # include("../src/ActionRNNs.jl")
 
+import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
+import ActionRNNs: ActionRNNs, LunarLander, ExpUtils
+
+import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad, experiment_wrapper
+import .ExpUtils: LunarLanderUtils as LMU, FluxUtils as FLU
+
 import Flux
 import Flux: gpu
 import JLD2
-import LinearAlgebra.Diagonal
-import MinimalRLCore
-using MinimalRLCore: run_episode!, get_actions
-import ActionRNNs
 
 # using ActionRNNs: TMaze
 
@@ -17,8 +19,6 @@ using Random
 using ProgressMeter
 using Reproduce
 using Random
-
-const FLU = ActionRNNs.FluxUtils
 
 function default_config()
     Dict{String,Any}(
@@ -132,7 +132,7 @@ end
 
 function construct_agent(env, parsed, rng)
 
-    fc = ActionRNNs.LunarLanderUtils.IdentityFeatureCreator()
+    fc = LMU.IdentityFeatureCreator()
     fs = MinimalRLCore.feature_size(fc, parsed["omit_states"])
 
     γ = Float32(parsed["gamma"])
