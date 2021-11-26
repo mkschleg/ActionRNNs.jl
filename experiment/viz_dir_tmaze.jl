@@ -1,14 +1,14 @@
 module VisualDirectionalTMazeERExperiment
 
-import Flux
-import JLD2
 
 import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
-import ActionRNNs: ActionRNNs, TMaze, ExpUtils, DRQNAgent
+import ActionRNNs: ActionRNNs, ImageDirTMaze, ExpUtils
 
 import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad, experiment_wrapper
 import .ExpUtils: TMazeUtils as TMU, FluxUtils as FLU
 
+import Flux
+import JLD2
 
 using Statistics
 using Random
@@ -169,7 +169,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = ActionRNNs.ImageDirTMaze(parsed["size"])
+        env = ImageDirTMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
 
         
