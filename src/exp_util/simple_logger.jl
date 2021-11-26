@@ -40,21 +40,27 @@ end
 
 Base.getindex(usa::UpdateStateAnalysis, idx::Symbol) = getindex(usa.data, idx)
 
-function l1_grad(s, us::UpdateState)
-    ns = zero(s)
-    for k ∈ us.grads.params
-        if !(us.grads[k] isa Nothing)
-            ns += sum(abs.(us.grads[k]))
+
+function sum_grad(f::Function, us::UpdateState)
+
+    
+    sum(us.grads) do grad
+        # @show typeof(p)
+        if grad isa Nothing
+            zero(us.loss)
+        else
+            sum(f, grad)
         end
+        # p.second isa Nothing ? zero(eltype(p.first)) : sum(f, p.second)
     end
-    ns
 end
 
-function l2_grad(s, us::UpdateState)
-    ns = zero(s)
-    for (k, v) ∈ us.grads
-        ns += dot(v, v)
-    end
-    ns
+l1_grad(s, us::UpdateState) = sum_grad(abs, us)
+l2_grad(s, us::UpdateState) = sum_grad(abs2, us)
+
+function layer_sum_grad(f::Function, us::UpdateState)
+    Dict(
+        p.second isa Nothing ? p.first=>p.second : p.first=>sum(f, p.second) for p in us.grads
+    )
 end
 

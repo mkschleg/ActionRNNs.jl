@@ -6,7 +6,7 @@ import Flux
 import JLD2
 
 import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
-import ActionRNNs: ActionRNNs, TMaze, ExpUtils
+import ActionRNNs: ActionRNNs, DirectionalTMaze, ExpUtils
 
 import .ExpUtils: experiment_wrapper, TMazeUtils, FluxUtils
 import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad
@@ -213,7 +213,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = ActionRNNs.DirectionalTMaze(parsed["size"])
+        env = DirectionalTMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
 
         

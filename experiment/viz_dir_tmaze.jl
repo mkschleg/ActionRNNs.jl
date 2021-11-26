@@ -2,12 +2,13 @@ module VisualDirectionalTMazeERExperiment
 
 import Flux
 import JLD2
-import LinearAlgebra.Diagonal
-import MinimalRLCore
-using MinimalRLCore: run_episode!, get_actions
-import ActionRNNs
 
-using ActionRNNs: TMaze
+import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
+import ActionRNNs: ActionRNNs, TMaze, ExpUtils, DRQNAgent
+
+import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad, experiment_wrapper
+import .ExpUtils: TMazeUtils as TMU, FluxUtils as FLU
+
 
 using Statistics
 using Random
@@ -15,15 +16,22 @@ using ProgressMeter
 using Reproduce
 using Random
 
-const TMU = ActionRNNs.TMazeUtils
-const FLU = ActionRNNs.FluxUtils
-
+#=
+Time: 0:00:21
+  episode:    6
+  steps:      33
+  successes:  0.4
+  loss:       0.9570326
+  l1:         0.06516068
+  action:     3
+  preds:      Float32[-1.4597893; -0.6299171; -1.4020246]
+=#
 function default_config()
     Dict{String,Any}(
         "save_dir" => "tmaze",
 
         "seed" => 1,
-        "steps" => 750000,
+        "steps" => 2000,
         "size" => 10,
 
 
@@ -154,7 +162,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         delete!(parsed, "numhidden_factors")
     end
     
-    ActionRNNs.experiment_wrapper(parsed, working) do parsed
+    experiment_wrapper(parsed, working) do parsed
 
         num_steps = parsed["steps"]
 
@@ -165,7 +173,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         agent = construct_agent(env, parsed, rng)
 
         
-        logger = ActionRNNs.SimpleLogger(
+        logger = SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
             (Float32, Float32, Bool, Int, Float32),
             Dict(
@@ -182,10 +190,10 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
         while sum(logger.data.total_steps) <= num_steps
-            usa = ActionRNNs.UpdateStateAnalysis(
+            usa = UpdateStateAnalysis(
                 (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
                 Dict(
-                    :l1 => ActionRNNs.l1_grad,
+                    :l1 => l1_grad,
                     :loss => (s, us) -> s + us.loss,
                     :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
                 ))

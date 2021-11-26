@@ -20,30 +20,34 @@ UpdateState() = UpdateState(nothing, nothing, nothing, nothing)
 
 # Update introspections.
 
-abstract type AbstractIntrospection end
+# abstract type AbstractIntrospection end
 
-apply(tpl::Tuple{Vararg{T} where {T<:AbstractIntrospection}}, us::UpdateState) =
-    [apply(interspect, us) for interspect ∈ tpl]
-struct L1GradIntrospection <: AbstractIntrospection end
-struct L2GradIntrospection <: AbstractIntrospection end
-struct LossIntrospection <: AbstractIntrospection end
+# apply(tpl::Tuple{Vararg{T} where {T<:AbstractIntrospection}}, us::UpdateState) =
+#     [apply(interspect, us) for interspect ∈ tpl]
+# struct L1GradIntrospection{F} <: AbstractIntrospection where F end
+# struct L2GradIntrospection{F} <: AbstractIntrospection where F end
+# struct LossIntrospection{F} <: AbstractIntrospection where F end
 
-apply(::AbstractIntrospection, ::UpdateState) = nothing
-apply(::L1GradIntrospection, us::UpdateState) = begin
-    l1_grad = 0.0f0
-    for (k, v) ∈ us.grads
-        l1_grad += sum(abs.(v))
-    end
-    l1_grad
-end
-apply(::L2GradIntrospection, us::UpdateState) = begin
-    l2_grad = 0.0f0
-    for (k, v) ∈ us.grads
-        l2_grad += dot(v, v)
-    end
-    l2_grad
-end
-apply(::LossIntrospection, us::UpdateState) = us.loss
+# # apply(::AbstractIntrospection, ::UpdateState) = nothing
+# apply(::L1GradIntrospection{F<:AbstractFloat}, us::UpdateState) = begin
+#     l1_grad = zero(F)
+#     for (k, v) ∈ us.grads
+#         if !(v isa Nothing)
+#             l1_grad += sum(abs, v)
+#         end
+#     end
+#     l1_grad
+# end
+# apply(::L2GradIntrospection{F<:AbstractFloat}, us::UpdateState) = begin
+#     l2_grad = zero(F)
+#     for (k, v) ∈ us.grads
+#         if !(v isa Nothing)
+#             l2_grad += sum(abs2, v)
+#         end
+#     end
+#     l2_grad
+# end
+# apply(::LossIntrospection, us::UpdateState) = us.loss
 
 
 get_params(model, h_init, hs_learnable=false) = if hs_learnable
