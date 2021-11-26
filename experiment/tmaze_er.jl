@@ -1,15 +1,13 @@
 module TMazeERExperiment
 
-# include("../src/ActionRNNs.jl")
-
 import Flux
 import JLD2
-import LinearAlgebra.Diagonal
-import MinimalRLCore
-using MinimalRLCore: run_episode!, get_actions
-import ActionRNNs
 
-using ActionRNNs: TMaze
+import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
+import ActionRNNs: ActionRNNs, TMaze, ExpUtils, DRQNAgent
+
+import .ExpUtils: experiment_wrapper, TMazeUtils, FluxUtils
+import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad
 
 using Statistics
 using Random
@@ -17,12 +15,23 @@ using ProgressMeter
 using Reproduce
 using Random
 
-const TMU = ActionRNNs.TMazeUtils
-const FLU = ActionRNNs.FluxUtils
+const TMU = TMazeUtils
+const FLU = FluxUtils
 
+#=
+Time: 0:01:19
+  episode:    6455
+  successes:  0.9600399600399601
+  loss:       0.990142
+  l1:         0.000502145
+  action:     2
+  preds:      Float32[0.3016336, 3.6225605, -2.5592222, 1.884988]
+  grad:       0.0
+=#
 function default_config()
+    
     Dict{String,Any}(
-        "save_dir" => "tmaze",
+        "save_dir" => "tmp/tmaze_er",
 
         "seed" => 1,
         "steps" => 80000,
@@ -116,20 +125,20 @@ function construct_agent(env, parsed, rng)
 
     chain = get_ann(parsed, fs, env, rng)
 
-    ActionRNNs.DRQNAgent(chain,
-                         opt,
-                         τ,
-                         γ,
-                         fc,
-                         fs,
-                         3,
-                         parsed["replay_size"],
-                         parsed["warm_up"],
-                         parsed["batch_size"],
-                         parsed["update_wait"],
-                         parsed["target_update_wait"],
-                         ap,
-                         parsed["hs_learnable"])
+    DRQNAgent(chain,
+              opt,
+              τ,
+              γ,
+              fc,
+              fs,
+              3,
+              parsed["replay_size"],
+              parsed["warm_up"],
+              parsed["batch_size"],
+              parsed["update_wait"],
+              parsed["target_update_wait"],
+              ap,
+              parsed["hs_learnable"])
 end
 
 function main_experiment(parsed = default_config(); working=false, progress=false, verbose=false)
@@ -140,7 +149,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         parsed["factors"] = parsed["numhidden_factors"][2]
     end
 
-    ActionRNNs.experiment_wrapper(parsed, working) do parsed
+    experiment_wrapper(parsed, working) do parsed
 
         num_steps = parsed["steps"]
 
@@ -151,7 +160,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         agent = construct_agent(env, parsed, rng)
 
 
-        logger = ActionRNNs.SimpleLogger(
+        logger = SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
             (Float32, Float32, Bool, Int, Float32),
             Dict(
@@ -168,10 +177,10 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
         while sum(logger.data.total_steps) <= num_steps
-            usa = ActionRNNs.UpdateStateAnalysis(
+            usa = UpdateStateAnalysis(
                 (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
                 Dict(
-                    :l1 => ActionRNNs.l1_grad,
+                    :l1 => l1_grad,
                     :loss => (s, us) -> s + us.loss,
                     :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
                 ))
@@ -206,7 +215,5 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         (;save_results = save_results)
     end
 end
-
-
 
 end

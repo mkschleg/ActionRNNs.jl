@@ -66,8 +66,8 @@ function check_save_file_loadable(savefile)
 end
 
 function experiment_wrapper(exp_func::Function, parsed, working; overwrite=false)
-    savefile = ActionRNNs.save_setup(parsed)
-    if isfile(savefile) && ActionRNNs.check_save_file_loadable(savefile) && !overwrite
+    savefile = save_setup(parsed)
+    if isfile(savefile) && check_save_file_loadable(savefile) && !overwrite
         return
     end
 
@@ -76,8 +76,8 @@ function experiment_wrapper(exp_func::Function, parsed, working; overwrite=false
     if working
         ret
     elseif ret isa NamedTuple
-        ActionRNNs.save_results(savefile, ret.save_results)
+        save_results(savefile, ret.save_results)
     else
-        ActionRNNs.save_results(savefile, ret)
+        save_results(savefile, ret)
     end
 end

@@ -5,12 +5,11 @@ import Flux
 import JLD2
 import LinearAlgebra.Diagonal
 
-# include("../src/ActionRNNs.jl")
-import ActionRNNs
+import ActionRNNs: ActionRNNs, ExpUtils, RingWorld, glorot_uniform
+import .ExpUtils: RingWorldUtils, FluxUtils, experiment_wrapper
 using MinimalRLCore
 
-using DataStructures: CircularBuffer
-using ActionRNNs: RingWorld, step!, start!, glorot_uniform
+
 
 # using ActionRNNs
 using Statistics
@@ -19,11 +18,10 @@ using ProgressMeter
 using Reproduce
 using Random
 
-
 # using Plots
 
-const RWU = ActionRNNs.RingWorldUtils
-const FLU = ActionRNNs.FluxUtils
+const RWU = RingWorldUtils
+const FLU = FluxUtils
 
 function results_synopsis(res, ::Val{true})
     rmse = sqrt.(mean(res["err"].^2; dims=2))
@@ -37,37 +35,31 @@ function results_synopsis(res, ::Val{true})
 end
 results_synopsis(res, ::Val{false}) = res
 
+#=
+Time: 0:01:28
+Dict{String, Matrix{Float32}} with 2 entries:
+  "err"  => [0.0 0.0; -1.0 0.0; … ; -0.00895289 0.00520104; 0.00517368 -0.0150787]
+  "pred" => [0.0 0.0; 0.0 0.0; … ; -0.00895289 0.00520104; 1.00517 -0.0150787]
+=#
 function default_args()
     Dict{String,Any}(
 
-        "save_dir" => "ringworld_online",
+        "save_dir" => "tmp/ringworld_online",
 
         "seed" => 1,
         "steps" => 100000,
-        "size" => 10,
+        "size" => 6,
 
-        "cell" => "FacTucMARNN",
-#         "cell" => "MAGRU",
+        "cell" => "MARNN",
         "numhidden" => 15,
-        "factors" => 10,
 
-        "action_factors" => 2,
-        "out_factors" => 15,
-        "in_factors" => 2,
-
-        # TODO: the hs_learnable parameter should not be necessary and should be removed
-        "hs_learnable" => true,
-        
-#         "outhorde" => "onestep",
-        "outhorde" => "gammas_term",
+        "outhorde" => "onestep",
         "outgamma" => 0.9,
-
-        "action_features"=>false,
 
         "opt" => "RMSProp",
         "eta" => 0.001,
         "rho" => 0.9,
-        "truncation" => 12,
+        "truncation" => 4,
 
         "synopsis" => false)
 
@@ -77,7 +69,10 @@ function get_model(parsed, out_horde, fc, rng)
 
     nh = parsed["numhidden"]
     na = 2
-    init_func = (dims...)->glorot_uniform(rng, dims...)
+    
+    initW = (dims...; kwargs...) -> glorot_uniform(rng, dims...; kwargs...)
+    initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+    
     fs = size(fc)
     num_gvfs = length(out_horde)
 
@@ -88,15 +83,13 @@ function get_model(parsed, out_horde, fc, rng)
             factors = parsed["factors"]
             init_style = get(parsed, "init_style", "standard")
 
-            init_func = (dims...; kwargs...)->
-                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
             initb = (dims...; kwargs...) -> Flux.zeros(dims...)
 
             Flux.Chain(rnn(fs, na, nh, factors;
                            init_style=init_style,
-                           init=init_func,
+                           init=initW,
                            initb=initb),
-                       Flux.Dense(nh, num_gvfs; initW=init_func))
+                       Flux.Dense(nh, num_gvfs; initW=initW))
 
         elseif parsed["cell"] ∈ ActionRNNs.fac_tuc_rnn_types()
 
@@ -104,34 +97,27 @@ function get_model(parsed, out_horde, fc, rng)
             action_factors = parsed["action_factors"]
             out_factors = parsed["out_factors"]
             in_factors = parsed["in_factors"]
-            init_func = (dims...; kwargs...)->
-                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
 
             Flux.Chain(rnn(fs, 2, nh, action_factors, out_factors, in_factors;
-                           init=init_func,
+                           init=initW,
                            initb=initb),
-                       Flux.Dense(nh, num_gvfs; initW=init_func))
+                       Flux.Dense(nh, num_gvfs; initW=initW))
 
         elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
             rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         
-            init_func = (dims...; kwargs...)->
-                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-        
             m = Flux.Chain(
                 rnn(fs, na, nh;
-                    init=init_func,
+                    init=initW,
                     initb=initb),
-                Flux.Dense(nh, num_gvfs; initW=init_func))
+                Flux.Dense(nh, num_gvfs; initW=initW))
         else
             rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-            Flux.Chain(rnntype(fs, nh; init=init_func),
+            Flux.Chain(rnntype(fs, nh; init=initW),
                        Flux.Dense(nh,
                                   num_gvfs;
-                                  initW=init_func))
+                                  initW=initW))
         end
     end
 
@@ -140,7 +126,7 @@ end
 
 function construct_agent(parsed, rng)
 
-    fc = RWU.StandardFeatureCreator{parsed["action_features"]}()
+    fc = RWU.StandardFeatureCreator{false}()
 
     out_horde = RWU.get_horde(parsed, "out")
 
@@ -161,13 +147,13 @@ end
 
 function main_experiment(parsed=default_args(); working=false, progress=false, overwrite=false)
 
-    ActionRNNs.experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
+    experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
 
         num_steps = parsed["steps"]
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = RingWorld(parsed)
+        env = RingWorld(parsed["size"])
         agent = construct_agent(parsed, rng)
 
         out_pred_strg, out_err_strg =

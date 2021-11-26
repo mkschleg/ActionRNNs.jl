@@ -25,3 +25,5 @@ docs/site/
 
 *.pdf
 local_data/
+tmp/
+*.DS_Store

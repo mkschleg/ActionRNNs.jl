@@ -1,18 +1,18 @@
 module RingWorldERExperiment
 
+using MinimalRLCore
+
+import ActionRNNs: ActionRNNs, ExpUtils, RingWorld, glorot_uniform
+
+import .ExpUtils: RingWorldUtils, FluxUtils, experiment_wrapper
+
+
 import Flux
-# import Flux.Tracker
 import JLD2
 import LinearAlgebra.Diagonal
 
-# include("../src/ActionRNNs.jl")
-import ActionRNNs
-import MinimalRLCore
+# using DataStructures: CircularBuffer
 
-using DataStructures: CircularBuffer
-using ActionRNNs: RingWorld, step!, start!, glorot_uniform
-
-# using ActionRNNs
 using Statistics
 using Random
 using ProgressMeter
@@ -22,8 +22,8 @@ using Random
 
 # using Plots
 
-const RWU = ActionRNNs.RingWorldUtils
-const FLU = ActionRNNs.FluxUtils
+const RWU = RingWorldUtils
+const FLU = FluxUtils
 
 function results_synopsis(res, ::Val{true})
     rmse = sqrt.(mean(res["err"].^2; dims=2))
@@ -37,42 +37,47 @@ function results_synopsis(res, ::Val{true})
 end
 results_synopsis(res, ::Val{false}) = res
 
+#=
+
+Time: 0:00:56
+Dict{String, Matrix{Float32}} with 2 entries:
+  "err"  => [0.0 0.0; 0.0 0.0; … ; 0.0128746 -0.000129551; 0.00117147 -0.00140008]
+  "pred" => [0.0 0.0; 0.0 0.0; … ; 0.0128746 -0.000129551; 1.00117 -0.00140008]
+
+=#
 function default_args()
     Dict{String,Any}(
 
-        "agent"=>"new",
-        "save_dir" => "ringworld",
-
+        "save_dir" => "tmp/ringworld",
         "seed" => 1,
+        "synopsis" => false,
+        
         "steps" => 200000,
         "size" => 6,
 
+        # Network
         "cell" => "MARNN",
-        "factors" => 10,
         "numhidden" => 6,
-        "hs_learnable" => true,
 
-        "action_factors" => 2,
-        "out_factors" => 15,
-        "in_factors" => 2,
-        
+        # Problem
         "outhorde" => "onestep",
         "outgamma" => 0.9,
-        
+
+        # Opt
         "opt" => "RMSProp",
         "eta" => 0.001,
         "rho" => 0.9,
+
+        # BPTT
         "truncation" => 3,
 
-        "action_features"=>false,
-
+        # Replay
         "replay_size"=>1000,
         "warm_up" => 1000,
         "batch_size"=>4,
         "update_freq"=>4,
         "target_update_freq"=>1000,
-
-        "synopsis" => false)
+        "hs_learnable"=>true)
 
 end
 
@@ -159,7 +164,7 @@ end
 
 function construct_new_agent(parsed, rng)
 
-    fc = RWU.StandardFeatureCreator{parsed["action_features"]}()
+    fc = RWU.StandardFeatureCreator{false}()
     fs = size(fc)
 
     out_horde = RWU.get_horde(parsed, "out")
@@ -195,19 +200,14 @@ function main_experiment(parsed=default_args(); working=false, progress=false, o
         parsed["factors"] = parsed["numhidden_factors"][2]
     end
     
-    ActionRNNs.experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
+    experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
         
         num_steps = parsed["steps"]
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = RingWorld(parsed)
+        env = RingWorld(parsed["size"])
         agent = construct_new_agent(parsed, rng)
-        # if parsed["agent"] == "new"
-        #     construct_new_agent(parsed, rng)
-        # else
-        #     construct_agent(parsed, rng)
-        # end
 
         out_pred_strg, out_err_strg =
             experiment_loop(env, agent, parsed["outhorde"], num_steps, rng; prgs=progress)

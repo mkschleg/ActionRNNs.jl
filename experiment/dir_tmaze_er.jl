@@ -4,12 +4,12 @@ module DirectionalTMazeERExperiment
 
 import Flux
 import JLD2
-import LinearAlgebra.Diagonal
-import MinimalRLCore
-using MinimalRLCore: run_episode!, get_actions
-import ActionRNNs
 
-using ActionRNNs: TMaze
+import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
+import ActionRNNs: ActionRNNs, DirectionalTMaze, ExpUtils
+
+import .ExpUtils: experiment_wrapper, TMazeUtils, FluxUtils
+import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad
 
 using Statistics
 using Random
@@ -17,31 +17,43 @@ using ProgressMeter
 using Reproduce
 using Random
 
-const TMU = ActionRNNs.TMazeUtils
-const FLU = ActionRNNs.FluxUtils
+const TMU = TMazeUtils
+const FLU = FluxUtils
 
+
+#=
+Default performance:
+
+Time: 0:02:28
+  episode:    5385
+  successes:  0.8351648351648352
+  loss:       1.0
+  l1:         0.0
+  action:     2
+  preds:      Float32[0.369189, 0.48326853, 0.993273]
+
+=#
 function default_config()
     Dict{String,Any}(
-        "save_dir" => "dit_tmaze_er",
+        "save_dir" => "tmp/dir_tmaze_er",
 
-        "seed" => 1,
-        "steps" => 80000,
-        "size" => 6,
+        "seed" => 2,
+        "steps" => 150000,
+        "size" => 10,
 
-        "cell" => "MARNN",
-        "numhidden" => 6,
+        "cell" => "MAGRU",
+        "numhidden" => 10,
 
         "opt" => "RMSProp",
         "eta" => 0.0005,
         "rho" =>0.99,
 
-        "replay_size"=>1000,
+        "replay_size"=>20000,
         "warm_up" => 1000,
-        "batch_size"=>4,
+        "batch_size"=>8,
         "update_wait"=>4,
         "target_update_wait"=>1000,
-        "truncation" => 8,
-        "internal"=>10,
+        "truncation" => 12,
 
         "hs_learnable" => true,
         
@@ -194,18 +206,18 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         delete!(parsed, "cell_numhidden")
     end
     
-    ActionRNNs.experiment_wrapper(parsed, working) do parsed
+    experiment_wrapper(parsed, working) do parsed
 
         num_steps = parsed["steps"]
 
         seed = parsed["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = ActionRNNs.DirectionalTMaze(parsed["size"])
+        env = DirectionalTMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
 
         
-        logger = ActionRNNs.SimpleLogger(
+        logger = SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
             (Float32, Float32, Bool, Int, Float32),
             Dict(
@@ -222,10 +234,10 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
         while sum(logger.data.total_steps) <= num_steps
-            usa = ActionRNNs.UpdateStateAnalysis(
+            usa = UpdateStateAnalysis(
                 (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
                 Dict(
-                    :l1 => ActionRNNs.l1_grad,
+                    :l1 => l1_grad,
                     :loss => (s, us) -> s + us.loss,
                     :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
                 ))

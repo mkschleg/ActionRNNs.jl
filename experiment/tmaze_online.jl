@@ -1,15 +1,13 @@
 module TMazeOnlineExperiment
 
-# include("../src/ActionRNNs.jl")
-
 import Flux
 import JLD2
-import LinearAlgebra.Diagonal
-import MinimalRLCore
-using MinimalRLCore: run_episode!, get_actions
-import ActionRNNs
 
-using ActionRNNs: TMaze
+import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
+import ActionRNNs: ActionRNNs, TMaze, ExpUtils, DRQNAgent
+
+import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad, experiment_wrapper
+import .ExpUtils: TMazeUtils as TMU, FluxUtils as FLU
 
 using Statistics
 using Random
@@ -17,31 +15,32 @@ using ProgressMeter
 using Reproduce
 using Random
 
-const TMU = ActionRNNs.TMazeUtils
-const FLU = ActionRNNs.FluxUtils
-
+#=
+Time: 0:01:51
+  episode:    5384
+  successes:  0.6013986013986014
+  loss:       0.99005485
+  l1:         0.16161172
+  action:     2
+  preds:      Float32[1.7402661, 2.2144663, 1.4456049, 1.9616138]
+  grad:       0.0032181505
+=#
 function default_config()
     Dict{String,Any}(
-        "save_dir" => "tmaze_online",
+        "save_dir" => "tmp/tmaze_online",
 
         "seed" => 1,
         "steps" => 80000,
         "size" => 10,
 
-        "cell" => "FacTucMARNN",
+        "cell" => "MARNN",
         "numhidden" => 15,
         "factors" => 10,
-
-        "action_factors" => 4,
-        "out_factors" => 15,
-        "in_factors" => 15,
         
         "opt" => "RMSProp",
         "eta" => 0.0005,
         "rho" => 0.99,
         "truncation" => 12,
-
-#         "hs_learnable" => true,
 
         "gamma"=>0.99)
 
@@ -130,7 +129,7 @@ end
 
 function main_experiment(parsed=default_config(); working=false, progress=false)
 
-    ActionRNNs.experiment_wrapper(parsed, working) do (parsed)
+    experiment_wrapper(parsed, working) do (parsed)
 
         num_steps = parsed["steps"]
 
@@ -141,7 +140,7 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
         agent = construct_agent(env, parsed, rng)
 
 
-        logger = ActionRNNs.SimpleLogger(
+        logger = SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
             (Float32, Float32, Bool, Int, Float32),
             Dict(
@@ -156,10 +155,10 @@ function main_experiment(parsed=default_config(); working=false, progress=false)
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         eps = 1
         while sum(logger.data.total_steps) <= num_steps
-            usa = ActionRNNs.UpdateStateAnalysis(
+            usa = UpdateStateAnalysis(
                 (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
                 Dict(
-                    :l1 => ActionRNNs.l1_grad,
+                    :l1 => l1_grad,
                     :loss => (s, us) -> s + us.loss,
                     :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
                 ))

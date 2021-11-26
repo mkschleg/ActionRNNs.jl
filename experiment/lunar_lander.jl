@@ -2,13 +2,15 @@ module LunarLanderExperiment
 
 # include("../src/ActionRNNs.jl")
 
+import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
+import ActionRNNs: ActionRNNs, LunarLander, ExpUtils
+
+import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad, experiment_wrapper
+import .ExpUtils: LunarLanderUtils as LMU, FluxUtils as FLU
+
 import Flux
 import Flux: gpu
 import JLD2
-import LinearAlgebra.Diagonal
-import MinimalRLCore
-using MinimalRLCore: run_episode!, get_actions
-import ActionRNNs
 
 # using ActionRNNs: TMaze
 
@@ -18,15 +20,13 @@ using ProgressMeter
 using Reproduce
 using Random
 
-const FLU = ActionRNNs.FluxUtils
-
 function default_config()
     Dict{String,Any}(
-        "save_dir" => "lunar_lander",
+        "save_dir" => "tmp/lunar_lander",
 
         "seed" => 1,
-#         "steps" => 1000000,
-        "steps" => 10000,
+        "steps" => 1000000,
+        # "steps" => 10000,
 
         "cell" => "MAGRU",
         "numhidden" => 64,
@@ -132,7 +132,7 @@ end
 
 function construct_agent(env, parsed, rng)
 
-    fc = ActionRNNs.LunarLanderUtils.IdentityFeatureCreator()
+    fc = LMU.IdentityFeatureCreator()
     fs = MinimalRLCore.feature_size(fc, parsed["omit_states"])
 
     γ = Float32(parsed["gamma"])
@@ -176,7 +176,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         agent = construct_agent(env, parsed, rng)
 
         
-        logger = ActionRNNs.SimpleLogger(
+        logger = SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
             (Float32, Float32, Bool, Int, Float32),
             Dict(
@@ -195,15 +195,15 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         checkpoint = 1
         while sum(logger.data.total_steps) <= num_steps
             if sum(logger.data.total_steps) > checkpoint * 500000
-                ActionRNNs.save_results("$(data_dir)/results.jld2", logger.data)
+                ExpUtils.save_results("$(data_dir)/results.jld2", logger.data)
 
                 GC.gc()
                 checkpoint += 1
             end
-            usa = ActionRNNs.UpdateStateAnalysis(
+            usa = UpdateStateAnalysis(
                 (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
                 Dict(
-                    :l1 => ActionRNNs.l1_grad,
+                    :l1 => l1_grad,
                     :loss => (s, us) -> s + us.loss,
                     :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
                 ))
@@ -247,7 +247,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
 end
 
 function ll_experiment_wrapper(exp_func::Function, parsed, working; overwrite=false)
-    savefile = ActionRNNs.save_setup(parsed)
+    savefile = ExpUtils.save_setup(parsed)
     if isfile(savefile) && ActionRNNs.check_save_file_loadable(savefile) && !overwrite
         return
     end
@@ -258,9 +258,9 @@ function ll_experiment_wrapper(exp_func::Function, parsed, working; overwrite=fa
     if working
         ret
     elseif ret isa NamedTuple
-        ActionRNNs.save_results(savefile, ret.save_results)
+        ExpUtils.save_results(savefile, ret.save_results)
     else
-        ActionRNNs.save_results(savefile, ret)
+        ExpUtils.save_results(savefile, ret)
     end
 end
 

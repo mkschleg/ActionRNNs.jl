@@ -7,10 +7,6 @@ import Reexport: @reexport
 export glorot_uniform, glorot_normal, ExperienceReplay
 include("Utils.jl")
 
-
-
-
-
 export AARNN, MARNN, FacMARNN, AAGRU, MAGRU, FacMAGRU, reset!, get
 include("RNNs.jl")
 

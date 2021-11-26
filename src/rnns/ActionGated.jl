@@ -263,7 +263,7 @@ end
 
 Flux.@functor GAUGRUCell
 
-Base.show(io::IO, l::GAIGRUCell) =
+Base.show(io::IO, l::GAUGRUCell) =
   print(io, "GAUGRUCell(", size(l.Wi, 2), ", ", size(l.Wa), ", ", size(l.Wi, 1)÷3, ")")
 
 """

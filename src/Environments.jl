@@ -9,7 +9,7 @@ include("env/CompassWorld.jl")
 export CycleWorld
 include("env/CycleWorld.jl")
 
-export RingWorld
+export RingWorld, RingWorldConst
 include("env/RingWorld.jl")
 
 export TMaze
