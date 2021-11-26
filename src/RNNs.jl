@@ -49,7 +49,7 @@ function contract_WA(W::CuArray, a::AbstractVector{Int}, x)
 end
 
 function contract_WA(W, a::AbstractVector{Int}, x::AbstractVector)
-    @tullio ret[i, k] := W[a[k], i, 1] * x[k]
+    @tullio ret[i, k] := W[a[k], i, 1] * x[k] # if state is scalar?
 end
 
 function contract_WA(W, a::AbstractVector{<:AbstractFloat}, x)
