@@ -30,3 +30,6 @@ include("env/ImageDirectionalTMaze.jl")
 export LunarLander
 include("env/LunarLander.jl")
 
+export Torus2d
+include("env/Torus2d.jl")
+
