@@ -135,6 +135,9 @@ function get_ann(parsed, fs::Int, na::Int, rng)
                 initb=initb),
             Flux.Dense(nh, na; initW=init_func))
     elseif parsed["cell"]  ∈ ActionRNNs.rnn_types() && get(parsed, "deep", false)
+
+        # Deep actions for RNNs from Zhu et al 2018
+        
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         
         ninternal = parsed["internal"]
@@ -158,12 +161,15 @@ function get_ann(parsed, fs::Int, na::Int, rng)
                 init=init_func,
                 initb=initb),
             Flux.Dense(nh, na; initW=init_func))
+        
     else
+        
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
         Flux.Chain(rnntype(fs, nh; init=init_func),
                    Flux.Dense(nh,
                               na;
                               initW=init_func))
+        
     end
 end
 
