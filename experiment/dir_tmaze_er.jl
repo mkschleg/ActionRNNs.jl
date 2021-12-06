@@ -140,7 +140,8 @@ function get_ann(parsed, fs::Int, na::Int, rng)
         
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         
-        ninternal = parsed["internal"]
+        internal_a = parsed["internal_a"]
+        internal_o = parsed["internal_o"]
         
         init_func = (dims...; kwargs...)->
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
@@ -148,16 +149,16 @@ function get_ann(parsed, fs::Int, na::Int, rng)
 
         action_stream = Flux.Chain(
             (a)->Flux.onehotbatch(a, 1:na),
-            Flux.Dense(na, ninternal, Flux.relu, initW=init_func),
+            Flux.Dense(na, internal_a, Flux.relu, initW=init_func),
         )
 
         obs_stream = Flux.Chain(
-            Flux.Dense(fs, ninternal, Flux.relu, initW=init_func)
+            Flux.Dense(fs, internal_o, Flux.relu, initW=init_func)
         )
         
         m = Flux.Chain(
             ActionRNNs.DualStreams(action_stream, obs_stream),
-            rnn(ninternal, ninternal, nh;
+            rnn(internal_o, internal_a, nh;
                 init=init_func,
                 initb=initb),
             Flux.Dense(nh, na; initW=init_func))
