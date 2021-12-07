@@ -45,7 +45,7 @@ Dict{String, Matrix{Float32}} with 2 entries:
   "pred" => [0.0 0.0; 0.0 0.0; … ; 0.0128746 -0.000129551; 1.00117 -0.00140008]
 
 =#
-function default_args()
+function default_config()
     Dict{String,Any}(
 
         "save_dir" => "tmp/ringworld",
@@ -223,7 +223,7 @@ function construct_new_agent(parsed, rng)
 
 end
 
-function main_experiment(parsed=default_args(); working=false, progress=false, overwrite=false)
+function main_experiment(parsed=default_config(); working=false, progress=false, overwrite=false)
 
     if "numhidden_factors" ∈ keys(parsed)
         parsed["numhidden"] = parsed["numhidden_factors"][1]
