@@ -120,7 +120,7 @@ function get_model(parsed, out_horde, fs, rng)
                            initb=initb),
                        Flux.Dense(nh, num_gvfs; initW=init_func))
             
-        elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
+        elseif parsed["cell"] ∈ ActionRNNs.rnn_types() && !get(parsed, "deep", false)
 
             rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
             
@@ -148,6 +148,36 @@ function get_model(parsed, out_horde, fs, rng)
                 init=init_func,
                 initb=initb),
             Flux.Dense(nh, num_gvfs; initW=init_func))
+
+        elseif parsed["cell"]  ∈ ActionRNNs.rnn_types() && get(parsed, "deep", false)
+
+            # Deep actions for RNNs from Zhu et al 2018
+            
+            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+            
+            internal_a = parsed["internal_a"]
+            internal_o = parsed["internal_o"]
+            
+            init_func = (dims...; kwargs...)->
+                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+            action_stream = Flux.Chain(
+                (a)->Flux.onehotbatch(a, 1:na),
+                Flux.Dense(na, internal_a, Flux.relu, initW=init_func),
+            )
+
+            obs_stream = Flux.Chain(
+                Flux.Dense(fs, internal_o, Flux.relu, initW=init_func)
+            )
+            
+            m = Flux.Chain(
+                ActionRNNs.DualStreams(action_stream, obs_stream),
+                rnn(internal_o, internal_a, nh;
+                    init=init_func,
+                    initb=initb),
+                Flux.Dense(nh, num_gvfs; initW=init_func))
+ 
         else
             
             rnntype = getproperty(Flux, Symbol(parsed["cell"]))
