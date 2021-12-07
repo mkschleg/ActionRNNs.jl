@@ -41,8 +41,12 @@ function default_config()
         "steps" => 150000,
         "size" => 10,
 
-        "cell" => "MAGRU",
+        "cell" => "MARNN",
         "numhidden" => 10,
+
+        "deep" => true,
+        "internal_a" => 5,
+        "internal_o" => 20,
 
         "opt" => "RMSProp",
         "eta" => 0.0005,
