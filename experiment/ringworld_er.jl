@@ -192,7 +192,7 @@ function get_model(parsed, out_horde, fs, rng)
 end
 
 
-function construct_new_agent(parsed, rng)
+function construct_agent(parsed, rng)
 
     fc = RWU.StandardFeatureCreator{false}()
     fs = size(fc)
@@ -237,7 +237,7 @@ function main_experiment(parsed=default_config(); working=false, progress=false,
         rng = Random.MersenneTwister(seed)
         
         env = RingWorld(parsed["size"])
-        agent = construct_new_agent(parsed, rng)
+        agent = construct_agent(parsed, rng)
 
         out_pred_strg, out_err_strg =
             experiment_loop(env, agent, parsed["outhorde"], num_steps, rng; prgs=progress)
