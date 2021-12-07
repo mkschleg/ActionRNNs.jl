@@ -33,6 +33,36 @@ Time: 0:02:28
   preds:      Float32[0.369189, 0.48326853, 0.993273]
 
 =#
+
+#=
+function default_config()
+    Dict{String,Any}(
+        "save_dir" => "tmp/dir_tmaze_er",
+
+        "seed" => 2,
+        "steps" => 150000,
+        "size" => 10,
+
+        "cell" => "MAGRU",
+        "numhidden" => 10,
+
+        "opt" => "RMSProp",
+        "eta" => 0.0005,
+        "rho" =>0.99,
+
+        "replay_size"=>20000,
+        "warm_up" => 1000,
+        "batch_size"=>8,
+        "update_wait"=>4,
+        "target_update_wait"=>1000,
+        "truncation" => 12,
+
+        "hs_learnable" => true,
+        
+        "gamma"=>0.99)
+end
+=#
+
 function default_config()
     Dict{String,Any}(
         "save_dir" => "tmp/dir_tmaze_er",
