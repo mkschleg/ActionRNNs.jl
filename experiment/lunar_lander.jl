@@ -26,7 +26,6 @@ function default_config()
 
         "seed" => 1,
         "steps" => 1000000,
-        # "steps" => 10000,
 
         "cell" => "MAGRU",
         "numhidden" => 64,
@@ -43,8 +42,6 @@ function default_config()
         "truncation" => 16,
 
         "hs_learnable" => true,
-#         "action_encoding_size" => 64,
-#         "state_encoding_size" => 128,
         "encoding_size" => 128,
         "omit_states" => [6],
         "state_conditions" => [2],
@@ -95,8 +92,7 @@ function get_ann(parsed, fs, env, rng)
             init=init_func,
             initb=initb)
 
-        
-    elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
+    elseif parsed["cell"] ∈ ActionRNNs.rnn_types() && !get(parsed, "deep", false)
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         
@@ -108,15 +104,49 @@ function get_ann(parsed, fs, env, rng)
             init=init_func,
             initb=initb)
 
+    elseif parsed["cell"]  ∈ ActionRNNs.rnn_types() && get(parsed, "deep", false)
+
+        # Deep actions for RNNs from Zhu et al 2018
+        
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        internal_a = parsed["internal_a"]
+        
+        rnn(es, internal_a, nh;
+            init=init_func,
+            initb=initb)
+
     else
         rnntype = getproperty(Flux, Symbol(parsed["cell"]))
         rnntype(es, nh; init=init_func)
     end
 
-   Flux.Chain(Flux.Dense(fs, es, Flux.relu; initW=init_func),
-               rnn_layer,
-               Flux.Dense(nh, nh, Flux.relu; initW=init_func),
-               Flux.Dense(nh, na; initW=init_func))
+    encoding_network = if get(parsed, "deep", false)
+
+        action_stream = Flux.Chain(
+            (a)->Flux.onehotbatch(a, 1:na),
+            Flux.Dense(na, internal_a, Flux.relu, initW=init_func),
+        )
+
+        obs_stream = Flux.Chain(
+            Flux.Dense(fs, es, Flux.relu, initW=init_func)
+        )
+
+        ActionRNNs.DualStreams(action_stream, obs_stream)
+    else
+        Flux.Dense(fs, es, Flux.relu; initW=init_func)
+    end
+
+        Flux.Chain(encoding_network,
+                   rnn_layer,
+                   Flux.Dense(nh, nh, Flux.relu; initW=init_func),
+                   Flux.Dense(nh, na; initW=init_func))
+                
 
 #    action_state_stream = ActionRNNs.ActionStateStreams(
 #        Flux.Dense(na, aes, Flux.relu; initW=init_func),
