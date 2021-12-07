@@ -1,23 +1,33 @@
 using ActionRNNs
 using Random
 using Flux 
+include("../../experiment/dir_tmaze_er.jl")
 
 function default_config()
     [
         Dict{String,Any}(
-            "cell" => "MAGRU",
-            "numhidden" => 11,
+            "cell" => "AARNN",
+            "numhidden" => 30,
+            "deep" => false,
         )
         Dict{String,Any}(
-            "cell" => "MARNN",
+            "cell" => "AAGRU",
             "numhidden" => 17,
+            "deep" => false,
         )
         Dict{String,Any}(
-            "cell" => "MARNN",
+            "cell" => "AARNN",
+            "numhidden" => 30,
+            "deep" => true,
+            "internal_a" => 6,
+            "internal_o" => 12,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
             "numhidden" => 17,
             "deep" => true,
-            "internal_a" => 10,
-            "internal_o" => 17,
+            "internal_a" => 6,
+            "internal_o" => 12,
         )
     ]
 end
@@ -25,7 +35,6 @@ end
 
 function main(env_name)
     if env_name == "dir_tmaze_er"
-        include("../../experiment/dir_tmaze_er.jl")
         parsed = DirectionalTMazeERExperiment.default_config()
         env = DirectionalTMaze(10)
         rng = Random.MersenneTwister(1)
