@@ -28,7 +28,7 @@ Time: 0:00:21
 =#
 function default_config()
     Dict{String,Any}(
-        "save_dir" => "tmaze",
+        "save_dir" => "tmp/viz_dir_tmaze",
 
         "seed" => 1,
         "steps" => 2000,
@@ -89,7 +89,7 @@ function get_ann(parsed, image_dims, env, rng)
                        initb=initb),
                    Flux.Dense(nh, na; initW=init_func))
         
-    elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
+    elseif parsed["cell"] ∈ ActionRNNs.rnn_types() && !get(parsed, "deep", false)
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         
@@ -101,6 +101,36 @@ function get_ann(parsed, image_dims, env, rng)
             cl, Flux.flatten, Flux.Dense(fs, latent_size, Flux.relu; initW=init_func),
             Flux.Dense(latent_size, latent_size, Flux.relu; initW=init_func),
             rnn(latent_size, na, nh;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh, output_size, Flux.relu; initW=init_func),
+            Flux.Dense(output_size, na; initW=init_func))
+
+    elseif parsed["cell"]  ∈ ActionRNNs.rnn_types() && get(parsed, "deep", false)
+
+        # Deep actions for RNNs from Zhu et al 2018
+        
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        internal_a = parsed["internal_a"]
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        action_stream = Flux.Chain(
+            (a)->Flux.onehotbatch(a, 1:na),
+            Flux.Dense(na, internal_a, Flux.relu, initW=init_func),
+        )
+
+        obs_stream = Flux.Chain(
+            cl, Flux.flatten, Flux.Dense(fs, latent_size, Flux.relu; initW=init_func),
+            Flux.Dense(latent_size, latent_size, Flux.relu; initW=init_func),
+        )
+
+        Flux.Chain(
+            ActionRNNs.DualStreams(action_stream, obs_stream),
+            rnn(latent_size, internal_a, nh;
                 init=init_func,
                 initb=initb),
             Flux.Dense(nh, output_size, Flux.relu; initW=init_func),
