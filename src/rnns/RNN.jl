@@ -81,12 +81,10 @@ MARNNCell(num_ext_features, num_actions, num_hidden;
              initb(num_hidden, num_actions),
              init_state(num_hidden, 1))
 
-Flux.@functor MARNNCell
-MARNN(args...; kwargs...) = Flux.Recur(MARNNCell(args...; kwargs...))
-Flux.Recur(m::MARNNCell) = Flux.Recur(m, m.state0)
 
 
 function (m::MARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{<:Integer, 1}, A<:AbstractArray{<:AbstractFloat, 2}}
+
     Wx, Wh, b, σ = m.Wx, m.Wh, m.b, m.σ
 
     a = x[1]
@@ -99,9 +97,16 @@ function (m::MARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{<:Inte
     new_h = σ.(wx .+ wh .+ ba)
     
     sz = size(o)
+    if new_h isa AbstractVector
+        new_h = reshape(new_h, :, 1)
+    end
     return new_h, reshape(new_h, :, sz[2:end]...)
 
 end
+
+Flux.@functor MARNNCell
+MARNN(args...; kwargs...) = Flux.Recur(MARNNCell(args...; kwargs...))
+Flux.Recur(m::MARNNCell) = Flux.Recur(m, m.state0)
 
 function Base.show(io::IO, l::MARNNCell)
   print(io, "MARNNCell(", size(l.Wx, 2), ", ", size(l.Wx, 3), ", ", size(l.Wx, 1))
