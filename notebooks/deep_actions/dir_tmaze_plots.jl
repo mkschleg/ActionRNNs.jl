@@ -95,7 +95,10 @@ md"""
 """
 
 # ╔═╡ 0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
-ic_dir, dd_dir = RPU.load_data(at("dir_tmaze_er_10_deep_a_internal/"))
+ic_dir, dd_dir = RPU.load_data(at("dir_tmaze_er_deep_a/"))
+
+# ╔═╡ c7f9c051-5024-4ff8-a19a-8cad57c05123
+ic_dir_final, dd_dir_final = RPU.load_data(at("final_dir_tmaze_er_rnn_rmsprop_10_2/"))
 
 # ╔═╡ 6211a38a-7b53-4054-970e-c29ad17de646
 ic_dir[1].parsed_args["steps"]
@@ -103,7 +106,7 @@ ic_dir[1].parsed_args["steps"]
 # ╔═╡ e822182e-b485-4a95-a08c-efe1540ff6ad
 data = RPU.get_line_data_for(
 	ic_dir,
-	["numhidden", "truncation", "cell", "internal_a", "internal_o"],
+	["numhidden", "truncation", "cell"],
 	["eta"];
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
@@ -134,8 +137,9 @@ end
 # ╔═╡ 0eb4c818-b533-4695-a0c7-53e72023281f
 let 
 	args_list = [
-		Dict("internal"=>14, "numhidden"=>10, "replay_size"=>20000, "truncation"=>12, "cell"=>"AAGRU"),
-		Dict("internal"=>50, "numhidden"=>10, "replay_size"=>20000, "truncation"=>12, "cell"=>"AAGRU"),
+		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"),
+		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"),
+		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN"),
 	]
 	
 	plot(data, args_list, palette=RPU.custom_colorant)
@@ -163,23 +167,68 @@ end
 # ╔═╡ fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
 data_dist = RPU.get_line_data_for(
 	ic_dir,
-	["numhidden", "truncation", "cell", "internal", "replay_size"],
+	["numhidden", "truncation", "cell"],
 	["eta"];
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
 	get_data=(x)->RPU.get_MUE(x, :successes))
 
-# ╔═╡ db83dce1-29d5-42f8-b226-4412ce63c8f1
+# ╔═╡ c3e8037d-fd67-4609-9c54-716d3707d25c
+data_dist_final = RPU.get_line_data_for(
+	ic_dir_final,
+	["numhidden", "cell"],
+	[];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ b1beea3f-28c4-4d6e-9738-601ac71e51df
 let
 	args_list_l = [
-		Dict("internal"=>14, "numhidden"=>10, "replay_size"=>20000, "truncation"=>12, "cell"=>"AAGRU"),
-		Dict("internal"=>20, "numhidden"=>18, "replay_size"=>20000, "truncation"=>12, "cell"=>"AARNN"),
+		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"),
+		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"),
+		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN"),
 	]
-	boxplot(data_dist, args_list_l; 
+	boxplot(data_dist, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"); 
+		#label_idx="cell", 
+		label = "DMAGRU",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"); 
+		#label_idx="cell", 
+		label = "DMAGRU",
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist, Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"); 
+		#label_idx="cell", 
+		label = "DAAGRU",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist, Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"); 
+		#label_idx="cell", 
+		label = "DAAGRU",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist, Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN"); 
+		#label_idx="cell", 
+		label = "DAARNN",
+		color=cell_colors["AARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist, Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN"); 
+		#label_idx="cell", 
+		label = "DAARNN",
+		color=cell_colors["AARNN"])
+	
+	args_list_l = [
+		Dict("numhidden"=>10, "cell"=>"MAGRU"),
+		Dict("numhidden"=>17, "cell"=>"AAGRU"),
+		Dict("numhidden"=>30, "cell"=>"AARNN"),
+	]
+	boxplot!(data_dist_final, args_list_l; 
 		label_idx="cell", 
 		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist, args_list_l; 
+	dotplot!(data_dist_final, args_list_l; 
 		label_idx="cell", 
 		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
 		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
@@ -433,15 +482,17 @@ end
 # ╠═cc4a219d-9118-4c34-93ce-317afc837f6c
 # ╟─1756d1cc-1a88-4442-b55a-fdbb44f56313
 # ╠═0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
+# ╠═c7f9c051-5024-4ff8-a19a-8cad57c05123
 # ╟─6211a38a-7b53-4054-970e-c29ad17de646
 # ╟─e822182e-b485-4a95-a08c-efe1540ff6ad
-# ╟─c1b80cfd-dbb8-41c5-a778-66b112e1c091
+# ╠═c1b80cfd-dbb8-41c5-a778-66b112e1c091
 # ╠═e4cc9109-d8b1-4bff-a176-3627e24ab757
 # ╠═0eb4c818-b533-4695-a0c7-53e72023281f
 # ╟─5c3ddaed-47b6-465b-b4c5-bc0fb30c8601
 # ╟─37af922e-ed3c-4aec-a4cf-c403c49a9ba9
 # ╠═fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
-# ╠═db83dce1-29d5-42f8-b226-4412ce63c8f1
+# ╠═c3e8037d-fd67-4609-9c54-716d3707d25c
+# ╟─b1beea3f-28c4-4d6e-9738-601ac71e51df
 # ╠═e2a991a9-580d-44eb-86ff-468686fcae11
 # ╠═305f8ac8-8f5f-4ec4-84a6-867f69a8887c
 # ╠═533cba3d-7fc5-4d66-b545-b15ffc8ab6d8
