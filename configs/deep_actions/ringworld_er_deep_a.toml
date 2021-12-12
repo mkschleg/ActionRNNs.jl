@@ -23,10 +23,12 @@ outhorde = "gammas_term"
 hs_learnable = true
 update_freq = 4
 
+truncation = 10
+internal_o = 12
+internal_a = 6
 
 [sweep_args]
 deep = [true, false]
 "cell+numhidden" = [["AARNN", 15], ["MARNN", 12], ["AAGRU", 12], ["MAGRU", 9]]
 eta = "0.1 .* 1.6 .^(-16:3:-2)"
-truncation = [10]
 seed = "1:10"

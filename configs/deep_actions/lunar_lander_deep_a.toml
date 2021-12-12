@@ -27,9 +27,9 @@ state_conditions = [2]
 
 deep = true
 internal_a = 64
+truncation = 16
 
 [sweep_args]
 "cell+numhidden" = [["AAGRU", 152], ["MAGRU", 64]]
 eta = "0.1 .* 1.6 .^(-18:2:-4)"
-truncation = [8, 12]
 seed = "1:5"
