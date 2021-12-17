@@ -139,6 +139,7 @@ let
 	args_list = [
 		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"),
 		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"),
+		Dict("numhidden"=>18, "truncation"=>12, "cell"=>"MARNN"),
 		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN"),
 	]
 	
@@ -498,7 +499,7 @@ end
 # ╟─37af922e-ed3c-4aec-a4cf-c403c49a9ba9
 # ╠═fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
 # ╠═c3e8037d-fd67-4609-9c54-716d3707d25c
-# ╟─b1beea3f-28c4-4d6e-9738-601ac71e51df
+# ╠═b1beea3f-28c4-4d6e-9738-601ac71e51df
 # ╠═e2a991a9-580d-44eb-86ff-468686fcae11
 # ╠═305f8ac8-8f5f-4ec4-84a6-867f69a8887c
 # ╠═533cba3d-7fc5-4d66-b545-b15ffc8ab6d8

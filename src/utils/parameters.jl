@@ -14,8 +14,18 @@ function dir_tmaze_er_args()
             "deep" => false,
         )
         Dict{String,Any}(
+            "cell" => "MARNN",
+            "numhidden" => 18,
+            "deep" => false,
+        )
+        Dict{String,Any}(
             "cell" => "AAGRU",
             "numhidden" => 17,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 10,
             "deep" => false,
         )
         Dict{String,Any}(
@@ -26,8 +36,22 @@ function dir_tmaze_er_args()
             "internal_o" => 12,
         )
         Dict{String,Any}(
+            "cell" => "MARNN",
+            "numhidden" => 18,
+            "deep" => true,
+            "internal_a" => 6,
+            "internal_o" => 12,
+        )
+        Dict{String,Any}(
             "cell" => "AAGRU",
             "numhidden" => 17,
+            "deep" => true,
+            "internal_a" => 6,
+            "internal_o" => 12,
+        )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 10,
             "deep" => true,
             "internal_a" => 6,
             "internal_o" => 12,
@@ -38,23 +62,35 @@ end
 function ringworld_er_args()
     [
         Dict{String,Any}(
-            "cell" => "RNN",
-            "numhidden" => 27,
-            "deep" => false,
-        )
-        Dict{String,Any}(
             "cell" => "AARNN",
-            "numhidden" => 27,
-            "deep" => false,
-        )
-        Dict{String,Any}(
-            "cell" => "AAGRU",
             "numhidden" => 15,
             "deep" => false,
         )
         Dict{String,Any}(
+            "cell" => "MARNN",
+            "numhidden" => 12,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
+            "numhidden" => 12,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 9,
+            "deep" => false,
+        )
+        Dict{String,Any}(
             "cell" => "AARNN",
-            "numhidden" => 20,
+            "numhidden" => 15,
+            "deep" => true,
+            "internal_a" => 6,
+            "internal_o" => 12,
+        )
+        Dict{String,Any}(
+            "cell" => "MARNN",
+            "numhidden" => 12,
             "deep" => true,
             "internal_a" => 6,
             "internal_o" => 12,
@@ -66,17 +102,18 @@ function ringworld_er_args()
             "internal_a" => 6,
             "internal_o" => 12,
         )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 9,
+            "deep" => true,
+            "internal_a" => 6,
+            "internal_o" => 12,
+        )
     ]
 end
 
 function lunar_lander_args()
     [
-        Dict{String,Any}(
-            "cell" => "GRU",
-            "numhidden" => 154,
-            "encoding_size" => 128,
-            "deep" => false,
-        )
         Dict{String,Any}(
             "cell" => "AAGRU",
             "numhidden" => 152,
@@ -90,6 +127,20 @@ function lunar_lander_args()
             "deep" => true,
             "internal_a" => 64,
         )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 64,
+            "encoding_size" => 128,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 64,
+            "encoding_size" => 128,
+            "deep" => true,
+            "internal_a" => 64,
+        )
+
     ]
 end
 
@@ -112,8 +163,6 @@ function viz_dir_tmaze_args()
         )
     ]
 end
-
-
 
 
 function main(env_name)
