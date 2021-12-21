@@ -21,7 +21,7 @@ target_update_wait = 10000
 
 latent_size = 128	
 output_size = 128
-latent_a = 64
+internal_a = 64
 
 deep = true
 
