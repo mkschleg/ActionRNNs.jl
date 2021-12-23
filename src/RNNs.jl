@@ -87,9 +87,11 @@ include("rnns/GRU.jl")
 include("rnns/LSTM.jl")
 
 include("rnns/ActionGated.jl")
+include("rnns/RNNCombo.jl")
 
 # Keep list of all the non-specialized RNN types in ActionRNNs
-rnn_types() = ["AARNN", "MARNN", "AAGRU", "MAGRU", "AALSTM", "MALSTM"]
+rnn_types() = ["AARNN", "MARNN", "MAARNNadd", "AAGRU", "MAGRU", "AALSTM", "MALSTM"]
 fac_rnn_types() = ["FacMARNN", "FacMAGRU"]
-gated_rnn_types() = ["ActionGatedRNN", "GAIARNN", "GAIGRU", "GAIAGRU", "GAUGRU", "GAIALSTM"]
 fac_tuc_rnn_types() = ["FacTucMARNN", "FacTucMAGRU"]
+gated_rnn_types() = ["ActionGatedRNN", "GAIARNN", "GAIGRU", "GAIAGRU", "GAUGRU", "GAIALSTM"]
+combo_add_rnn_types() = ["CaddRNN"]

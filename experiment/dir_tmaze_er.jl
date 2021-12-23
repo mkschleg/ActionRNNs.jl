@@ -74,7 +74,7 @@ function default_config()
         "cell" => "MARNN",
         "numhidden" => 10,
 
-        "deep" => true,
+        "deep" => false,
         "internal_a" => 5,
         "internal_o" => 20,
 
@@ -140,6 +140,20 @@ function get_ann(parsed, fs::Int, na::Int, rng)
                    Flux.Dense(nh, na; initW=init_func))
         
     elseif parsed["cell"] ∈ ActionRNNs.rnn_types() && !get(parsed, "deep", false)
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+        
+        m = Flux.Chain(
+            rnn(fs, na, nh;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh, na; initW=init_func))
+
+    elseif parsed["cell"] ∈ ActionRNNs.combo_add_rnn_types() && !get(parsed, "deep", false)
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
         
