@@ -133,17 +133,6 @@ let
 	plt
 end
 
-# ╔═╡ 0eb4c818-b533-4695-a0c7-53e72023281f
-let 
-	args_list = [
-		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"),
-		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"),
-		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN"),
-	]
-	
-	plot(data, args_list, palette=RPU.custom_colorant)
-end
-
 # ╔═╡ 5c3ddaed-47b6-465b-b4c5-bc0fb30c8601
 data_sens = RPU.get_line_data_for(
 	ic_dir,
@@ -166,11 +155,11 @@ end
 # ╔═╡ fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
 data_dist = RPU.get_line_data_for(
 	ic_dir,
-	["numhidden", "cell"],
+	["numhidden", "cell", "truncation"],
 	["eta"];
 	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :total_rews),
-	get_data=(x)->RPU.get_MUE(x, :total_rews))
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
 
 # ╔═╡ c3e8037d-fd67-4609-9c54-716d3707d25c
 data_dist_final = RPU.get_line_data_for(
@@ -183,36 +172,37 @@ data_dist_final = RPU.get_line_data_for(
 
 # ╔═╡ b1beea3f-28c4-4d6e-9738-601ac71e51df
 let
-	boxplot(data_dist, Dict("numhidden"=>64, "cell"=>"MAGRU"); 
+	truncation = 12
+	boxplot(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
 		label = "DMAGRU",
 		color=cell_colors["MAGRU"],
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist, Dict("numhidden"=>64, "cell"=>"MAGRU"); 
+	dotplot!(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
 		label = "DMAGRU",
 		color=cell_colors["MAGRU"])
 	
-	boxplot!(data_dist, Dict("numhidden"=>152, "cell"=>"AAGRU"); 
+	boxplot!(data_dist, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
 		label = "DAAGRU",
 		color=cell_colors["AAGRU"],
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist, Dict("numhidden"=>152, "cell"=>"AAGRU"); 
+	dotplot!(data_dist, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
 		label = "DAAGRU",
 		color=cell_colors["AAGRU"])
 	
 	
-	boxplot!(data_dist_magru_final, Dict(); 
+	boxplot!(data_dist_final, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
 		label = "MAGRU",
 		color=cell_colors["MAGRU"],
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_magru_final, Dict(); 
+	dotplot!(data_dist_final, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
 		label = "MAGRU",
 		color=cell_colors["MAGRU"])
 	
-	boxplot!(data_dist_aagru_final, Dict(); 
+	boxplot!(data_dist_final, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
 		label = "AAGRU",
 		color=cell_colors["AAGRU"],
-		legend=false, lw=1.5, ylims=(-50, 150), tickdir=:out, grid=false)
-	dotplot!(data_dist_aagru_final, Dict(); 
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
 		label = "AAGRU",
 		color=cell_colors["AAGRU"])
 	
@@ -471,7 +461,6 @@ end
 # ╠═e822182e-b485-4a95-a08c-efe1540ff6ad
 # ╠═c1b80cfd-dbb8-41c5-a778-66b112e1c091
 # ╠═e4cc9109-d8b1-4bff-a176-3627e24ab757
-# ╠═0eb4c818-b533-4695-a0c7-53e72023281f
 # ╟─5c3ddaed-47b6-465b-b4c5-bc0fb30c8601
 # ╟─37af922e-ed3c-4aec-a4cf-c403c49a9ba9
 # ╠═fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
