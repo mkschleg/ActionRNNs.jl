@@ -56,6 +56,11 @@ function dir_tmaze_er_args()
             "internal_a" => 6,
             "internal_o" => 12,
         )
+        Dict{String,Any}(
+            "cell" => "CaddRNN",
+            "numhidden" => 15,
+            "deep" => false,
+        )
     ]
 end
 
@@ -148,6 +153,74 @@ function viz_dir_tmaze_args()
     [
         Dict{String,Any}(
             "cell" => "AAGRU",
+            "numhidden" => 132,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
+            "numhidden" => 122,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 32,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
+            "numhidden" => 112,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 64,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
+            "numhidden" => 100,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 128,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
+            "numhidden" => 75,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 256,
+        )
+
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 64,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 32,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 8,
+        )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 16,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 16,
+        )
+    ]
+end
+
+function viz_dir_tmaze_args_2()
+    [
+        Dict{String,Any}(
+            "cell" => "AAGRU",
             "numhidden" => 70,
             "latent_size" => 128,
             "output_size" => 128,
@@ -155,11 +228,59 @@ function viz_dir_tmaze_args()
         )
         Dict{String,Any}(
             "cell" => "AAGRU",
-            "numhidden" => 70,
+            "numhidden" => 65,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 16,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
+            "numhidden" => 60,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 32,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
+            "numhidden" => 55,
             "latent_size" => 128,
             "output_size" => 128,
             "deep" => true,
             "internal_a" => 64,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
+            "numhidden" => 45,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 128,
+        )
+
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 32,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 14,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 8,
+        )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 11,
+            "latent_size" => 128,
+            "output_size" => 128,
+            "deep" => true,
+            "internal_a" => 11,
         )
     ]
 end
