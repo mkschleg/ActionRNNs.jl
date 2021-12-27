@@ -97,6 +97,12 @@ md"""
 # ╔═╡ 0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
 ic_dir, dd_dir = RPU.load_data(at("image_dir_tmaze_deep_a/"))
 
+# ╔═╡ 9758c880-9021-4acf-a6cf-fc954a71a61f
+ic_dir_aagru, dd_dir_aagru = RPU.load_data(at("image_dir_tmaze_deep_a_aagru/"))
+
+# ╔═╡ cdf182a9-9884-4d5b-9a03-f2a0303eff0f
+ic_dir_magru, dd_dir_magru = RPU.load_data(at("image_dir_tmaze_deep_a_magru/"))
+
 # ╔═╡ c7f9c051-5024-4ff8-a19a-8cad57c05123
 ic_dir_final, dd_dir_final = RPU.load_data(at("final_image_dir_tmaze_adam_6/"))
 
@@ -161,6 +167,24 @@ data_dist = RPU.get_line_data_for(
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
 	get_data=(x)->RPU.get_MUE(x, :successes))
 
+# ╔═╡ 49be9e02-a6a0-457d-80d1-5d4e8922a954
+data_dist_aagru = RPU.get_line_data_for(
+	ic_dir_aagru,
+	["numhidden", "internal_a", "truncation"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ bb028b44-720b-425d-a2a3-59812eb141ea
+data_dist_magru = RPU.get_line_data_for(
+	ic_dir_magru,
+	["numhidden", "internal_a", "truncation"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
 # ╔═╡ c3e8037d-fd67-4609-9c54-716d3707d25c
 data_dist_final = RPU.get_line_data_for(
 	ic_dir_final,
@@ -172,276 +196,176 @@ data_dist_final = RPU.get_line_data_for(
 
 # ╔═╡ b1beea3f-28c4-4d6e-9738-601ac71e51df
 let
-	truncation = 12
-	boxplot(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
-		label = "DMAGRU",
-		color=cell_colors["MAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
-		label = "DMAGRU",
-		color=cell_colors["MAGRU"])
+	truncation = 20
+# 	boxplot(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
+# 		label = "DMA",
+# 		color=cell_colors["MAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
+# 		label = "DMA",
+# 		color=cell_colors["MAGRU"])
 	
-	boxplot!(data_dist, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
-		label = "DAAGRU",
-		color=cell_colors["AAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
-		label = "DAAGRU",
-		color=cell_colors["AAGRU"])
+# 	boxplot!(data_dist, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
+# 		label = "DAA",
+# 		color=cell_colors["AAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
+# 		label = "DAA",
+# 		color=cell_colors["AAGRU"])
 	
 	
-	boxplot!(data_dist_final, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
-		label = "MAGRU",
+	boxplot(data_dist_final, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
+		label = "MA",
 		color=cell_colors["MAGRU"],
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
 	dotplot!(data_dist_final, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
-		label = "MAGRU",
+		label = "MA",
 		color=cell_colors["MAGRU"])
 	
 	boxplot!(data_dist_final, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
-		label = "AAGRU",
+		label = "AA",
 		color=cell_colors["AAGRU"],
 		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
 	dotplot!(data_dist_final, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
-		label = "AAGRU",
+		label = "AA",
 		color=cell_colors["AAGRU"])
 	
+	
+	boxplot!(data_dist_aagru, Dict("numhidden"=>122, "truncation"=>truncation, "internal_a"=>32); 
+		label = "DAA32",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_aagru, Dict("numhidden"=>122, "truncation"=>truncation, "internal_a"=>32); 
+		label = "DAA32",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_aagru, Dict("numhidden"=>112, "truncation"=>truncation, "internal_a"=>64); 
+		label = "DAA64",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_aagru, Dict("numhidden"=>112, "truncation"=>truncation, "internal_a"=>64); 
+		label = "DAA64",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_aagru, Dict("numhidden"=>100, "truncation"=>truncation, "internal_a"=>128); 
+		label = "DAA128",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_aagru, Dict("numhidden"=>100, "truncation"=>truncation, "internal_a"=>128); 
+		label = "DAA128",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_aagru, Dict("numhidden"=>75, "truncation"=>truncation, "internal_a"=>256); 
+		label = "DAA256",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_aagru, Dict("numhidden"=>75, "truncation"=>truncation, "internal_a"=>256); 
+		label = "DAA256",
+		color=cell_colors["AAGRU"])
+	
+	
+	boxplot!(data_dist_magru, Dict("numhidden"=>32, "truncation"=>truncation, "internal_a"=>8); 
+		label = "DMA8",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_magru, Dict("numhidden"=>32, "truncation"=>truncation, "internal_a"=>8); 
+		label = "DMA8",
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
+		label = "DMA16",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
+		label = "DMA16",
+		color=cell_colors["MAGRU"], title="AA nh: 132, MA nh: 64, truncation: $(truncation)")
 end
 
-# ╔═╡ e2a991a9-580d-44eb-86ff-468686fcae11
+# ╔═╡ 9725440a-b7d8-4b6b-b8e2-64b4cec96feb
 let
-	args_list_l = [
-		Dict("internal"=>14, "numhidden"=>10, "replay_size"=>20000, "truncation"=>20, "cell"=>"AAGRU"),
-		Dict("internal"=>20, "numhidden"=>18, "replay_size"=>20000, "truncation"=>20, "cell"=>"AARNN"),
-	]
-	boxplot(data_dist, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
+	truncation = 20
+# 	boxplot(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
+# 		label = "DMA",
+# 		color=cell_colors["MAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
+# 		label = "DMA",
+# 		color=cell_colors["MAGRU"])
+	
+# 	boxplot!(data_dist, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
+# 		label = "DAA",
+# 		color=cell_colors["AAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
+# 		label = "DAA",
+# 		color=cell_colors["AAGRU"])
+	
+	
+	boxplot(data_dist_final, Dict("numhidden"=>32, "truncation"=>truncation, "cell"=>"MAGRU"); 
+		label = "MA",
+		color=cell_colors["MAGRU"],
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-end
-
-# ╔═╡ 305f8ac8-8f5f-4ec4-84a6-867f69a8887c
-ic_fac, dd_fac = RPU.load_data("../local_data/dir_tmaze_er_fac_rnn_rmsprop_10/")
-
-# ╔═╡ 533cba3d-7fc5-4d66-b545-b15ffc8ab6d8
-data_fac_sens_eta = RPU.get_line_data_for(
-	ic_fac,
-	["numhidden", "cell", "replay_size", "factors", "eta"],
-	[];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ 39752286-a6db-439d-aca0-1be4821bfc2b
-let
-	args_list = [
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10),
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU", "factors"=>10)]
-	plot(data_fac_sens_eta, args_list; sort_idx="eta", labels=["FacMARNN" "FacMAGRU"])
-end
-
-# ╔═╡ 7d611b39-f9a8-43e4-951e-9d812cbd4384
-data_fac_sens = RPU.get_line_data_for(
-	ic_fac,
-	["numhidden", "cell", "replay_size", "factors"],
-	["eta"];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ a8949e02-61f5-456a-abee-2bad91d2df05
-let
-	args_list = [
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN"),
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU")]
-	plot(data_fac_sens, args_list; sort_idx="factors", labels=["FacMARNN" "FacMAGRU"])
-end
-
-# ╔═╡ 4b654ad2-93cf-455e-9c7b-982766560205
-let
-	plts = []
-	for rs ∈ dd_fac["replay_size"]
-		
-		args_list = [
-			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMARNN"),
-			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMAGRU")]
-		push!(plts, plot(data_fac_sens, args_list; sort_idx="factors", labels=["FacMARNN" "FacMAGRU"], title=rs, color = 	[cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], legend=nothing, z=1.97, lw=2, xlabel="Factors", ylabel="Success"))
-	end
-	plot(plts..., size=(800, 600))
-end
-
-# ╔═╡ 2dbcb518-2fda-44c4-bfc0-b422a8da9c35
-let
-	args_list = [
-		Dict("numhidden"=>25, "replay_size"=>10000, "cell"=>"FacMARNN", "factors"=>10),
-		Dict("numhidden"=>15, "replay_size"=>10000, "cell"=>"FacMAGRU", "factors"=>10)]
-	boxplot(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
-	dotplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
-	args_list_l = [
-		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"GRU"),
-		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"),
-		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"),
-		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"RNN"),
-		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN"),
-		Dict("numhidden"=>18, "truncation"=>12, "cell"=>"MARNN")]
-	boxplot!(data_10_dist, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_10_dist, args_list_l; label_idx="cell",
-				color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),)
-	# dotplot!(data_10_dist, args_list_l; 
-	# 	label_idx="cell", 
-	# 	color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-end
-
-# ╔═╡ 7f630af5-a608-47d3-be13-589b9731798e
-ic_fac_init, dd_fac_init = RPU.load_data("../local_data/dir_tmaze_er_fac_rnn_init_rmsprop_10/")
-
-# ╔═╡ c60ee6c5-85e4-407c-8272-801085296084
-
-
-# ╔═╡ f297e4f3-5826-4f90-8f24-ae731232f63b
-data_fac_init_sens_eta = RPU.get_line_data_for(
-	ic_fac_init,
-	["numhidden", "cell", "init_style", "replay_size", "factors", "eta"],
-	[];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ baf539d2-bdd9-40be-bca7-2af231d7063d
-let
-	args_list = [
-		Dict("numhidden"=>25, "replay_size"=>10000, "cell"=>"FacMARNN", "factors"=>15, "init_style"=>"tensor"),
-		Dict("numhidden"=>15, "replay_size"=>10000, "cell"=>"FacMAGRU", "factors"=>15, "init_style"=>"tensor")]
-	plot(data_fac_init_sens_eta, args_list; sort_idx="eta", labels=["FacMARNN" "FacMAGRU"])
-end
-
-# ╔═╡ 4480eb51-352d-49ff-8181-96e6bf03cab3
-data_fac_init_sens = RPU.get_line_data_for(
-	ic_fac_init,
-	["numhidden", "cell", "replay_size", "factors", "init_style"],
-	["eta"];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ 800cd6d3-177f-4542-b4b5-38f24265876a
-d = data_fac_init_sens[1]
-
-# ╔═╡ 10a832cc-574b-4012-ab9e-4cd40f9bb9c8
-d.swept_params
-
-# ╔═╡ 8500402b-28aa-41ed-96d7-450903bc90d0
-let
-	plts = []
-	rsrs = [10000, 20000]
-	for (rs, ins) ∈ Iterators.product(rsrs, dd_fac_init["init_style"])
-		
-		args_list = [
-			Dict("numhidden"=>25, "replay_size"=>rs, "cell"=>"FacMARNN", "init_style"=>ins),
-			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMAGRU", "init_style"=>ins)]
-		push!(plts, plot(data_fac_init_sens, args_list; sort_idx="factors", labels=["FacMARNN" "FacMAGRU"], title="$((rs, ins))", color = 	[cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], lw = 2, legend=nothing))
-	end
-	plot(plts...)
-end
-
-# ╔═╡ 20e3d6d4-bec8-4a42-8e5c-01c6f60600d7
-plt_args_list = let
-	args_list = [
-		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.0003125), #num_params = 1303
-		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.0003125), #num_params = 3499
-		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.00125), #num_params = 1053
-		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.0003125),
-		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.00125), #num_params = 1703
-		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"GRU", "eta"=>0.00125),
-		Dict("numhidden"=>18, "truncation"=>12, "cell"=>"MARNN", "eta"=>0.0003125), #num_params = 463
-		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN", "eta"=>0.0003125),
-		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"RNN", "eta"=>1.953125e-5)
-	]
-
-	# FileIO.save("../final_runs/dir_tmaze_10.jld2", "args", args_list)
+	dotplot!(data_dist_final, Dict("numhidden"=>32, "truncation"=>truncation, "cell"=>"MAGRU"); 
+		label = "MA",
+		color=cell_colors["MAGRU"])
 	
-	plt_keys = ["numhidden", "truncation", "cell"]
-	[Dict(k=>args_list[i][k] for k ∈ plt_keys) for i in 1:length(args_list)]
-end
-
-# ╔═╡ c9ab1109-4513-412c-8b84-9ae02d65acf7
-
-
-# ╔═╡ 24b79fb2-acfe-47e8-976d-231fa4ce2a10
-let	
-	params = [
-		Dict("cell"=>"FacMAGRU", "numhidden"=>15, "init_style"=>"tensor"),
-		Dict("cell"=>"FacMARNN", "numhidden"=>25, "init_style"=>"tensor")
-	]
-	# dd_fac_init["truncation"] = [12]
-	get_final_argument_list(params, data_fac_init_sens, dd_fac_init, ["factors", "replay_size"], ["eta"])
-end
-
-# ╔═╡ 7333fe0d-02fe-4d74-9427-95826c485334
-ic_20, dd_20 = RPU.load_data("../local_data/dir_tmaze_er_rnn_rmsprop_10_20k/")
-
-# ╔═╡ 72a17826-a498-4cd5-9523-d20a1bab5c30
-data_10_dist_20 = RPU.get_line_data_for(
-	ic_20,
-	["cell"],
-	["eta"];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ 55e67b77-bd4f-4841-aa16-81d5630a0f0a
-let
-	plt = plot()
-	# args_list = [
-	# 	Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10)]
-	# violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
-	# boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
-
-	args_list_l = [
-		Dict("cell"=>"GRU"),
-		Dict("cell"=>"AAGRU"),
-		Dict("cell"=>"MAGRU")]
-	violin!(data_10_dist_20, args_list_l; label_idx="cell",
-				color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :), linecolor=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-	boxplot!(data_10_dist_20, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=2, ylims=(0.4, 1.0), tickdir=:out, grid=false, linecolor=:black, fillalpha=0.75)
-
-	args_list = [Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU", "factors"=>10)]
-	
-		violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMAGRU"]], linecolor = [cell_colors["FacMAGRU"]])
-	boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
-	
-	args_list_l = [		
-		Dict("cell"=>"RNN"),
-		Dict("cell"=>"AARNN"),
-		Dict("cell"=>"MARNN")]
-	violin!(data_10_dist_20, args_list_l; label_idx="cell",
-				color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :), linecolor=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-	boxplot!(data_10_dist_20, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=2, ylims=(0.4, 1.0), tickdir=:out, grid=false, linecolor=:black, fillalpha=0.75)
+	boxplot!(data_dist_final, Dict("numhidden"=>70, "truncation"=>truncation, "cell"=>"AAGRU"); 
+		label = "AA",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>70, "truncation"=>truncation, "cell"=>"AAGRU"); 
+		label = "AA",
+		color=cell_colors["AAGRU"])
 	
 	
-	args_list = [Dict("numhidden"=>20, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10)]
+	boxplot!(data_dist_aagru, Dict("numhidden"=>65, "truncation"=>truncation, "internal_a"=>16); 
+		label = "DAA16",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_aagru, Dict("numhidden"=>65, "truncation"=>truncation, "internal_a"=>16); 
+		label = "DAA16",
+		color=cell_colors["AAGRU"])
 	
-	violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"]], linecolor = [cell_colors["FacMARNN"]])
-	boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
+	boxplot!(data_dist_aagru, Dict("numhidden"=>60, "truncation"=>truncation, "internal_a"=>32); 
+		label = "DAA32",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_aagru, Dict("numhidden"=>60, "truncation"=>truncation, "internal_a"=>32); 
+		label = "DAA32",
+		color=cell_colors["AAGRU"])
 	
-	savefig("../plots/dir_tmaze_20k_buffer.pdf")
-	plt
-	# dotplot!(data_10_dist, args_list_l; 
-	# 	label_idx="cell", 
-	# 	color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
+	boxplot!(data_dist_aagru, Dict("numhidden"=>55, "truncation"=>truncation, "internal_a"=>64); 
+		label = "DAA64",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_aagru, Dict("numhidden"=>55, "truncation"=>truncation, "internal_a"=>64); 
+		label = "DAA64",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_aagru, Dict("numhidden"=>45, "truncation"=>truncation, "internal_a"=>128); 
+		label = "DAA128",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	dotplot!(data_dist_aagru, Dict("numhidden"=>45, "truncation"=>truncation, "internal_a"=>128); 
+		label = "DAA128",
+		color=cell_colors["AAGRU"])
+	
+	
+	boxplot!(data_dist_magru, Dict("numhidden"=>14, "truncation"=>truncation, "internal_a"=>8); 
+		label = "DMA8",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_magru, Dict("numhidden"=>14, "truncation"=>truncation, "internal_a"=>8); 
+		label = "DMA8",
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist_magru, Dict("numhidden"=>11, "truncation"=>truncation, "internal_a"=>11); 
+		label = "DMA11",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
+		label = "DMA11",
+		color=cell_colors["MAGRU"], title="AA nh: 70, MA nh: 32, truncation: $(truncation)")
 end
 
 # ╔═╡ Cell order:
@@ -456,6 +380,8 @@ end
 # ╠═cc4a219d-9118-4c34-93ce-317afc837f6c
 # ╟─1756d1cc-1a88-4442-b55a-fdbb44f56313
 # ╠═0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
+# ╠═9758c880-9021-4acf-a6cf-fc954a71a61f
+# ╠═cdf182a9-9884-4d5b-9a03-f2a0303eff0f
 # ╠═c7f9c051-5024-4ff8-a19a-8cad57c05123
 # ╟─6211a38a-7b53-4054-970e-c29ad17de646
 # ╠═e822182e-b485-4a95-a08c-efe1540ff6ad
@@ -464,27 +390,8 @@ end
 # ╟─5c3ddaed-47b6-465b-b4c5-bc0fb30c8601
 # ╟─37af922e-ed3c-4aec-a4cf-c403c49a9ba9
 # ╠═fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
+# ╠═49be9e02-a6a0-457d-80d1-5d4e8922a954
+# ╠═bb028b44-720b-425d-a2a3-59812eb141ea
 # ╠═c3e8037d-fd67-4609-9c54-716d3707d25c
 # ╠═b1beea3f-28c4-4d6e-9738-601ac71e51df
-# ╠═e2a991a9-580d-44eb-86ff-468686fcae11
-# ╠═305f8ac8-8f5f-4ec4-84a6-867f69a8887c
-# ╠═533cba3d-7fc5-4d66-b545-b15ffc8ab6d8
-# ╠═39752286-a6db-439d-aca0-1be4821bfc2b
-# ╠═7d611b39-f9a8-43e4-951e-9d812cbd4384
-# ╠═a8949e02-61f5-456a-abee-2bad91d2df05
-# ╠═4b654ad2-93cf-455e-9c7b-982766560205
-# ╠═2dbcb518-2fda-44c4-bfc0-b422a8da9c35
-# ╠═7f630af5-a608-47d3-be13-589b9731798e
-# ╠═c60ee6c5-85e4-407c-8272-801085296084
-# ╠═f297e4f3-5826-4f90-8f24-ae731232f63b
-# ╠═baf539d2-bdd9-40be-bca7-2af231d7063d
-# ╠═4480eb51-352d-49ff-8181-96e6bf03cab3
-# ╠═800cd6d3-177f-4542-b4b5-38f24265876a
-# ╠═10a832cc-574b-4012-ab9e-4cd40f9bb9c8
-# ╠═8500402b-28aa-41ed-96d7-450903bc90d0
-# ╠═20e3d6d4-bec8-4a42-8e5c-01c6f60600d7
-# ╠═c9ab1109-4513-412c-8b84-9ae02d65acf7
-# ╠═24b79fb2-acfe-47e8-976d-231fa4ce2a10
-# ╠═7333fe0d-02fe-4d74-9427-95826c485334
-# ╠═72a17826-a498-4cd5-9523-d20a1bab5c30
-# ╠═55e67b77-bd4f-4841-aa16-81d5630a0f0a
+# ╠═9725440a-b7d8-4b6b-b8e2-64b4cec96feb
