@@ -23,7 +23,7 @@ replay_size = 20000
 deep = false 
 
 [sweep_args]
-"cell+numhidden" = [["CaddRNN", 15], ["CaddRNN", 20], ["CaddRNN", 10]]
+"cell+numhidden" = [["CaddRNN", 15], ["CaddRNN", 20], ["CaddRNN", 10], ["CaddGRU", 15], ["CaddGRU", 10], ["CaddGRU", 8], ["CaddGRU", 6]]
 eta = "0.01*(1.6.^(-11:2:-1))"
 truncation = [12, 20]
 seed = "1:20"
