@@ -61,6 +61,11 @@ function dir_tmaze_er_args()
             "numhidden" => 15,
             "deep" => false,
         )
+        Dict{String,Any}(
+            "cell" => "CaddGRU",
+            "numhidden" => 8,
+            "deep" => false,
+        )
     ]
 end
 

@@ -94,4 +94,4 @@ rnn_types() = ["AARNN", "MARNN", "MAARNNadd", "AAGRU", "MAGRU", "AALSTM", "MALST
 fac_rnn_types() = ["FacMARNN", "FacMAGRU"]
 fac_tuc_rnn_types() = ["FacTucMARNN", "FacTucMAGRU"]
 gated_rnn_types() = ["ActionGatedRNN", "GAIARNN", "GAIGRU", "GAIAGRU", "GAUGRU", "GAIALSTM"]
-combo_add_rnn_types() = ["CaddRNN"]
+combo_add_rnn_types() = ["CaddRNN", "CaddGRU"]
