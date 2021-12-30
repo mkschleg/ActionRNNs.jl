@@ -167,6 +167,20 @@ function get_ann(parsed, fs::Int, na::Int, rng)
                 initb=initb),
             Flux.Dense(nh, na; initW=init_func))
 
+    elseif parsed["cell"] ∈ ActionRNNs.combo_cat_rnn_types() && !get(parsed, "deep", false)
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+        
+        m = Flux.Chain(
+            rnn(fs, na, nh;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh*2, na; initW=init_func))
+
     elseif parsed["cell"] ∈ ActionRNNs.gated_rnn_types()
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
