@@ -66,6 +66,16 @@ function dir_tmaze_er_args()
             "numhidden" => 8,
             "deep" => false,
         )
+        Dict{String,Any}(
+            "cell" => "CcatRNN",
+            "numhidden" => 11,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatGRU",
+            "numhidden" => 6,
+            "deep" => false,
+        )
     ]
 end
 
