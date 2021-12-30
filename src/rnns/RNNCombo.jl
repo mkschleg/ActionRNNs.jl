@@ -137,7 +137,7 @@ function (m::CaddGRUCell)(h, x::Tuple{A, O}) where {A, O}
     
     rm = σ.(gate(gxm, o, 1)  .+ gate(ghm, o, 1) .+ gate(bm, o, 1))
     zm = σ.(gate(gxm, o, 2)  .+ gate(ghm, o, 2) .+ gate(bm, o, 2))
-    h̃m = tanh.(gate(gxm, o, 3) .+ ra .* gate(ghm, o, 3) .+ gate(bm, o, 3))
+    h̃m = tanh.(gate(gxm, o, 3) .+ rm .* gate(ghm, o, 3) .+ gate(bm, o, 3))
     h′m = (1 .- zm) .* h̃m .+ zm .* h
 
     # adding together state
