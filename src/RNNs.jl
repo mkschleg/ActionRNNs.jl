@@ -88,6 +88,7 @@ include("rnns/LSTM.jl")
 
 include("rnns/ActionGated.jl")
 include("rnns/RNNCombo.jl")
+include("rnns/GRUCombo.jl")
 
 # Keep list of all the non-specialized RNN types in ActionRNNs
 rnn_types() = ["AARNN", "MARNN", "MAARNNadd", "AAGRU", "MAGRU", "AALSTM", "MALSTM"]
