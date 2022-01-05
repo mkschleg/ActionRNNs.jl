@@ -55,7 +55,7 @@ function DRQNAgent(model,
                    hs_learnable)
 
     dev = Device(model)
-    @info dev
+    # @info dev
     
     state_list, init_state = make_obs_list(model, dev)
 
