@@ -1,0 +1,31 @@
+[config]
+save_dir="image_dir_tmaze_combo"
+exp_file="experiment/viz_dir_tmaze.jl"
+exp_module_name = "VisualDirectionalTMazeERExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iter"
+
+[static_args]
+steps = 400000
+
+opt = "ADAM"
+size = 6
+gamma = 0.9
+
+batch_size = 16
+replay_size = 50000
+warm_up = 1000
+hs_learnable = true
+update_wait = 4
+target_update_wait = 10000
+
+latent_size = 128	
+output_size = 128
+
+deep = false 
+
+[sweep_args]
+"cell+numhidden" = [["CaddRNN", 111], ["CaddGRU", 52], ["CcatRNN", 89], ["CcatGRU", 44], ["CaddRNN", 58], ["CaddGRU", 26], ["CcatRNN", 49], ["CcatGRU", 23]]
+eta = "(2.0.^(-20:2:-6))"
+truncation = [12, 20]
+seed = "1:5"

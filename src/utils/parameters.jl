@@ -160,7 +160,26 @@ function lunar_lander_args()
             "deep" => true,
             "internal_a" => 64,
         )
-
+        Dict{String,Any}(
+            "cell" => "CaddRNN",
+            "numhidden" => 114,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddGRU",
+            "numhidden" => 54,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatRNN",
+            "numhidden" => 92,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatGRU",
+            "numhidden" => 45,
+            "deep" => false,
+        )
     ]
 end
 
@@ -228,6 +247,26 @@ function viz_dir_tmaze_args()
             "output_size" => 128,
             "deep" => true,
             "internal_a" => 16,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddRNN",
+            "numhidden" => 111,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddGRU",
+            "numhidden" => 52,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatRNN",
+            "numhidden" => 89,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatGRU",
+            "numhidden" => 44,
+            "deep" => false,
         )
     ]
 end
@@ -297,6 +336,26 @@ function viz_dir_tmaze_args_2()
             "deep" => true,
             "internal_a" => 11,
         )
+        Dict{String,Any}(
+            "cell" => "CaddRNN",
+            "numhidden" => 58,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddGRU",
+            "numhidden" => 26,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatRNN",
+            "numhidden" => 49,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatGRU",
+            "numhidden" => 23,
+            "deep" => false,
+        )
     ]
 end
 
@@ -353,7 +412,7 @@ function main(env_name)
         module_name = VisualDirectionalTMazeERExperiment 
         env = ImageDirTMaze(10)
         rng = Random.MersenneTwister(1)
-        args_list = viz_dir_tmaze_args()
+        args_list = viz_dir_tmaze_args_2()
         parsed = module_name.default_config()
         for args in args_list
             for (key, value) in args

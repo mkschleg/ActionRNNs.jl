@@ -104,6 +104,30 @@ function get_ann(parsed, fs, env, rng)
             init=init_func,
             initb=initb)
 
+    elseif parsed["cell"] ∈ ActionRNNs.combo_add_rnn_types() && !get(parsed, "deep", false)
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+        
+        rnn(es, na, nh;
+            init=init_func,
+            initb=initb)
+
+    elseif parsed["cell"] ∈ ActionRNNs.combo_cat_rnn_types() && !get(parsed, "deep", false)
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+        
+        rnn(es, na, nh;
+            init=init_func,
+            initb=initb)
+
     elseif parsed["cell"]  ∈ ActionRNNs.rnn_types() && get(parsed, "deep", false)
 
         # Deep actions for RNNs from Zhu et al 2018
@@ -142,9 +166,15 @@ function get_ann(parsed, fs, env, rng)
         Flux.Dense(fs, es, Flux.relu; initW=init_func)
     end
 
+    first_output_layer = if parsed["cell"] ∈ ActionRNNs.combo_cat_rnn_types()
+        Flux.Dense(nh*2, nh, Flux.relu; initW=init_func)
+    else
+        Flux.Dense(nh, nh, Flux.relu; initW=init_func)
+    end
+
         Flux.Chain(encoding_network,
                    rnn_layer,
-                   Flux.Dense(nh, nh, Flux.relu; initW=init_func),
+                   first_output_layer,
                    Flux.Dense(nh, na; initW=init_func))
                 
 
