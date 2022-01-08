@@ -60,7 +60,7 @@ function (m::CaddGRUCell)(h, x::Tuple{A, O}) where {A, O}
     h′m = (1 .- zm) .* h̃m .+ zm .* h
 
     # adding together state
-    h′ = m.w[1]*h′a + m.w[2]*h′m
+    h′ = (m.w[1]*h′a + m.w[2]*h′m) ./ sum(m.w)
 
     sz = size(obs)
     return h′, reshape(h′, :, sz[2:end]...)
@@ -85,7 +85,6 @@ Flux.Recur(m::CaddGRUCell) = Flux.Recur(m, m.state0)
 
 
 struct CcatGRUCell{A,V,T,S}  <: AbstractActionRNN
-    w::V
     Wia::A
     Wa::A
     Wha::A
@@ -102,8 +101,7 @@ CcatGRUCell(in,
             init = Flux.glorot_uniform, 
             initb = Flux.zeros,
             init_state = Flux.zeros) =
-    CcatGRUCell(Flux.ones(2),
-              init(out * 3, in),
+    CcatGRUCell(init(out * 3, in),
               init(out * 3, na),
               init(out * 3, out * 2),
               initb(out * 3),
@@ -138,7 +136,7 @@ function (m::CcatGRUCell)(h, x::Tuple{A, O}) where {A, O}
     h′m = (1 .- zm) .* h̃m .+ zm .* h[o+1:end, :]
 
     # concatenating together state
-    h′ = vcat(m.w[1]*h′a, m.w[2]*h′m)
+    h′ = vcat(h′a, h′m)
 
     sz = size(obs)
     return h′, reshape(h′, :, sz[2:end]...)

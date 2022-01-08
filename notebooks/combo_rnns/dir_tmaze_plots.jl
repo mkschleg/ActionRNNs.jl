@@ -104,17 +104,17 @@ ic_dir_deep_final, dd_dir_deep_final = RPU.load_data(at("dir_tmaze_er_deep_a_fin
 ic_dir_final, dd_dir_final = RPU.load_data(at("final_dir_tmaze_er_rnn_rmsprop_10_2/"))
 
 # ╔═╡ d3c612a3-7e0c-489c-98cc-9fde857cf27a
-ic_dir_combo, dd_dir_combo = RPU.load_data(at("dir_tmaze_er_combo_add/"))
+ic_dir_combo_add, dd_dir_combo_add = RPU.load_data(at("dir_tmaze_er_combo_add/"))
+
+# ╔═╡ 538d0e68-c644-4306-a030-a4a1bdefa97b
+ic_dir_combo_cat, dd_dir_combo_cat = RPU.load_data(at("dir_tmaze_er_combo_cat/"))
 
 # ╔═╡ 6211a38a-7b53-4054-970e-c29ad17de646
 ic_dir[1].parsed_args["steps"]
 
-# ╔═╡ 86e1a8ea-d844-469c-9b6c-a40b2f5ae8fb
-
-
 # ╔═╡ e822182e-b485-4a95-a08c-efe1540ff6ad
 data = RPU.get_line_data_for(
-	ic_dir_combo,
+	ic_dir_combo_cat,
 	["numhidden", "truncation", "cell"],
 	["eta"];
 	comp=findmax,
@@ -123,17 +123,17 @@ data = RPU.get_line_data_for(
 
 # ╔═╡ 025f23f6-040e-44df-8183-915cb4d1ee25
 data_steps = RPU.get_line_data_for(
-	ic_dir_combo,
+	ic_dir_combo_cat,
 	["numhidden", "truncation", "cell"],
 	["eta"];
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :total_steps),
-	get_data=(x)->RPU.get_rolling_mean_line(x, :total_steps, 3))
+	get_data=(x)->RPU.get_rolling_mean_line(x, :total_steps, 30))
 
 # ╔═╡ c1b80cfd-dbb8-41c5-a778-66b112e1c091
 md"""
-Truncation: $(@bind τ_dir Select(string.(dd_dir_combo["truncation"])))
-NumHidden: $(@bind nh_dir Select(string.(dd_dir_combo["numhidden"])))
+Truncation: $(@bind τ_dir Select(string.(dd_dir_combo_cat["truncation"])))
+NumHidden: $(@bind nh_dir Select(string.(dd_dir_combo_cat["numhidden"])))
 """
 
 # ╔═╡ e4cc9109-d8b1-4bff-a176-3627e24ab757
@@ -145,7 +145,7 @@ let
 	# for nh_ ∈ nh_dir
 		plot!(plt, 
 			data_steps, 
-			Dict("numhidden"=>nh, "truncation"=>τ, "cell"=>"CaddGRU"), 
+			Dict("numhidden"=>nh, "truncation"=>τ, "cell"=>"CcatGRU"), 
 			palette=RPU.custom_colorant, legend=:bottomright)
 	# end
 	plt
@@ -223,8 +223,17 @@ data_dist_final = RPU.get_line_data_for(
 	get_data=(x)->RPU.get_MUE(x, :successes))
 
 # ╔═╡ ff776339-f8a3-4204-962f-da9fd8b5bbe4
-data_dist_combo = RPU.get_line_data_for(
-	ic_dir_combo,
+data_dist_combo_add = RPU.get_line_data_for(
+	ic_dir_combo_add,
+	["numhidden", "truncation", "cell"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ b4805558-8a0c-4942-8462-d02b34452222
+data_dist_combo_cat = RPU.get_line_data_for(
+	ic_dir_combo_cat,
 	["numhidden", "truncation", "cell"],
 	["eta"];
 	comp=findmax,
@@ -307,64 +316,297 @@ let
 		color=cell_colors["AARNN"])
 	
 	
-	boxplot!(data_dist_combo, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddRNN"); 
+	boxplot!(data_dist_combo_add, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddRNN"); 
 		label = "CaR10",
 		color=cell_colors["RNN"],
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddRNN"); 
+	dotplot!(data_dist_combo_add, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddRNN"); 
 		label = "CaR10",
 		color=cell_colors["RNN"])
 	
-	boxplot!(data_dist_combo, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddRNN"); 
+	boxplot!(data_dist_combo_add, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddRNN"); 
 		label = "CaR15",
 		color=cell_colors["AARNN"],
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddRNN"); 
+	dotplot!(data_dist_combo_add, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddRNN"); 
 		label = "CaR15",
 		color=cell_colors["AARNN"])
 	
-	boxplot!(data_dist_combo, Dict("numhidden"=>20, "truncation"=>12, "cell"=>"CaddRNN"); 
+	boxplot!(data_dist_combo_add, Dict("numhidden"=>20, "truncation"=>12, "cell"=>"CaddRNN"); 
 		label = "CaR20",
 		color=cell_colors["MARNN"],
 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo, Dict("numhidden"=>20, "truncation"=>12, "cell"=>"CaddRNN"); 
+	dotplot!(data_dist_combo_add, Dict("numhidden"=>20, "truncation"=>12, "cell"=>"CaddRNN"); 
 		label = "CaR20",
 		color=cell_colors["MARNN"])
 
 	
-# 	boxplot!(data_dist_combo, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CaddGRU"); 
+# 	boxplot!(data_dist_combo_add, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CaddGRU"); 
 # 		label = "CaG6",
 # 		color=cell_colors["GRU"],
 # 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-# 	dotplot!(data_dist_combo, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CaddGRU"); 
+# 	dotplot!(data_dist_combo_add, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CaddGRU"); 
 # 		label = "CaG6",
 # 		color=cell_colors["GRU"])
 	
-# 	boxplot!(data_dist_combo, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CaddGRU"); 
+# 	boxplot!(data_dist_combo_add, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CaddGRU"); 
 # 		label = "CaG8",
 # 		color=cell_colors["AAGRU"],
 # 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-# 	dotplot!(data_dist_combo, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CaddGRU"); 
+# 	dotplot!(data_dist_combo_add, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CaddGRU"); 
 # 		label = "CaG8",
 # 		color=cell_colors["AAGRU"])
 	
-# 	boxplot!(data_dist_combo, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddGRU"); 
+# 	boxplot!(data_dist_combo_add, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddGRU"); 
 # 		label = "CaG10",
 # 		color=cell_colors["MAGRU"],
 # 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-# 	dotplot!(data_dist_combo, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddGRU"); 
+# 	dotplot!(data_dist_combo_add, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddGRU"); 
 # 		label = "CaG10",
 # 		color=cell_colors["MAGRU"])
 	
-# 	boxplot!(data_dist_combo, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddGRU"); 
+# 	boxplot!(data_dist_combo_add, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddGRU"); 
 # 		label = "CaG15",
 # 		color=cell_colors["FacMAGRU"],
 # 		legend=false, lw=1.5, ylims=(0.0, 1.0), tickdir=:out, grid=false)
-# 	dotplot!(data_dist_combo, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddGRU"); 
+# 	dotplot!(data_dist_combo_add, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddGRU"); 
 # 		label = "CaG15",
 # 		color=cell_colors["FacMAGRU"], xtickfontsize=6)
+
+	
+	boxplot!(data_dist_combo_cat, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CcatRNN"); 
+		label = "CcR8",
+		color=cell_colors["RNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_cat, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CcatRNN"); 
+		label = "CcR8",
+		color=cell_colors["RNN"])
+	
+	boxplot!(data_dist_combo_cat, Dict("numhidden"=>11, "truncation"=>12, "cell"=>"CcatRNN"); 
+		label = "CcR11",
+		color=cell_colors["AARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_cat, Dict("numhidden"=>11, "truncation"=>12, "cell"=>"CcatRNN"); 
+		label = "CcR11",
+		color=cell_colors["AARNN"])
+	
+	boxplot!(data_dist_combo_cat, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CcatRNN"); 
+		label = "CcR15",
+		color=cell_colors["MARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_cat, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CcatRNN"); 
+		label = "CcR15",
+		color=cell_colors["MARNN"], xtickfontsize=6)
 	
 
+# 	boxplot!(data_dist_combo_cat, Dict("numhidden"=>4, "truncation"=>12, "cell"=>"CcatGRU"); 
+# 		label = "CcG6",
+# 		color=cell_colors["GRU"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_combo_cat, Dict("numhidden"=>4, "truncation"=>12, "cell"=>"CcatGRU"); 
+# 		label = "CcG6",
+# 		color=cell_colors["GRU"])
+	
+# 	boxplot!(data_dist_combo_cat, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CcatGRU"); 
+# 		label = "CcG8",
+# 		color=cell_colors["AAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_combo_cat, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CcatGRU"); 
+# 		label = "CcG8",
+# 		color=cell_colors["AAGRU"])
+	
+# 	boxplot!(data_dist_combo_cat, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CcatGRU"); 
+# 		label = "CcG10",
+# 		color=cell_colors["MAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.0, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_combo_cat, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CcatGRU"); 
+# 		label = "CcG10",
+# 		color=cell_colors["MAGRU"])
+	
+end
+
+# ╔═╡ 0b15129e-a281-49bc-9c87-f3db376e01ea
+let
+	boxplot(data_dist_deep_final, Dict("cell"=>"MAGRU"); 
+		#label_idx="cell", 
+		label = "DMAG",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_deep_final, Dict("cell"=>"MAGRU"); 
+		#label_idx="cell", 
+		label = "DMAG",
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist_deep_final, Dict("cell"=>"AAGRU"); 
+		#label_idx="cell", 
+		label = "DAAG",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_deep_final, Dict("cell"=>"AAGRU"); 
+		#label_idx="cell", 
+		label = "DAAG",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_deep_final, Dict("cell"=>"MARNN"); 
+		#label_idx="cell", 
+		label = "DMAR",
+		color=cell_colors["MARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_deep_final, Dict("cell"=>"MARNN"); 
+		#label_idx="cell", 
+		label = "DMAR",
+		color=cell_colors["MARNN"])
+	
+	boxplot!(data_dist_deep_final, Dict("cell"=>"AARNN"); 
+		#label_idx="cell", 
+		label = "DAAR",
+		color=cell_colors["AARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_deep_final, Dict("cell"=>"AARNN"); 
+		#label_idx="cell", 
+		label = "DAAR",
+		color=cell_colors["AARNN"])
+	
+
+	boxplot!(data_dist_final, Dict("numhidden"=>10, "cell"=>"MAGRU"); 
+		label="MAG", 
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>10, "cell"=>"MAGRU"); 
+		label="MAG", 
+		color=cell_colors["MAGRU"])
+
+	boxplot!(data_dist_final, Dict("numhidden"=>17, "cell"=>"AAGRU"); 
+		label="AAG", 
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>17, "cell"=>"AAGRU"); 
+		label="AAG", 
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_final, Dict("numhidden"=>18, "cell"=>"MARNN"); 
+		label="MAR", 
+		color=cell_colors["MARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>18, "cell"=>"MARNN"); 
+		label="MAR", 
+		color=cell_colors["MARNN"])
+	
+	boxplot!(data_dist_final, Dict("numhidden"=>30, "cell"=>"AARNN"); 
+		label="AAR", 
+		color=cell_colors["AARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>30, "cell"=>"AARNN"); 
+		label="AAR", 
+		color=cell_colors["AARNN"])
+	
+	
+# 	boxplot!(data_dist_combo_add, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddRNN"); 
+# 		label = "CaR10",
+# 		color=cell_colors["RNN"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_combo_add, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddRNN"); 
+# 		label = "CaR10",
+# 		color=cell_colors["RNN"])
+	
+# 	boxplot!(data_dist_combo_add, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddRNN"); 
+# 		label = "CaR15",
+# 		color=cell_colors["AARNN"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_combo_add, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddRNN"); 
+# 		label = "CaR15",
+# 		color=cell_colors["AARNN"])
+	
+# 	boxplot!(data_dist_combo_add, Dict("numhidden"=>20, "truncation"=>12, "cell"=>"CaddRNN"); 
+# 		label = "CaR20",
+# 		color=cell_colors["MARNN"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_combo_add, Dict("numhidden"=>20, "truncation"=>12, "cell"=>"CaddRNN"); 
+# 		label = "CaR20",
+# 		color=cell_colors["MARNN"])
+
+	
+	boxplot!(data_dist_combo_add, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CaddGRU"); 
+		label = "CaG6",
+		color=cell_colors["GRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_add, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CaddGRU"); 
+		label = "CaG6",
+		color=cell_colors["GRU"])
+	
+	boxplot!(data_dist_combo_add, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CaddGRU"); 
+		label = "CaG8",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_add, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CaddGRU"); 
+		label = "CaG8",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_combo_add, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddGRU"); 
+		label = "CaG10",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_add, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CaddGRU"); 
+		label = "CaG10",
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist_combo_add, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddGRU"); 
+		label = "CaG15",
+		color=cell_colors["FacMAGRU"],
+		legend=false, lw=1.5, ylims=(0.0, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_add, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CaddGRU"); 
+		label = "CaG15",
+		color=cell_colors["FacMAGRU"], xtickfontsize=6)
+
+	
+# 	boxplot!(data_dist_combo_cat, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CcatRNN"); 
+# 		label = "CcR8",
+# 		color=cell_colors["RNN"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_combo_cat, Dict("numhidden"=>8, "truncation"=>12, "cell"=>"CcatRNN"); 
+# 		label = "CcR8",
+# 		color=cell_colors["RNN"])
+	
+# 	boxplot!(data_dist_combo_cat, Dict("numhidden"=>11, "truncation"=>12, "cell"=>"CcatRNN"); 
+# 		label = "CcR11",
+# 		color=cell_colors["AARNN"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_combo_cat, Dict("numhidden"=>11, "truncation"=>12, "cell"=>"CcatRNN"); 
+# 		label = "CcR11",
+# 		color=cell_colors["AARNN"])
+	
+# 	boxplot!(data_dist_combo_cat, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CcatRNN"); 
+# 		label = "CcR15",
+# 		color=cell_colors["MARNN"],
+# 		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_combo_cat, Dict("numhidden"=>15, "truncation"=>12, "cell"=>"CcatRNN"); 
+# 		label = "CcR15",
+# 		color=cell_colors["MARNN"], xtickfontsize=6)
+	
+
+	boxplot!(data_dist_combo_cat, Dict("numhidden"=>4, "truncation"=>12, "cell"=>"CcatGRU"); 
+		label = "CcG6",
+		color=cell_colors["GRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_cat, Dict("numhidden"=>4, "truncation"=>12, "cell"=>"CcatGRU"); 
+		label = "CcG6",
+		color=cell_colors["GRU"])
+	
+	boxplot!(data_dist_combo_cat, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CcatGRU"); 
+		label = "CcG8",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_cat, Dict("numhidden"=>6, "truncation"=>12, "cell"=>"CcatGRU"); 
+		label = "CcG8",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_combo_cat, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CcatGRU"); 
+		label = "CcG10",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.0, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_cat, Dict("numhidden"=>10, "truncation"=>12, "cell"=>"CcatGRU"); 
+		label = "CcG10",
+		color=cell_colors["MAGRU"])
 	
 end
 
@@ -677,8 +919,8 @@ end
 # ╠═cefbb7a2-2a1c-43a2-ba9a-77369f80177d
 # ╠═c7f9c051-5024-4ff8-a19a-8cad57c05123
 # ╠═d3c612a3-7e0c-489c-98cc-9fde857cf27a
+# ╠═538d0e68-c644-4306-a030-a4a1bdefa97b
 # ╟─6211a38a-7b53-4054-970e-c29ad17de646
-# ╠═86e1a8ea-d844-469c-9b6c-a40b2f5ae8fb
 # ╠═e822182e-b485-4a95-a08c-efe1540ff6ad
 # ╠═025f23f6-040e-44df-8183-915cb4d1ee25
 # ╠═c1b80cfd-dbb8-41c5-a778-66b112e1c091
@@ -691,7 +933,9 @@ end
 # ╠═2dfb9219-2e99-4ee0-bf1b-464da02358a2
 # ╠═c3e8037d-fd67-4609-9c54-716d3707d25c
 # ╠═ff776339-f8a3-4204-962f-da9fd8b5bbe4
+# ╠═b4805558-8a0c-4942-8462-d02b34452222
 # ╠═f2c005aa-e4d6-449c-a345-ef2fea5ee03e
+# ╠═0b15129e-a281-49bc-9c87-f3db376e01ea
 # ╠═b1beea3f-28c4-4d6e-9738-601ac71e51df
 # ╠═e2a991a9-580d-44eb-86ff-468686fcae11
 # ╠═305f8ac8-8f5f-4ec4-84a6-867f69a8887c
