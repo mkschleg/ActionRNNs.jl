@@ -29,6 +29,7 @@ truncation = 16
 deep = false 
 
 [sweep_args]
-"cell+numhidden" = [["CaddRNN", 114], ["CaddGRU", 54], ["CcatRNN", 92], ["CcatGRU", 45]]
+#"cell+numhidden" = [["CaddRNN", 114], ["CaddGRU", 54], ["CcatRNN", 92], ["CcatGRU", 45]]
+"cell+numhidden" = [["CaddAAGRU", 102], ["CaddMAGRU", 38]]
 eta = "0.1 .* 1.6 .^(-18:2:-4)"
 seed = "1:5"
