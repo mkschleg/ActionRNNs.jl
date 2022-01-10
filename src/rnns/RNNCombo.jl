@@ -59,7 +59,7 @@ function (m::CaddRNNCell)(h, x::Tuple{A, X}) where {A, X}
     end
 
     # adding together state
-    new_h = w[1]*new_ha + w[2]*new_hm
+    new_h = (w[1]*new_ha + w[2]*new_hm) ./ sum(w)
 
     sz = size(o)
     return new_h, reshape(new_h, :, sz[2:end]...)
@@ -85,7 +85,6 @@ Flux.Recur(m::CaddRNNCell) = Flux.Recur(m, m.state0)
 
 struct CcatRNNCell{F,A,V,T,S} <: AbstractActionRNN
     σ::F
-    w::V
     Wi::A
     Wa::A
     Wha::A
@@ -104,7 +103,6 @@ CcatRNNCell(in::Integer,
           initb=Flux.zeros,
           init_state=Flux.zeros) = 
               CcatRNNCell(σ,
-                        Flux.ones(2),
                         init(out, in),
                         init(out, na),
                         init(out, out*2),
@@ -115,7 +113,7 @@ CcatRNNCell(in::Integer,
                         init_state(out*2, 1))
 
 function (m::CcatRNNCell)(h, x::Tuple{A, X}) where {A, X}
-    σ, w, Wi, Wa, Wha, ba = m.σ, m.w, m.Wi, m.Wa, m.Wha, m.ba
+    σ, Wi, Wa, Wha, ba = m.σ, m.Wi, m.Wa, m.Wha, m.ba
     Wx, Whm, bm = m.Wx, m.Whm, m.bm
 
     o = x[2]
@@ -136,7 +134,7 @@ function (m::CcatRNNCell)(h, x::Tuple{A, X}) where {A, X}
     end
 
     # concatenating together state
-    new_h = vcat(w[1]*new_ha, w[2]*new_hm)
+    new_h = vcat(new_ha, new_hm)
 
     sz = size(o)
     return new_h, reshape(new_h, :, sz[2:end]...)

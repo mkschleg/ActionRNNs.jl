@@ -160,7 +160,36 @@ function lunar_lander_args()
             "deep" => true,
             "internal_a" => 64,
         )
-
+        Dict{String,Any}(
+            "cell" => "CaddRNN",
+            "numhidden" => 114,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddGRU",
+            "numhidden" => 54,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddAAGRU",
+            "numhidden" => 102,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddMAGRU",
+            "numhidden" => 38,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatRNN",
+            "numhidden" => 92,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatGRU",
+            "numhidden" => 45,
+            "deep" => false,
+        )
     ]
 end
 
@@ -229,6 +258,36 @@ function viz_dir_tmaze_args()
             "deep" => true,
             "internal_a" => 16,
         )
+        Dict{String,Any}(
+            "cell" => "CaddRNN",
+            "numhidden" => 111,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddGRU",
+            "numhidden" => 52,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddAAGRU",
+            "numhidden" => 85,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddMAGRU",
+            "numhidden" => 39,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatRNN",
+            "numhidden" => 89,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatGRU",
+            "numhidden" => 44,
+            "deep" => false,
+        )
     ]
 end
 
@@ -296,6 +355,36 @@ function viz_dir_tmaze_args_2()
             "output_size" => 128,
             "deep" => true,
             "internal_a" => 11,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddRNN",
+            "numhidden" => 58,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddGRU",
+            "numhidden" => 26,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddAAGRU",
+            "numhidden" => 44,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddMAGRU",
+            "numhidden" => 19,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatRNN",
+            "numhidden" => 49,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatGRU",
+            "numhidden" => 23,
+            "deep" => false,
         )
     ]
 end
