@@ -248,38 +248,55 @@ let
 # 		color=cell_colors["FacMARNN"])
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>114, "cell"=>"CaddRNN"); 
-		label = "CaddRNN",
+		label = "CaR",
 		color=cell_colors["FacMARNN"],
 		legend=false, lw=1.5, ylims=(-50, 150), tickdir=:out, grid=false)
 	dotplot!(data_dist_combo, Dict("numhidden"=>114, "cell"=>"CaddRNN"); 
-		label = "CaddRNN",
+		label = "CaR",
 		color=cell_colors["FacMARNN"])
 	
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>54, "cell"=>"CaddGRU"); 
-		label = "CaddGRU",
+		label = "CaG",
 		color=cell_colors["FacMAGRU"],
 		legend=false, lw=1.5, ylims=(-50, 180), tickdir=:out, grid=false)
 	dotplot!(data_dist_combo, Dict("numhidden"=>54, "cell"=>"CaddGRU"); 
-		label = "CaddGRU",
+		label = "CaG",
 		color=cell_colors["FacMAGRU"])
+	
+	boxplot!(data_dist_combo, Dict("numhidden"=>102, "cell"=>"CaddAAGRU"); 
+		label = "CaAAG",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(-50, 150), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo, Dict("numhidden"=>102, "cell"=>"CaddAAGRU"); 
+		label = "CaAAG",
+		color=cell_colors["AAGRU"])
+	
+	
+	boxplot!(data_dist_combo, Dict("numhidden"=>38, "cell"=>"CaddMAGRU"); 
+		label = "CaMAG",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(-50, 180), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo, Dict("numhidden"=>38, "cell"=>"CaddMAGRU"); 
+		label = "CaMAG",
+		color=cell_colors["MAGRU"])
 	
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>92, "cell"=>"CcatRNN"); 
-		label = "CcatRNN",
+		label = "CcR",
 		color=cell_colors["FacMARNN"],
 		legend=false, lw=1.5, ylims=(-50, 150), tickdir=:out, grid=false)
 	dotplot!(data_dist_combo, Dict("numhidden"=>92, "cell"=>"CcatRNN"); 
-		label = "CcatRNN",
+		label = "CcR",
 		color=cell_colors["FacMARNN"])
 	
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>45, "cell"=>"CcatGRU"); 
-		label = "CcatGRU",
+		label = "CcG",
 		color=cell_colors["FacMAGRU"],
 		legend=false, lw=1.5, ylims=(-50, 200), tickdir=:out, grid=false)
 	dotplot!(data_dist_combo, Dict("numhidden"=>45, "cell"=>"CcatGRU"); 
-		label = "CcatGRU",
+		label = "CcG",
 		color=cell_colors["FacMAGRU"])
 	
 end

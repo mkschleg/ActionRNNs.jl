@@ -25,8 +25,7 @@ output_size = 128
 deep = false 
 
 [sweep_args]
-#"cell+numhidden" = [["CaddRNN", 111], ["CaddGRU", 52], ["CcatRNN", 89], ["CcatGRU", 44], ["CaddRNN", 58], ["CaddGRU", 26], ["CcatRNN", 49], ["CcatGRU", 23]]
-"cell+numhidden" = [["CaddAAGRU", 85], ["CaddMAGRU", 39], ["CaddAAGRU", 44], ["CaddMAGRU", 19]]
+"cell+numhidden" = [["CaddRNN", 111], ["CaddGRU", 52], ["CcatRNN", 89], ["CcatGRU", 44], ["CaddRNN", 58], ["CaddGRU", 26], ["CcatRNN", 49], ["CcatGRU", 23], ["CaddAAGRU", 85], ["CaddMAGRU", 39], ["CaddAAGRU", 44], ["CaddMAGRU", 19]]
 eta = "(2.0.^(-20:2:-6))"
 truncation = [12, 20]
-seed = "1:5"
+seed = "6:20"

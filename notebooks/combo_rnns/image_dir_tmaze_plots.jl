@@ -243,13 +243,13 @@ let
 		color=cell_colors["AAGRU"])
 	
 	
-	boxplot!(data_dist_aagru, Dict("numhidden"=>122, "truncation"=>truncation, "internal_a"=>32); 
-		label = "DAA32",
-		color=cell_colors["AAGRU"],
-		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
-	dotplot!(data_dist_aagru, Dict("numhidden"=>122, "truncation"=>truncation, "internal_a"=>32); 
-		label = "DAA32",
-		color=cell_colors["AAGRU"])
+	# boxplot!(data_dist_aagru, Dict("numhidden"=>122, "truncation"=>truncation, "internal_a"=>32); 
+	# 	label = "DAA32",
+	# 	color=cell_colors["AAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	# dotplot!(data_dist_aagru, Dict("numhidden"=>122, "truncation"=>truncation, "internal_a"=>32); 
+	# 	label = "DAA32",
+	# 	color=cell_colors["AAGRU"])
 	
 	boxplot!(data_dist_aagru, Dict("numhidden"=>112, "truncation"=>truncation, "internal_a"=>64); 
 		label = "DAA64",
@@ -259,21 +259,21 @@ let
 		label = "DAA64",
 		color=cell_colors["AAGRU"])
 	
-	boxplot!(data_dist_aagru, Dict("numhidden"=>100, "truncation"=>truncation, "internal_a"=>128); 
-		label = "DAA128",
-		color=cell_colors["AAGRU"],
-		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
-	dotplot!(data_dist_aagru, Dict("numhidden"=>100, "truncation"=>truncation, "internal_a"=>128); 
-		label = "DAA128",
-		color=cell_colors["AAGRU"])
+# 	boxplot!(data_dist_aagru, Dict("numhidden"=>100, "truncation"=>truncation, "internal_a"=>128); 
+# 		label = "DAA128",
+# 		color=cell_colors["AAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_aagru, Dict("numhidden"=>100, "truncation"=>truncation, "internal_a"=>128); 
+# 		label = "DAA128",
+# 		color=cell_colors["AAGRU"])
 	
-	boxplot!(data_dist_aagru, Dict("numhidden"=>75, "truncation"=>truncation, "internal_a"=>256); 
-		label = "DAA256",
-		color=cell_colors["AAGRU"],
-		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
-	dotplot!(data_dist_aagru, Dict("numhidden"=>75, "truncation"=>truncation, "internal_a"=>256); 
-		label = "DAA256",
-		color=cell_colors["AAGRU"])
+# 	boxplot!(data_dist_aagru, Dict("numhidden"=>75, "truncation"=>truncation, "internal_a"=>256); 
+# 		label = "DAA256",
+# 		color=cell_colors["AAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_aagru, Dict("numhidden"=>75, "truncation"=>truncation, "internal_a"=>256); 
+# 		label = "DAA256",
+# 		color=cell_colors["AAGRU"])
 	
 	
 	boxplot!(data_dist_magru, Dict("numhidden"=>32, "truncation"=>truncation, "internal_a"=>8); 
@@ -284,13 +284,13 @@ let
 		label = "DMA8",
 		color=cell_colors["MAGRU"])
 	
-	boxplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
-		label = "DMA16",
-		color=cell_colors["MAGRU"],
-		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
-		label = "DMA16",
-		color=cell_colors["MAGRU"], title="AA nh: 132, MA nh: 64, truncation: $(truncation)")
+	# boxplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
+	# 	label = "DMA16",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
+	# 	label = "DMA16",
+	# 	color=cell_colors["MAGRU"], title="AA nh: 132, MA nh: 64, truncation: $(truncation)")
 	
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>111, "truncation"=>truncation, "cell"=>"CaddRNN"); 
@@ -308,6 +308,22 @@ let
 	dotplot!(data_dist_combo, Dict("numhidden"=>52, "truncation"=>truncation, "cell"=>"CaddGRU"); 
 		label = "CaG",
 		color=cell_colors["FacMAGRU"])
+	
+	boxplot!(data_dist_combo, Dict("numhidden"=>85, "truncation"=>truncation, "cell"=>"CaddAAGRU"); 
+		label = "CaAAG",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo, Dict("numhidden"=>85, "truncation"=>truncation, "cell"=>"CaddAAGRU"); 
+		label = "CaAAG",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_combo, Dict("numhidden"=>39, "truncation"=>truncation, "cell"=>"CaddMAGRU"); 
+		label = "CaMAG",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo, Dict("numhidden"=>39, "truncation"=>truncation, "cell"=>"CaddMAGRU"); 
+		label = "CaMAG",
+		color=cell_colors["MAGRU"])
 	
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>89, "truncation"=>truncation, "cell"=>"CcatRNN"); 
@@ -364,21 +380,21 @@ let
 		color=cell_colors["AAGRU"])
 	
 	
-	boxplot!(data_dist_aagru, Dict("numhidden"=>65, "truncation"=>truncation, "internal_a"=>16); 
-		label = "DAA16",
-		color=cell_colors["AAGRU"],
-		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
-	dotplot!(data_dist_aagru, Dict("numhidden"=>65, "truncation"=>truncation, "internal_a"=>16); 
-		label = "DAA16",
-		color=cell_colors["AAGRU"])
+# 	boxplot!(data_dist_aagru, Dict("numhidden"=>65, "truncation"=>truncation, "internal_a"=>16); 
+# 		label = "DAA16",
+# 		color=cell_colors["AAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_aagru, Dict("numhidden"=>65, "truncation"=>truncation, "internal_a"=>16); 
+# 		label = "DAA16",
+# 		color=cell_colors["AAGRU"])
 	
-	boxplot!(data_dist_aagru, Dict("numhidden"=>60, "truncation"=>truncation, "internal_a"=>32); 
-		label = "DAA32",
-		color=cell_colors["AAGRU"],
-		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
-	dotplot!(data_dist_aagru, Dict("numhidden"=>60, "truncation"=>truncation, "internal_a"=>32); 
-		label = "DAA32",
-		color=cell_colors["AAGRU"])
+# 	boxplot!(data_dist_aagru, Dict("numhidden"=>60, "truncation"=>truncation, "internal_a"=>32); 
+# 		label = "DAA32",
+# 		color=cell_colors["AAGRU"],
+# 		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+# 	dotplot!(data_dist_aagru, Dict("numhidden"=>60, "truncation"=>truncation, "internal_a"=>32); 
+# 		label = "DAA32",
+# 		color=cell_colors["AAGRU"])
 	
 	boxplot!(data_dist_aagru, Dict("numhidden"=>55, "truncation"=>truncation, "internal_a"=>64); 
 		label = "DAA64",
@@ -388,22 +404,22 @@ let
 		label = "DAA64",
 		color=cell_colors["AAGRU"])
 	
-	boxplot!(data_dist_aagru, Dict("numhidden"=>45, "truncation"=>truncation, "internal_a"=>128); 
-		label = "DAA128",
-		color=cell_colors["AAGRU"],
-		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
-	dotplot!(data_dist_aagru, Dict("numhidden"=>45, "truncation"=>truncation, "internal_a"=>128); 
-		label = "DAA128",
-		color=cell_colors["AAGRU"])
+	# boxplot!(data_dist_aagru, Dict("numhidden"=>45, "truncation"=>truncation, "internal_a"=>128); 
+	# 	label = "DAA128",
+	# 	color=cell_colors["AAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	# dotplot!(data_dist_aagru, Dict("numhidden"=>45, "truncation"=>truncation, "internal_a"=>128); 
+	# 	label = "DAA128",
+	# 	color=cell_colors["AAGRU"])
 	
 	
-	boxplot!(data_dist_magru, Dict("numhidden"=>14, "truncation"=>truncation, "internal_a"=>8); 
-		label = "DMA8",
-		color=cell_colors["MAGRU"],
-		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_magru, Dict("numhidden"=>14, "truncation"=>truncation, "internal_a"=>8); 
-		label = "DMA8",
-		color=cell_colors["MAGRU"])
+	# boxplot!(data_dist_magru, Dict("numhidden"=>14, "truncation"=>truncation, "internal_a"=>8); 
+	# 	label = "DMA8",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_magru, Dict("numhidden"=>14, "truncation"=>truncation, "internal_a"=>8); 
+	# 	label = "DMA8",
+	# 	color=cell_colors["MAGRU"])
 	
 	boxplot!(data_dist_magru, Dict("numhidden"=>11, "truncation"=>truncation, "internal_a"=>11); 
 		label = "DMA11",
@@ -429,6 +445,22 @@ let
 	dotplot!(data_dist_combo, Dict("numhidden"=>26, "truncation"=>truncation, "cell"=>"CaddGRU"); 
 		label = "CaG",
 		color=cell_colors["FacMAGRU"])
+	
+	boxplot!(data_dist_combo, Dict("numhidden"=>44, "truncation"=>truncation, "cell"=>"CaddAAGRU"); 
+		label = "CaAAG",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo, Dict("numhidden"=>44, "truncation"=>truncation, "cell"=>"CaddAAGRU"); 
+		label = "CaAAG",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_combo, Dict("numhidden"=>19, "truncation"=>truncation, "cell"=>"CaddMAGRU"); 
+		label = "CaMAG",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo, Dict("numhidden"=>19, "truncation"=>truncation, "cell"=>"CaddMAGRU"); 
+		label = "CaMAG",
+		color=cell_colors["MAGRU"])
 	
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>49, "truncation"=>truncation, "cell"=>"CcatRNN"); 
