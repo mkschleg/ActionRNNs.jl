@@ -338,7 +338,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
             eps += 1
         end
         save_results = logger.data
-        (;save_results = save_results)
+        (;agent = agent, save_results = save_results)
     end
 end
 
