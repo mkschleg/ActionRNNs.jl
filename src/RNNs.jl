@@ -93,11 +93,7 @@ include("rnns/mixture_rnns.jl")
 include("rnns/mixture_grus.jl")
 
 # Keep list of all the non-specialized RNN types in ActionRNNs
-rnn_types() = ["AARNN", "MARNN", "MAARNNadd", "AAGRU", "MAGRU", "AALSTM", "MALSTM"]
-fac_rnn_types() = ["FacMARNN", "FacMAGRU"]
-fac_tuc_rnn_types() = ["FacTucMARNN", "FacTucMAGRU"]
-gated_rnn_types() = ["ActionGatedRNN", "GAIARNN", "GAIGRU", "GAIAGRU", "GAUGRU", "GAIALSTM"]
-combo_add_rnn_types() = ["CaddRNN", "CaddGRU", "CaddAAGRU", "CaddMAGRU", "CaddElRNN"]
-combo_cat_rnn_types() = ["CcatRNN", "CcatGRU"]
 
-mixture_rnn_types() = ["MixRNN", "MixElRNN", "MixElGRU", "MixGRU"]
+include("rnns/construct.jl")
+
+
