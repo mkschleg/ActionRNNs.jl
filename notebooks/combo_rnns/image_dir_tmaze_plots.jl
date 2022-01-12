@@ -208,7 +208,7 @@ data_dist_final = RPU.get_line_data_for(
 
 # ╔═╡ b1beea3f-28c4-4d6e-9738-601ac71e51df
 let
-	truncation = 12
+	truncation = 20
 # 	boxplot(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
 # 		label = "DMA",
 # 		color=cell_colors["MAGRU"],
@@ -240,7 +240,7 @@ let
 		legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
 	dotplot!(data_dist_final, Dict("numhidden"=>132, "truncation"=>truncation, "cell"=>"AAGRU"); 
 		label = "AA",
-		color=cell_colors["AAGRU"])
+		color=cell_colors["AAGRU"], title="AA nh: 132, MA nh: 64, truncation: $(truncation)")
 	
 	
 	# boxplot!(data_dist_aagru, Dict("numhidden"=>122, "truncation"=>truncation, "internal_a"=>32); 
@@ -345,7 +345,7 @@ end
 
 # ╔═╡ 9725440a-b7d8-4b6b-b8e2-64b4cec96feb
 let
-	truncation = 12
+	truncation = 20
 # 	boxplot(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
 # 		label = "DMA",
 # 		color=cell_colors["MAGRU"],

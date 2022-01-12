@@ -101,7 +101,6 @@ get_ann(parsed, fs, env, rng) = get_ann(parsed, fs, length(get_actions(env)), rn
 function get_ann(parsed, fs::Int, na::Int, rng)
 
     nh = parsed["numhidden"]
-    # na = length(get_actions(env))
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
     
     
@@ -354,7 +353,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
             eps += 1
         end
         save_results = logger.data
-        (;agent = agent, save_results = save_results)
+        (;save_results = save_results)
     end
 end
 

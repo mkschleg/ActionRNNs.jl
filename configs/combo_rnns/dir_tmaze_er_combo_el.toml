@@ -1,0 +1,29 @@
+[config]
+save_dir="dir_tmaze_er_combo_el"
+exp_file="experiment/dir_tmaze_er.jl"
+exp_module_name = "DirectionalTMazeERExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iter"
+
+[static_args]
+steps = 300000
+opt = "RMSProp"
+rho = 0.99
+
+size = 10
+gamma = 0.99
+batch_size = 8
+
+warm_up = 1000
+hs_learnable = true
+update_wait = 4
+target_update_wait = 1000
+replay_size = 20000
+
+deep = false 
+
+[sweep_args]
+"cell+numhidden+num_experts" = [["CaddRNN", 15, 0], ["CaddElRNN", 15, 0], ["MixRNN", 21, 2], ["MixElRNN", 21, 2], ["MixRNN", 17, 3], ["MixElRNN", 17, 3], ["MixRNN", 12, 5], ["MixElRNN", 12, 5], ["CaddGRU", 8, 0], ["CaddElGRU", 8, 0], ["MixGRU", 11, 2], ["MixElGRU", 11, 2], ["MixGRU", 9, 3], ["MixElGRU", 9, 3], ["MixGRU", 6, 5], ["MixElGRU", 6, 5]]
+eta = "0.01*(1.6.^(-11:2:-1))"
+truncation = [12, 20]
+seed = "1:20"

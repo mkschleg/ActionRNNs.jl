@@ -2,6 +2,7 @@ using ActionRNNs
 using Random
 using Flux 
 include("../../experiment/dir_tmaze_er.jl")
+include("../../experiment/tmaze_er.jl")
 include("../../experiment/ringworld_er.jl")
 include("../../experiment/lunar_lander.jl")
 include("../../experiment/viz_dir_tmaze.jl")
@@ -57,16 +58,6 @@ function dir_tmaze_er_args()
             "internal_o" => 12,
         )
         Dict{String,Any}(
-            "cell" => "CaddRNN",
-            "numhidden" => 15,
-            "deep" => false,
-        )
-        Dict{String,Any}(
-            "cell" => "CaddGRU",
-            "numhidden" => 8,
-            "deep" => false,
-        )
-        Dict{String,Any}(
             "cell" => "CcatRNN",
             "numhidden" => 11,
             "deep" => false,
@@ -75,6 +66,225 @@ function dir_tmaze_er_args()
             "cell" => "CcatGRU",
             "numhidden" => 6,
             "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddRNN",
+            "numhidden" => 15,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddElRNN",
+            "numhidden" => 15,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MixRNN",
+            "numhidden" => 21,
+            "deep" => false,
+            "num_experts" => 2,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElRNN",
+            "numhidden" => 21,
+            "deep" => false,
+            "num_experts" => 2,
+        )
+        Dict{String,Any}(
+            "cell" => "MixRNN",
+            "numhidden" => 17,
+            "deep" => false,
+            "num_experts" => 3,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElRNN",
+            "numhidden" => 17,
+            "deep" => false,
+            "num_experts" => 3,
+        )
+        Dict{String,Any}(
+            "cell" => "MixRNN",
+            "numhidden" => 12,
+            "deep" => false,
+            "num_experts" => 5,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElRNN",
+            "numhidden" => 12,
+            "deep" => false,
+            "num_experts" => 5,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddGRU",
+            "numhidden" => 8,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddElGRU",
+            "numhidden" => 8,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MixGRU",
+            "numhidden" => 11,
+            "deep" => false,
+            "num_experts" => 2,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElGRU",
+            "numhidden" => 11,
+            "deep" => false,
+            "num_experts" => 2,
+        )
+        Dict{String,Any}(
+            "cell" => "MixGRU",
+            "numhidden" => 9,
+            "deep" => false,
+            "num_experts" => 3,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElGRU",
+            "numhidden" => 9,
+            "deep" => false,
+            "num_experts" => 3,
+        )
+        Dict{String,Any}(
+            "cell" => "MixGRU",
+            "numhidden" => 6,
+            "deep" => false,
+            "num_experts" => 5,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElGRU",
+            "numhidden" => 6,
+            "deep" => false,
+            "num_experts" => 5,
+        )
+    ]
+end
+
+function tmaze_er_args()
+    [
+        Dict{String,Any}(
+            "cell" => "AARNN",
+            "numhidden" => 12,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MARNN",
+            "numhidden" => 6,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "AAGRU",
+            "numhidden" => 6,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MAGRU",
+            "numhidden" => 3,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatRNN",
+            "numhidden" => 4,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CcatGRU",
+            "numhidden" => 2,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddRNN",
+            "numhidden" => 5,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddElRNN",
+            "numhidden" => 5,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MixRNN",
+            "numhidden" => 8,
+            "deep" => false,
+            "num_experts" => 2,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElRNN",
+            "numhidden" => 8,
+            "deep" => false,
+            "num_experts" => 2,
+        )
+        Dict{String,Any}(
+            "cell" => "MixRNN",
+            "numhidden" => 6,
+            "deep" => false,
+            "num_experts" => 3,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElRNN",
+            "numhidden" => 6,
+            "deep" => false,
+            "num_experts" => 3,
+        )
+        Dict{String,Any}(
+            "cell" => "MixRNN",
+            "numhidden" => 4,
+            "deep" => false,
+            "num_experts" => 5,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElRNN",
+            "numhidden" => 4,
+            "deep" => false,
+            "num_experts" => 5,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddGRU",
+            "numhidden" => 2,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "CaddElGRU",
+            "numhidden" => 2,
+            "deep" => false,
+        )
+        Dict{String,Any}(
+            "cell" => "MixGRU",
+            "numhidden" => 4,
+            "deep" => false,
+            "num_experts" => 2,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElGRU",
+            "numhidden" => 4,
+            "deep" => false,
+            "num_experts" => 2,
+        )
+        Dict{String,Any}(
+            "cell" => "MixGRU",
+            "numhidden" => 3,
+            "deep" => false,
+            "num_experts" => 3,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElGRU",
+            "numhidden" => 3,
+            "deep" => false,
+            "num_experts" => 3,
+        )
+        Dict{String,Any}(
+            "cell" => "MixGRU",
+            "numhidden" => 2,
+            "deep" => false,
+            "num_experts" => 5,
+        )
+        Dict{String,Any}(
+            "cell" => "MixElGRU",
+            "numhidden" => 2,
+            "deep" => false,
+            "num_experts" => 5,
         )
     ]
 end
@@ -396,6 +606,22 @@ function main(env_name)
         env = DirectionalTMaze(10)
         rng = Random.MersenneTwister(1)
         args_list = dir_tmaze_er_args()
+        parsed = module_name.default_config()
+        for args in args_list
+            for (key, value) in args
+                parsed[key] = value
+            end
+            agent = module_name.construct_agent(env, parsed, rng)
+            num_params = size(Flux.destructure(agent.model)[1])
+            println("parsed: $(args)")
+            println("number of parameters: $(num_params)")
+        end
+
+    elseif env_name == "tmaze_er"
+        module_name = TMazeERExperiment
+        env = TMaze(10)
+        rng = Random.MersenneTwister(1)
+        args_list = tmaze_er_args()
         parsed = module_name.default_config()
         for args in args_list
             for (key, value) in args

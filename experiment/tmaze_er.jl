@@ -58,7 +58,9 @@ function default_config()
     
 end
 
-function get_ann(parsed, fs, env, rng)
+get_ann(parsed, fs, env, rng) = get_ann(parsed, fs, length(get_actions(env)), rng)
+
+function get_ann(parsed, fs::Int, na::Int, rng)
 
     nh = parsed["numhidden"]
     init_func = (dims...)->ActionRNNs.glorot_uniform(rng, dims...)
@@ -67,10 +69,11 @@ function get_ann(parsed, fs, env, rng)
         
         factors = parsed["factors"]
         
-        Flux.Chain(ActionRNNs.FacARNN(fs, 4, nh, factors;
+        Flux.Chain(ActionRNNs.FacARNN(fs, na, nh, factors;
                                       init=init_func,
                                       initb=init_func),
-                   Flux.Dense(nh, length(get_actions(env)); initW=init_func))
+                   Flux.Dense(nh, na; initW=init_func))
+
     elseif parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
 
         rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
@@ -80,10 +83,54 @@ function get_ann(parsed, fs, env, rng)
             ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
-        Flux.Chain(rnn(fs, 4, nh, factors;
+        Flux.Chain(rnn(fs, na, nh, factors;
                        init=init_func,
                        initb=initb),
-                   Flux.Dense(nh, 4; initW=init_func))
+                   Flux.Dense(nh, na; initW=init_func))
+
+    elseif parsed["cell"] ∈ ActionRNNs.combo_add_rnn_types() 
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        m = Flux.Chain(
+            rnn(fs, na, nh;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh, na; initW=init_func))
+
+    elseif parsed["cell"] ∈ ActionRNNs.combo_cat_rnn_types()
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        m = Flux.Chain(
+            rnn(fs, na, nh;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh*2, na; initW=init_func))
+
+    elseif parsed["cell"] ∈ ActionRNNs.mixture_rnn_types()
+
+        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
+        
+        init_func = (dims...; kwargs...)->
+            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
+        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
+
+        ne = parsed["num_experts"]
+        
+        m = Flux.Chain(
+            rnn(fs, na, nh, ne;
+                init=init_func,
+                initb=initb),
+            Flux.Dense(nh, na; initW=init_func))
         
     elseif parsed["cell"] ∈ ActionRNNs.rnn_types()
 
@@ -94,11 +141,10 @@ function get_ann(parsed, fs, env, rng)
         initb = (dims...; kwargs...) -> Flux.zeros(dims...)
         
         m = Flux.Chain(
-            rnn(fs, 4, nh;
+            rnn(fs, na, nh;
                 init=init_func,
                 initb=initb),
-            Flux.Dense(nh, length(get_actions(env)); initW=init_func))
-
+            Flux.Dense(nh, na; initW=init_func))
 
     else
         
@@ -199,8 +245,8 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
                                                (:loss, usa[:avg_loss]),
                                                (:l1, usa[:l1]/n),
                                                (:action, a.action),
-                                               (:preds, a.preds),
-                                               (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
+                                               (:preds, a.preds)])
+                                            #    (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
                 end
                 success = success || (r == 4.0)
                 if !(a.update_state isa Nothing)

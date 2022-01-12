@@ -97,7 +97,7 @@ rnn_types() = ["AARNN", "MARNN", "MAARNNadd", "AAGRU", "MAGRU", "AALSTM", "MALST
 fac_rnn_types() = ["FacMARNN", "FacMAGRU"]
 fac_tuc_rnn_types() = ["FacTucMARNN", "FacTucMAGRU"]
 gated_rnn_types() = ["ActionGatedRNN", "GAIARNN", "GAIGRU", "GAIAGRU", "GAUGRU", "GAIALSTM"]
-combo_add_rnn_types() = ["CaddRNN", "CaddGRU", "CaddAAGRU", "CaddMAGRU", "CaddElRNN"]
+combo_add_rnn_types() = ["CaddRNN", "CaddGRU", "CaddElRNN", "CaddElGRU", "CaddAAGRU", "CaddMAGRU"]
 combo_cat_rnn_types() = ["CcatRNN", "CcatGRU"]
 
 mixture_rnn_types() = ["MixRNN", "MixElRNN", "MixElGRU", "MixGRU"]
