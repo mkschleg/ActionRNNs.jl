@@ -81,7 +81,7 @@ function default_config()
 
 end
 
-function build_deep_action_rnn_layers(in, out, parsed, rng)
+function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
 
     # Deep actions for RNNs from Zhu et al 2018
     internal_a = parsed["internal_a"]
