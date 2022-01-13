@@ -92,7 +92,6 @@ include("rnns/GRUCombo.jl")
 include("rnns/mixture_rnns.jl")
 include("rnns/mixture_grus.jl")
 
-# Keep list of all the non-specialized RNN types in ActionRNNs
 
 include("rnns/construct.jl")
 

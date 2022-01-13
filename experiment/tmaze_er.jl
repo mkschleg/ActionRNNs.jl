@@ -64,6 +64,7 @@ function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
     internal_a = parsed["internal_a"]
     internal_o = parsed["internal_o"]
     
+
     init_func, initb = ActionRNNs.get_init_funcs(rng)
     
     action_stream = Flux.Chain(
@@ -185,8 +186,8 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
                                                (:loss, usa[:avg_loss]),
                                                (:l1, usa[:l1]/n),
                                                (:action, a.action),
-                                               (:preds, a.preds),
-                                               (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
+                                               (:preds, a.preds)])
+                                            #    (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
                 end
                 success = success || (r == 4.0)
                 if !(a.update_state isa Nothing)

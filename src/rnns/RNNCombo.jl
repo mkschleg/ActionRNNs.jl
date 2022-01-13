@@ -226,7 +226,6 @@ function (m::CaddElRNNCell)(h, x::Tuple{A, X}) where {A, X}
     # adding together state
     # new_h = (w[1]*new_ha + w[2]*new_hm) ./ sum(w)
     new_h = (θa .* new_ha .+ θm .* new_hm) ./ (θa .+ θm)
-    
 
     sz = size(o)
     return new_h, reshape(new_h, :, sz[2:end]...)

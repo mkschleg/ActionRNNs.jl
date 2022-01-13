@@ -96,10 +96,11 @@ end
 
 function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
 
+
     # Deep actions for RNNs from Zhu et al 2018
     internal_a = parsed["internal_a"]
     internal_o = parsed["internal_o"]
-    
+
     init_func, initb = ActionRNNs.get_init_funcs(rng)
     
     action_stream = Flux.Chain(
@@ -235,7 +236,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
             eps += 1
         end
         save_results = logger.data
-        (;agent = agent, save_results = save_results)
+        (;save_results = save_results)
     end
 end
 
