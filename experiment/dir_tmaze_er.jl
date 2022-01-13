@@ -110,9 +110,9 @@ function build_deep_action_rnn_layers(in, out, parsed, rng)
     obs_stream = Flux.Chain(
         Flux.Dense(in, internal_o, Flux.relu, initW=init_func)
     )
-    
+
     (ActionRNNs.DualStreams(action_stream, obs_stream),
-     ActionRNNs.build_rnn_layer(latent_o_dim, latent_a_dim, out, parsed, rng))
+     ActionRNNs.build_rnn_layer(internal_a, internal_o, out, parsed, rng))
 end
 
 function build_ann(in, actions::Int, parsed, rng)

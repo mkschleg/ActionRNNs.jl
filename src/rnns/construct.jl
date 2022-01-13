@@ -78,6 +78,8 @@ function build_rnn_layer(::BuildFactored, rnn_type,
                          initb=get_init_funcs(rng)[2],
                          default_init_style="standard", kwargs...)
 
+    @assert "factors" ∈ keys(parsed)
+    
     factors = parsed["factors"]
     init_style = get(parsed, "init_style", default_init_style)
 
@@ -101,6 +103,10 @@ function build_rnn_layer(::BuildTucFactored,
                          init_func=get_init_funcs(rng)[1],
                          initb=get_init_funcs(rng)[2],
                          default_init_style="standard", kwargs...)
+
+    @assert "action_factors" ∈ keys(parsed)
+    @assert "out_factors" ∈ keys(parsed)
+    @assert "in_factors" ∈ keys(parsed)
 
     action_factors = parsed["action_factors"]
     out_factors = parsed["out_factors"]
@@ -165,6 +171,8 @@ function build_rnn_layer(::BuildMixed, rnn_type,
                          init_func=get_init_funcs(rng)[1],
                          initb=get_init_funcs(rng)[2], kwargs...)
 
+    @assert "num_experts" ∈ keys(parsed)
+    
     ne = parsed["num_experts"]
     rnn_type(fs, na, nh, ne;
         init=init_func,
