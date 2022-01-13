@@ -81,114 +81,41 @@ function default_config()
 
 end
 
-function get_model(parsed, out_horde, fs, rng)
+function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
 
+    # Deep actions for RNNs from Zhu et al 2018
+    internal_a = parsed["internal_a"]
+    
+    init_func, initb = ActionRNNs.get_init_funcs(rng)
+    
+    action_stream = Flux.Chain(
+        (a)->Flux.onehotbatch(a, 1:actions),
+        Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
+    )
+
+    obs_stream = identity
+        # Flux.Dense(in, internal_o, Flux.relu, initW=init_func)
+    # )
+    
+    (ActionRNNs.DualStreams(action_stream, obs_stream),
+     ActionRNNs.build_rnn_layer(in, internal_a, out, parsed, rng))
+end
+
+function build_ann(in, actions, out, parsed, rng)
+    
     nh = parsed["numhidden"]
-    na = 2
-    init_func = (dims...)->glorot_uniform(rng, dims...)
-    num_gvfs = length(out_horde)
+    init_func, initb = ActionRNNs.get_init_funcs(rng)
 
-    chain = begin
-        if parsed["cell"] ∈ ActionRNNs.fac_rnn_types()
-
-            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
-            factors = parsed["factors"]
-            init_style = get(parsed, "init_style", "standard")
-
-            init_func = (dims...; kwargs...)->
-                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-            
-            Flux.Chain(rnn(fs, na, nh, factors;
-                           init_style=init_style,
-                           init=init_func,
-                           initb=initb),
-                       Flux.Dense(nh, num_gvfs; initW=init_func))
-
-        elseif parsed["cell"] ∈ ActionRNNs.fac_tuc_rnn_types()
-
-            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
-            action_factors = parsed["action_factors"]
-            out_factors = parsed["out_factors"]
-            in_factors = parsed["in_factors"]
-            init_func = (dims...; kwargs...)->
-                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-
-            Flux.Chain(rnn(fs, na, nh, action_factors, out_factors, in_factors;
-                           init=init_func,
-                           initb=initb),
-                       Flux.Dense(nh, num_gvfs; initW=init_func))
-            
-        elseif parsed["cell"] ∈ ActionRNNs.rnn_types() && !get(parsed, "deep", false)
-
-            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
-            
-            init_func = (dims...; kwargs...)->
-                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-            
-            m = Flux.Chain(
-                rnn(fs, 2, nh;
-                    init=init_func,
-                    initb=initb),
-                Flux.Dense(nh, num_gvfs; initW=init_func))
-        elseif parsed["cell"] ∈ ActionRNNs.gated_rnn_types()
-
-        rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
-
-        ninternal = parsed["internal"]
-
-        init_func = (dims...; kwargs...)->
-            ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-        initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-
-        m = Flux.Chain(
-            rnn(fs, na, ninternal, nh;
-                init=init_func,
-                initb=initb),
-            Flux.Dense(nh, num_gvfs; initW=init_func))
-
-        elseif parsed["cell"]  ∈ ActionRNNs.rnn_types() && get(parsed, "deep", false)
-
-            # Deep actions for RNNs from Zhu et al 2018
-            
-            rnn = getproperty(ActionRNNs, Symbol(parsed["cell"]))
-            
-            internal_a = parsed["internal_a"]
-            internal_o = parsed["internal_o"]
-            
-            init_func = (dims...; kwargs...)->
-                ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
-            initb = (dims...; kwargs...) -> Flux.zeros(dims...)
-
-            action_stream = Flux.Chain(
-                (a)->Flux.onehotbatch(a, 1:na),
-                Flux.Dense(na, internal_a, Flux.relu, initW=init_func),
-            )
-
-            obs_stream = Flux.Chain(
-                Flux.Dense(fs, internal_o, Flux.relu, initW=init_func)
-            )
-            
-            m = Flux.Chain(
-                ActionRNNs.DualStreams(action_stream, obs_stream),
-                rnn(internal_o, internal_a, nh;
-                    init=init_func,
-                    initb=initb),
-                Flux.Dense(nh, num_gvfs; initW=init_func))
- 
-        else
-            
-            rnntype = getproperty(Flux, Symbol(parsed["cell"]))
-            Flux.Chain(rnntype(fs, nh; init=init_func),
-                       Flux.Dense(nh,
-                                  num_gvfs;
-                                  initW=init_func))
-        end
+    deep_action = get(parsed, "deep", false)
+    rnn = if deep_action
+        build_deep_action_rnn_layers(in, actions, nh, parsed, rng)
+    else
+        (ActionRNNs.build_rnn_layer(in, actions, nh, parsed, rng),)
     end
 
-    chain
+    Flux.Chain(rnn...,
+               Flux.Dense(nh, actions; initW=init_func))
+    
 end
 
 
@@ -204,7 +131,7 @@ function construct_agent(parsed, rng)
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_model(parsed, out_horde, fs, rng)
+    chain = build_ann(fs, 2, length(out_horde), parsed, rng)
 
     ActionRNNs.DRTDNAgent(out_horde,
                           chain,
