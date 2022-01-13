@@ -68,9 +68,13 @@ function build_ann(in, actions::Int, parsed, rng)
 
     deep_action = get(parsed, "deep", false)
 
-    rnn_layer = ActionRNNs.build_rnn_layer(es, actions, nh, parsed, rng)
-    
+
+    # construction dictated to maintain consistancy from previous experiments. Looks awkward. Is kinda awkward....
     encoding_network = if deep_action
+
+        internal_a = parsed["internal_a"]
+        
+        rnn_layer = ActionRNNs.build_rnn_layer(es, internal_a, nh, parsed, rng)
 
         action_stream = Flux.Chain(
             (a)->Flux.onehotbatch(a, 1:actions),
@@ -81,15 +85,17 @@ function build_ann(in, actions::Int, parsed, rng)
             Flux.Dense(in, es, Flux.relu, initW=init_func)
         )
 
-        ActionRNNs.DualStreams(action_stream, obs_stream)
+        (ActionRNNs.DualStreams(action_stream, obs_stream), rnn_layer)
     else
-        Flux.Dense(in, es, Flux.relu; initW=init_func)
+        
+        rnn_layer = ActionRNNs.build_rnn_layer(es, actions, nh, parsed, rng)
+        
+        (Flux.Dense(in, es, Flux.relu; initW=init_func), rnn_layer)
     end
 
 
 
-    Flux.Chain(encoding_network,
-               rnn_layer,
+    Flux.Chain(encoding_network...,
                Flux.Dense(nh, nh, Flux.relu; initW=init_func),
                Flux.Dense(nh, actions; initW=init_func))
 

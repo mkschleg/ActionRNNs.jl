@@ -73,7 +73,9 @@ function build_ann(in, actions::Int, parsed, rng)
     latent_size = parsed["latent_size"]
     output_size = parsed["output_size"]
     
-    encode_layers = if deep_action
+    pre_layers = if deep_action
+
+        internal_a = parsed["internal_a"]
         
         action_stream = Flux.Chain(
             (a)->Flux.onehotbatch(a, 1:actions),
@@ -85,19 +87,18 @@ function build_ann(in, actions::Int, parsed, rng)
                                 Flux.Dense(fs, latent_size, Flux.relu; initW=init_func),
                                 Flux.Dense(latent_size, latent_size, Flux.relu; initW=init_func))
         
-        ActionRNNs.DualStreams(action_stream, obs_stream)
+        (ActionRNNs.DualStreams(action_stream, obs_stream),
+         ActionRNNs.build_rnn_layer(latent_size, internal_a, nh, parsed, rng))
     else
         (cl,
-         Flux.flatten,         
+         Flux.flatten,
          Flux.Dense(fs, latent_size, Flux.relu; initW=init_func),
-         Flux.Dense(latent_size, latent_size, Flux.relu; initW=init_func))
+         Flux.Dense(latent_size, latent_size, Flux.relu; initW=init_func),
+         ActionRNNs.build_rnn_layer(latent_size, actions, nh, parsed, rng))
     end
-
-    rnn_layer = ActionRNNs.build_rnn_layer(latent_size, actions, nh, parsed, rng)
-
+    
     Flux.Chain(
-        encode_layers...,
-        rnn_layer,
+        pre_layers...,
         Flux.Dense(nh, output_size, Flux.relu; initW=init_func),
         Flux.Dense(output_size, actions; initW=init_func)
     )
