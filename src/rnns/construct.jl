@@ -29,6 +29,18 @@ end
 
 rnn_build_trait(rnn_func) = @error "$(rnn_func) not supported! Please implement `construct_rnn_layer`"
 
+function build_rnn_layer(in::Int, actions::Int, out::Int, parsed, rng)
+    rnn_type = if isdefined(ActionRNNs, Symbol(parsed["cell"]))
+        getproperty(ActionRNNs, Symbol(parsed["cell"]))
+    elseif isdefined(Flux, Symbol(parsed["cell"]))
+        getproperty(Flux, Symbol(parsed["cell"]))
+    else
+        @error """$(parsed["cell"]) not supported."""
+    end
+
+    build_rnn_layer(rnn_type, in, actions, out, parsed, rng)
+end
+
 build_rnn_layer(rnn_type, in, actions, out, parsed, rng; kwargs...) =
     build_rnn_layer(rnn_build_trait(rnn_type), rnn_type, in, actions, out, parsed, rng; kwargs...)
 

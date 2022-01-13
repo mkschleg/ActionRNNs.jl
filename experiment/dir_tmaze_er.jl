@@ -94,25 +94,9 @@ function working_config()
     
 end
 
+function build_deep_action_rnn_layers(in, out, parsed, rng)
 
-function construct_rnn_layers(in, actions, out, parsed, rng)
-    rnn_type = try
-        getproperty(ActionRNNs, Symbol(parsed["cell"]))
-    catch
-        getproperty(Flux, Symbol(parsed["cell"]))
-    end
-
-    deep_action = get(parsed, "deep", false)
-    if deep_action
-        build_deep_action_rnn_layers(rnn_type, in, actions, out, parsed, rng)
-    else
-        ActionRNNs.build_rnn_layer(rnn_type, in, actions, out, parsed, rng)
-    end
-end
-
-function build_deep_action_rnn_layers(rnn_type, in, actions, out, parsed, rng)
     # Deep actions for RNNs from Zhu et al 2018
-    
     internal_a = parsed["internal_a"]
     internal_o = parsed["internal_o"]
     
@@ -128,25 +112,23 @@ function build_deep_action_rnn_layers(rnn_type, in, actions, out, parsed, rng)
     )
     
     (ActionRNNs.DualStreams(action_stream, obs_stream),
-     ActionRNNs.build_rnn_layer(rnn_type, internal_o, internal_a, out, parsed, rng))
+     ActionRNNs.build_rnn_layer(latent_o_dim, latent_a_dim, out, parsed, rng))
 end
 
-get_ann(parsed, fs, env::MinimalRLCore.AbstractEnvironment, rng) = get_ann(parsed, fs, length(get_actions(env)), rng)
-
-function get_ann(parsed, in, actions::Int, rng)
+function build_ann(in, actions::Int, parsed, rng)
     
     nh = parsed["numhidden"]
     init_func, initb = ActionRNNs.get_init_funcs(rng)
 
-    rnn = construct_rnn_layers(in, actions, nh, parsed, rng)
-
-    if rnn isa Tuple
-        Flux.Chain(rnn...,
-                   Flux.Dense(nh, actions; initW=init_func))
+    deep_action = get(parsed, "deep", false)
+    rnn = if deep_action
+        build_deep_action_rnn_layers(in, actions, nh, parsed, rng)
     else
-        Flux.Chain(rnn,
-                   Flux.Dense(nh, actions; initW=init_func))
+        (ActionRNNs.build_rnn_layer(in, actions, nh, parsed, rng),)
     end
+
+    Flux.Chain(rnn...,
+               Flux.Dense(nh, actions; initW=init_func))
     
 end
 
@@ -155,16 +137,16 @@ function construct_agent(env, parsed, rng)
 
     fc = TMU.StandardFeatureCreator{false}()
     fs = MinimalRLCore.feature_size(fc)
+    num_actions = length(get_actions(env))
 
     γ = Float32(parsed["gamma"])
     τ = parsed["truncation"]
-
 
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
 
     opt = FLU.get_optimizer(parsed)
 
-    chain = get_ann(parsed, fs, length(get_actions(env)), rng)
+    chain = build_ann(fs, num_actions, parsed, rng)
 
     ActionRNNs.DRQNAgent(chain,
                          opt,
