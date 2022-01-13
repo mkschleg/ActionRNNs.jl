@@ -76,7 +76,7 @@ function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
     # )
     
     (ActionRNNs.DualStreams(action_stream, obs_stream),
-     ActionRNNs.build_rnn_layer(internal_a, internal_o, out, parsed, rng))
+     ActionRNNs.build_rnn_layer(in, internal_a, out, parsed, rng))
 end
 
 function build_ann(in, actions, parsed, rng)
