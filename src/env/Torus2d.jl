@@ -112,7 +112,7 @@ function partially_observable_state(env::Torus2d)
     return state
 end
 
-function MinimalRLCore.is_terminal(env::RingWorld) # -> determines if the agent_state is terminal
+function MinimalRLCore.is_terminal(env::Torus2d) # -> determines if the agent_state is terminal
     return false
 end
 
