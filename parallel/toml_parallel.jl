@@ -11,7 +11,7 @@ function main()
         arg_type=String
         "--path"
         arg_type=String
-        default="results"
+        default=""
         "--numworkers"
         arg_type=Int
         default=4
