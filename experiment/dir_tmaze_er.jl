@@ -172,7 +172,6 @@ function main_experiment(parsed = default_config(); progress=false, verbose=fals
         parsed["numhidden"] = parsed["cell_numhidden"][2]
         delete!(parsed, "cell_numhidden")
     end
-    
 
     experiment_wrapper(parsed; use_git_info=false) do parsed
 
