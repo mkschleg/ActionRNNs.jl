@@ -1331,11 +1331,11 @@ version = "1.1.0"
 
 [[Reproduce]]
 deps = ["ArgParse", "BSON", "CodeTracking", "DBInterface", "DataFrames", "Dates", "Distributed", "FileIO", "Git", "HDF5", "JLD2", "JSON", "Logging", "MySQL", "Parallelism", "Pkg", "ProgressMeter", "Random", "Reexport", "SharedArrays", "Sockets", "TOML", "Tables"]
-git-tree-sha1 = "dd3ca988a46c6b13546b33cf9f182075690e431e"
-repo-rev = "main"
+git-tree-sha1 = "b142ed1e0ca7e42396b52a4a33094b7cfd062849"
+repo-rev = "v0.11.2"
 repo-url = "https://github.com/mkschleg/Reproduce.jl.git"
 uuid = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
-version = "0.11.2-dev"
+version = "0.11.2"
 
 [[ReproducePlotUtils]]
 deps = ["DataFrames", "FileIO", "PlotUtils", "Plots", "RecipesBase", "Reproduce", "RollingFunctions", "Statistics", "StatsPlots"]
