@@ -174,7 +174,7 @@ function build_rnn_layer(::BuildMixed, rnn_type,
     @assert "num_experts" ∈ keys(parsed)
     
     ne = parsed["num_experts"]
-    rnn_type(in, na, out, ne;
+    rnn_type(in, actions, out, ne;
         init=init_func,
         initb=initb)
 
