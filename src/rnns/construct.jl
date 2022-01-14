@@ -174,7 +174,7 @@ function build_rnn_layer(::BuildMixed, rnn_type,
     @assert "num_experts" ∈ keys(parsed)
     
     ne = parsed["num_experts"]
-    rnn_type(fs, na, nh, ne;
+    rnn_type(in, na, nh, ne;
         init=init_func,
         initb=initb)
 
@@ -193,5 +193,5 @@ function build_rnn_layer(::BuildFlux, rnn_type,
                          in, actions, out,
                          parsed, rng;
                          init_func=get_init_funcs(rng)[1], kwargs...)
-    rnn_type(fs, nh; init=init_func)
+    rnn_type(in, nh; init=init_func)
 end
