@@ -173,6 +173,7 @@ function main_experiment(parsed = default_config(); progress=false, verbose=fals
         delete!(parsed, "cell_numhidden")
     end
     
+
     experiment_wrapper(parsed; use_git_info=false) do parsed
 
         num_steps = parsed["steps"]
