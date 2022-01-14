@@ -48,7 +48,7 @@ Dict{String, Matrix{Float32}} with 2 entries:
 function default_config()
     Dict{String,Any}(
 
-        "save_dir" => "tmp/ringworld",
+        # "_SAVE" => "tmp/ringworld",
         "seed" => 1,
         "synopsis" => false,
         
@@ -150,14 +150,14 @@ function construct_agent(parsed, rng)
 
 end
 
-function main_experiment(parsed=default_config(); working=false, progress=false, overwrite=false)
+function main_experiment(parsed=default_config(); working=false, progress=false)
 
     if "numhidden_factors" ∈ keys(parsed)
         parsed["numhidden"] = parsed["numhidden_factors"][1]
         parsed["factors"] = parsed["numhidden_factors"][2]
     end
     
-    experiment_wrapper(parsed, working, overwrite=overwrite) do (parsed)
+    experiment_wrapper(parsed) do (parsed)
         
         num_steps = parsed["steps"]
         seed = parsed["seed"]
