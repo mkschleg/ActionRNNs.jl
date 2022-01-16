@@ -150,14 +150,14 @@ function construct_agent(parsed, rng)
 
 end
 
-function main_experiment(parsed=default_config(); working=false, progress=false)
+function main_experiment(parsed=default_config(); progress=false, testing=false, overwrite=false)
 
     if "numhidden_factors" ∈ keys(parsed)
         parsed["numhidden"] = parsed["numhidden_factors"][1]
         parsed["factors"] = parsed["numhidden_factors"][2]
     end
     
-    experiment_wrapper(parsed) do (parsed)
+    experiment_wrapper(parsed, use_git_info=false, testing=testing, overwrite=overwrite) do (parsed)
         
         num_steps = parsed["steps"]
         seed = parsed["seed"]
