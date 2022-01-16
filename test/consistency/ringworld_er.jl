@@ -79,5 +79,16 @@ RINGWORLD_ER_BASE_CONFIG =
         @test ringworld_check(ret, -640.77185f0)
     end
 
+    @testset "CaddRNN" begin
+        ret = @run_experiment RingWorldERExperiment  "CaddRNN" Consistency.RINGWORLD_ER_BASE_CONFIG
+        @test ringworld_check(ret, -637.2064f0)
+    end
+
+    @testset "CcatRNN" begin
+        ret = @run_experiment RingWorldERExperiment  "CcatRNN" Consistency.RINGWORLD_ER_BASE_CONFIG
+        @test ringworld_check(ret, -1139.179f0)
+    end
+
+    
     
 end
