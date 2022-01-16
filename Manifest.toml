@@ -706,6 +706,12 @@ git-tree-sha1 = "098e4d2c533924c921f9f9847274f2ad89e018b8"
 uuid = "83e8ac13-25f8-5344-8a64-a9f2b223428f"
 version = "0.5.0"
 
+[[InlineTest]]
+deps = ["Test"]
+git-tree-sha1 = "daf0743879904f0ad645ca6594e1479685f158a2"
+uuid = "bd334432-b1e7-49c7-a2dc-dd9149e4ebd6"
+version = "0.2.0"
+
 [[IntelOpenMP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "d979e54b71da82f3a65b62553da4fc3d18c9004c"
@@ -1307,6 +1313,12 @@ git-tree-sha1 = "01d341f502250e81f6fec0afe662aa861392a3aa"
 uuid = "c84ed2f1-dad5-54f0-aa8e-dbefe2724439"
 version = "0.4.2"
 
+[[ReTest]]
+deps = ["Distributed", "InlineTest", "Printf", "Random", "Sockets", "Test"]
+git-tree-sha1 = "dd8f6587c0abac44bcec2e42f0aeddb73550c0ec"
+uuid = "e0db7c4e-2690-44b9-bad6-7687da720f89"
+version = "0.3.2"
+
 [[RealDot]]
 deps = ["LinearAlgebra"]
 git-tree-sha1 = "9f0a1b71baaf7650f4fa8a1d168c7fb6ee41f0c9"
@@ -1331,9 +1343,11 @@ version = "1.1.0"
 
 [[Reproduce]]
 deps = ["ArgParse", "BSON", "CodeTracking", "DBInterface", "DataFrames", "Dates", "Distributed", "FileIO", "Git", "HDF5", "JLD2", "JSON", "Logging", "MySQL", "Parallelism", "Pkg", "ProgressMeter", "Random", "Reexport", "SharedArrays", "Sockets", "TOML", "Tables"]
-git-tree-sha1 = "b142ed1e0ca7e42396b52a4a33094b7cfd062849"
+git-tree-sha1 = "9e6531fbad9ed515f22a544fbff12b1f9af94933"
+repo-rev = "main"
+repo-url = "https://github.com/mkschleg/Reproduce.jl.git"
 uuid = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
-version = "0.11.2"
+version = "0.11.3-dev"
 
 [[ReproducePlotUtils]]
 deps = ["DataFrames", "FileIO", "PlotUtils", "Plots", "RecipesBase", "Reproduce", "RollingFunctions", "Statistics", "StatsPlots"]
