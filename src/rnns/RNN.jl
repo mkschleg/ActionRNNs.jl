@@ -47,21 +47,17 @@ function Base.show(io::IO, l::AARNNCell)
 end
 
 """
-    AARNN(in::Integer, out::Integer, σ = tanh)
-The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
-output fed back into the input each time step.
+    AARNN(in::Integer, actions::Integer, out::Integer, σ = tanh)
+Like an RNN cell, except takes a tuple (action, observation) as input. The action is used with
+[`get_waa`](@ref) with results added to the usual update.
+
+The update is as follows:
+    `σ.(Wi*o .+ get_waa(Wa, a) .+ Wh*h .+ b)`
 """
 AARNN(a...; ka...) = Flux.Recur(AARNNCell(a...; ka...))
 Flux.Recur(m::AARNNCell) = Flux.Recur(m, m.state0)
 
 
-
-"""
-    MARNNCell
-
-    An RNN cell which explicitily transforms the hidden state of the recurrent neural network according to action using multiplicative updates.
-
-"""
 struct MARNNCell{F, A, V, H} <: AbstractActionRNN
     σ::F
     Wx::A
@@ -70,16 +66,16 @@ struct MARNNCell{F, A, V, H} <: AbstractActionRNN
     state0::H
 end
 
-MARNNCell(num_ext_features, num_actions, num_hidden;
+MARNNCell(in, actions, out;
          init=glorot_uniform,
          initb=(args...;kwargs...) -> Flux.zeros(args...),
          init_state=Flux.zeros,
          σ_int=tanh) =
     MARNNCell(σ_int,
-             init(num_actions, num_hidden, num_ext_features; ignore_dims=1),
-             init(num_actions, num_hidden, num_hidden; ignore_dims=1),
-             initb(num_hidden, num_actions),
-             init_state(num_hidden, 1))
+             init(actions, out, in; ignore_dims=1),
+             init(actions, out, out; ignore_dims=1),
+             initb(out, actions),
+             init_state(out, 1))
 
 
 
@@ -105,6 +101,17 @@ function (m::MARNNCell)(h, x::Tuple{A, X}) where {A, X} # where {I<:Array{<:Inte
 end
 
 Flux.@functor MARNNCell
+
+"""
+    MARNN(in::Integer, actions::Integer, out::Integer, σ = tanh)
+This cell incorporates the action as a multiplicative operation. We use 
+[`contract_WA`](@ref) and [`get_waa`](@ref) to handle this.
+
+The update is as follows:
+```julia
+new_h = σ.(contract_WA(m.Wx, a, o) .+ contract_WA(m.Wh, a, h) .+ get_waa(m.b, a))
+```
+"""
 MARNN(args...; kwargs...) = Flux.Recur(MARNNCell(args...; kwargs...))
 Flux.Recur(m::MARNNCell) = Flux.Recur(m, m.state0)
 
@@ -187,6 +194,16 @@ function FacMARNNCell_tensor(in, actions, out, factors, activation=tanh;
 end
 
 
+"""
+    FacMARNN(in::Integer, actions::Integer, out::Integer, σ = tanh)
+This cell incorporates the action as a multiplicative operation. We use 
+[`contract_WA`](@ref) and [`get_waa`](@ref) to handle this.
+
+The update is as follows:
+```julia
+new_h = σ.(contract_WA(m.Wx, a, o) .+ contract_WA(m.Wh, a, h) .+ get_waa(m.b, a))
+```
+"""
 FacMARNN(args...; kwargs...) = Flux.Recur(FacMARNNCell(args...; kwargs...))
 Flux.Recur(cell::FacMARNNCell) = Flux.Recur(cell, cell.state0)
 Flux.@functor FacMARNNCell
@@ -203,7 +220,7 @@ end
 
 function (m::FacMARNNCell)(h, x::Tuple{A, O}) where {A, O}
     W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-    new_h = m.σ.(W*((Wx*o .+ Wh*h) .* get_Wabya(Wa, a)) .+ b[:, a])
+    new_h = m.σ.(W*((Wx*o .+ Wh*h) .* get_waa(Wa, a)) .+ b[:, a])
     return new_h, new_h
 end
 
@@ -286,11 +303,3 @@ function (m::FacTucMARNNCell)(h, x::Tuple{A, X}) where {A, X}
     return new_h, new_h
 end
 
-# contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractVector{<:Number}) =
-#     @tullio ret[j] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r]
-#
-# contract_tuc(Wg, Wa::AbstractVector{<:Number}, Wh::AbstractMatrix{<:Number},Wx::AbstractMatrix{<:Number}) =
-#     @tullio ret[j, x] := Wg[p, q, r] * Wa[p] * Wh[q, j] * Wx[r, x]
-
-# tucker_compose(Wg, Wa::AbstractMatrix{<:Number}, Wh, Wx) =
-#     @tullio ret[i, j, k] := Wg[p, q, r] * Wa[p, i] * Wh[q, j] * Wx[r, k]
