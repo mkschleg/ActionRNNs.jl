@@ -48,8 +48,11 @@ end
 
 """
     AARNN(in::Integer, out::Integer, σ = tanh)
-The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
-output fed back into the input each time step.
+Like an RNN cell, except takes a tuple (action, observation) as input. The action is used with
+[`get_waa`](@ref) with results added to the usual update.
+
+The update is as follows:
+    `σ.(Wi*o .+ get_waa(Wa, a) .+ Wh*h .+ b)`
 """
 AARNN(a...; ka...) = Flux.Recur(AARNNCell(a...; ka...))
 Flux.Recur(m::AARNNCell) = Flux.Recur(m, m.state0)
