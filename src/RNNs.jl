@@ -34,11 +34,7 @@ The weight matrix is assumed to be in `nactions × out × in`.
 contract_WA(W, a::Int, x) = W[a, :, :]*x
 
 function contract_WA(W, a::AbstractVector{Int}, x::AbstractMatrix)
-    #=
-    ⊡ Generalised matrix multiplication: Contracts the last dimension of `A` with
-    the first dimension of `B`, for any `ndims(A)` & `ndims(B)`.
-    If both are vectors, then it returns a scalar `== sum(A .* B)`.
-    =#
+
     # mid = W ⊡ x
     # @tullio ret[i, k] := mid[a[k], i, k]
     @tullio ret[i, k] := W[a[k], i, j] * x[j, k]
@@ -59,8 +55,14 @@ end
 # GPU Versions
 # Maybe fixed by new version of tullio.
 function contract_WA(W::CuArray, a::AbstractVector{Int}, x)
-    mid = @view (W ⊡ x)[a, :, :]
-    @tullio ret[i, k] := mid[k, i, k]
+    #=
+    ⊡ Generalised matrix multiplication: Contracts the last dimension of `A` with
+    the first dimension of `B`, for any `ndims(A)` & `ndims(B)`.
+    If both are vectors, then it returns a scalar `== sum(A .* B)`.
+    =#
+    mid_1 = W ⊡ x
+    mid_2 = @view mid_1[a, :, :]
+    @tullio ret[i, k] := mid_2[k, i, k]
 end
 
 
