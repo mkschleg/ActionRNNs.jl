@@ -17,6 +17,12 @@ An abstract struct which will take the current hidden state and
 a tuple of observations and actions and returns the next hidden state.
 """
 abstract type AbstractActionRNN end
+
+"""
+    _needs_action_input
+
+If true, this means the cell or layer needs a tuple as input.
+"""
 _needs_action_input(m) = false
 _needs_action_input(m::Flux.Recur{T}) where {T} = _needs_action_input(m.cell)
 _needs_action_input(m::AbstractActionRNN) = true
@@ -80,6 +86,7 @@ This is to be used with various cells to incorporate this operation more reliabl
 get_waa(Wa, a::Int) = Wa[:, a]
 get_waa(Wa, a::Vector{Int}) = Wa[:, a]
 get_waa(Wa, a::AbstractArray{<:AbstractFloat}) = Wa*a
+
 
 function contract_Wga(Wg, Wa::AbstractVector{<:Number})
     @tullio ret[q, r] := Wg[p, q, r] * Wa[p]

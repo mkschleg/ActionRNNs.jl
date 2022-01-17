@@ -3,6 +3,11 @@
 
 ## Cells
 
+```@docs
+ActionRNNs.AbstractActionRNNCell
+ActionRNNs._needs_action_input
+```
+
 ### RNNs
 ```@docs
 ActionRNNs.AARNN
