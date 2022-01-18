@@ -127,16 +127,6 @@ end
 
 
 
-@doc raw"""
-    FactorizedARNNCell
-
-    An RNN cell which explicitily transforms the hidden state of the recurrent neural network according to action.
-    
-    ```math
-        W (x_{t+1}Wx \odot a_{t}Wa)^T
-    ```
-
-"""
 mutable struct FacMARNNCell{F, A, V, H} <: AbstractActionRNN
     σ::F
     W::A
@@ -195,14 +185,21 @@ end
 
 
 """
-    FacMARNN(in::Integer, actions::Integer, out::Integer, σ = tanh)
-This cell incorporates the action as a multiplicative operation. We use 
-[`contract_WA`](@ref) and [`get_waa`](@ref) to handle this.
+    FacMARNN(in::Integer, actions::Integer, out::Integer, factors, σ = tanh; init_style="ignore")
+This cell incorporates the action as a multiplicative operation, but as a factored approximation of the multiplicative version.
+This cell uses [`get_waa`](@ref). Uses [CP decomposition](https://en.wikipedia.org/wiki/Tensor_rank_decomposition).
 
 The update is as follows:
 ```julia
-new_h = σ.(contract_WA(m.Wx, a, o) .+ contract_WA(m.Wh, a, h) .+ get_waa(m.b, a))
+   new_h = m.σ.(W*((Wx*o .+ Wh*h) .* get_waa(Wa, a)) .+ get_waa(m.b, a))
 ```
+
+Three init_styles:
+- standard: using init and initb w/o any keywords
+- ignore: `W = init(out, factors, ignore_dims=2)`
+- tensor: Decompose `W_t = init(actions, out, in+out; ignore_dims=1)` to get `W_o, W_a, W_hi` using `TensorToolbox.cp_als`.
+
+
 """
 FacMARNN(args...; kwargs...) = Flux.Recur(FacMARNNCell(args...; kwargs...))
 Flux.Recur(cell::FacMARNNCell) = Flux.Recur(cell, cell.state0)
@@ -219,8 +216,8 @@ function get_Wabya(Wa, a)
 end
 
 function (m::FacMARNNCell)(h, x::Tuple{A, O}) where {A, O}
-    W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = m.b
-    new_h = m.σ.(W*((Wx*o .+ Wh*h) .* get_waa(Wa, a)) .+ b[:, a])
+    W = m.W; Wx = m.Wx; Wh = m.Wh; Wa = m.Wa; a = x[1]; o = x[2]; b = get_waa(m.b, a)
+    new_h = m.σ.(W*((Wx*o .+ Wh*h) .* get_waa(Wa, a)) .+ b)
     return new_h, new_h
 end
 
@@ -270,6 +267,16 @@ FacTucMARNNCell_ignore(in, actions, out, action_factors, out_factors, in_factors
                 initb(out, actions; ignore_dims=2),
                 init_state(out, 1))
 
+"""
+    FacTucMARNN(in::Integer, actions::Integer, out::Integer, action_factors, out_factors, in_factors, σ = tanh; init_style="ignore")
+This cell incorporates the action as a multiplicative operation, but as a factored approximation of the multiplicative version.
+This cell uses [`get_waa`](@ref). Uses [Tucker decomposition](https://en.wikipedia.org/wiki/Tucker_decomposition).
+
+Three init_styles:
+- standard: using init and initb w/o any keywords
+- ignore: `Wa = init(action_factors, actions; ignore_dims=2)`
+
+"""
 FacTucMARNN(args...; kwargs...) = Flux.Recur(FacTucMARNNCell(args...; kwargs...))
 Flux.Recur(m::FacTucMARNNCell) = Flux.Recur(m, m.state0)
 Flux.@functor FacTucMARNNCell
