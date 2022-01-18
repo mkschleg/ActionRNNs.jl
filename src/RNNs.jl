@@ -11,7 +11,7 @@ using Tullio
 =#
 
 """
-    AbstractActionRNNCell
+    AbstractActionRNN
 
 An abstract struct which will take the current hidden state and 
 a tuple of observations and actions and returns the next hidden state.

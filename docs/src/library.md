@@ -4,7 +4,7 @@
 ## Cells
 
 ```@docs
-ActionRNNs.AbstractActionRNNCell
+ActionRNNs.AbstractActionRNN
 ActionRNNs._needs_action_input
 ```
 
@@ -21,7 +21,7 @@ ActionRNNs.FacTucMARNN
 ActionRNNs.AAGRU
 ActionRNNs.MAGRU
 ActionRNNs.FacMAGRU
-ActionRNNs.FacTucMARNN
+ActionRNNs.FacTucMAGRU
 ```
 
 

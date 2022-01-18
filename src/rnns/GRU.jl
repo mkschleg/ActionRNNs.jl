@@ -40,11 +40,9 @@ Base.show(io::IO, l::AAGRUCell) =
   print(io, "AAGRUCell(", size(l.Wi, 2), ", ", size(l.Wa), ", ", size(l.Wi, 1)÷3, ")")
 
 """
-    AAGRU(in::Integer, out::Integer)
-[Additive Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
+    AAGRU(in, actions, out)
+Additive Action Gated Recurrent Unit layer. Behaves like an
+[`AARNN`](@ref) but uses a GRU internal structure
 """
 AAGRU(a...; ka...) = Flux.Recur(AAGRUCell(a...; ka...))
 Flux.Recur(m::AAGRUCell) = Flux.Recur(m, m.state0)
@@ -87,11 +85,9 @@ Base.show(io::IO, l::MAGRUCell) =
   print(io, "MAGRUCell(", size(l.Wi, 2), ", ", size(l.Wi, 1)÷3, ")")
 
 """
-    MAGRU(in::Integer, out::Integer)
-[Multiplicative Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
+    MAGRU(in, actions, out)
+Multiplicative Action Gated Recurrent Unit layer. Behaves like an
+[`MARNN`](@ref) but uses a GRU internal structure.
 """
 MAGRU(a...; ka...) = Flux.Recur(MAGRUCell(a...; ka...))
 Flux.Recur(m::MAGRUCell) = Flux.Recur(m, m.state0)
@@ -164,11 +160,15 @@ Base.show(io::IO, l::FacMAGRUCell) =
   print(io, "FacMAGRUCell(", size(l.Wi, 2), ", ", size(l.Wi, 1)÷3, ")")
 
 """
-    FacMAGRU(in::Integer, out::Integer)
-[Multiplicative Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
+    FacMAGRU(in, actions, out, factors)
+Factored Multiplicative Action Gated Recurrent Unit layer. Behaves like an
+[`FacMARNN`](@ref) but uses a GRU internal structure.
+
+Three init_styles:
+- standard: using init and initb w/o any keywords
+- ignore: `W = init(out, factors, ignore_dims=2)`
+- tensor: Decompose `W_t = init(actions, out, in+out; ignore_dims=1)` to get `W_o, W_a, W_hi` using `TensorToolbox.cp_als`.
+
 """
 FacMAGRU(a...; ka...) = Flux.Recur(FacMAGRUCell(a...; ka...))
 Flux.Recur(m::FacMAGRUCell) = Flux.Recur(m, m.state0)
@@ -238,11 +238,9 @@ Base.show(io::IO, l::FacTucMAGRUCell) =
   print(io, "FacTucMAGRUCell(", size(l.Wi, 2), ", ", size(l.Wi, 1)÷3, ")")
 
 """
-    FacTucMAGRU(in::Integer, out::Integer)
-[Multiplicative Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
+    FacTucMAGRU(in, actions, out, factors)
+Factored Multiplicative Action Gated Recurrent Unit layer. Behaves like an
+[`FacMARNN`](@ref) but uses a GRU internal structure.
 """
 FacTucMAGRU(a...; ka...) = Flux.Recur(FacTucMAGRUCell(a...; ka...))
 Flux.Recur(m::FacTucMAGRUCell) = Flux.Recur(m, m.state0)
