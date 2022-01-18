@@ -72,14 +72,17 @@ Flux.@functor CaddGRUCell
 Base.show(io::IO, l::CaddGRUCell) =
   print(io, "CaddGRUCell(", size(l.Wia, 2), ", ", size(l.Wa), ", ", size(l.Wia, 1)÷3, ")")
 
-"""
-    CaddGRU(in::Integer, out::Integer)
-[Additive Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
-"""
 
+"""
+    CaddGRU(in, actions, out, σ = tanh)
+
+Mixing between [`AAGRU`](@ref) and [`MAGRU`](@ref) through a weighting
+
+```julia
+h′ = (w[1]*new_hAA + w[2]*new_hMA) ./ sum(w)
+```
+
+"""
 CaddGRU(a...; ka...) = Flux.Recur(CaddGRUCell(a...; ka...))
 Flux.Recur(m::CaddGRUCell) = Flux.Recur(m, m.state0)
 
@@ -153,14 +156,17 @@ Flux.@functor CaddElGRUCell
 Base.show(io::IO, l::CaddElGRUCell) =
   print(io, "CaddElGRUCell(", size(l.Wia, 2), ", ", size(l.Wa), ", ", size(l.Wia, 1)÷3, ")")
 
-"""
-    CaddElGRU(in::Integer, out::Integer)
-[Additive Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
-"""
 
+"""
+    CaddElGRU(in, actions, out)
+
+Mixing between [`AAGRU`](@ref) and [`MAGRU`](@ref) through a weighting
+
+```julia
+h′ = (AA_θ .* AA_h′ .+ MA_θ .* MA_h′) ./ (AA_θ .+ MA_θ)
+```
+
+"""
 CaddElGRU(a...; ka...) = Flux.Recur(CaddElGRUCell(a...; ka...))
 Flux.Recur(m::CaddElGRUCell) = Flux.Recur(m, m.state0)
 
@@ -236,13 +242,13 @@ Base.show(io::IO, l::CaddAAGRUCell) =
   print(io, "CaddAAGRUCell(", size(l.Wi1, 2), ", ", size(l.Wa1), ", ", size(l.Wi1, 1)÷3, ")")
 
 """
-    CaddAAGRU(in::Integer, out::Integer)
-[Additive Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
-"""
+    CaddAAGRU(in, actions, out)
 
+Mixing between two [`AAGRU`](@ref) cells through weighting
+
+```julia
+h′ = (w[1]*new_hAA1 + w[2]*new_hAA2) ./ sum(w)
+"""
 CaddAAGRU(a...; ka...) = Flux.Recur(CaddAAGRUCell(a...; ka...))
 Flux.Recur(m::CaddAAGRUCell) = Flux.Recur(m, m.state0)
 
@@ -310,14 +316,15 @@ Flux.@functor CaddMAGRUCell
 Base.show(io::IO, l::CaddMAGRUCell) =
   print(io, "CaddMAGRUCell(", size(l.Wia, 2), ", ", size(l.Wa), ", ", size(l.Wia, 1)÷3, ")")
 
-"""
-    CaddMAGRU(in::Integer, out::Integer)
-[Additive Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
-"""
 
+"""
+    CaddMAGRU(in, actions, out)
+
+Mixing between two [`MAGRU`](@ref) cells through weighting
+
+```julia
+h′ = (w[1]*new_hMA1 + w[2]*new_hMA2) ./ sum(w)
+"""
 CaddMAGRU(a...; ka...) = Flux.Recur(CaddMAGRUCell(a...; ka...))
 Flux.Recur(m::CaddMAGRUCell) = Flux.Recur(m, m.state0)
 
@@ -386,13 +393,16 @@ Flux.@functor CcatGRUCell
 Base.show(io::IO, l::CcatGRUCell) =
   print(io, "CcatGRUCell(", size(l.Wia, 2), ", ", size(l.Wa), ", ", size(l.Wia, 1)÷3, ")")
 
-"""
-    CcatGRU(in::Integer, out::Integer)
-[Additive Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
-"""
 
+"""
+    CcatRNN(in, actions, out)
+
+Mixing between [`AAGRU`](@ref) and [`MAGRU`](@ref) through
+
+```julia
+h′ = cat(AA_h′, MA_h′)
+```
+
+"""
 CcatGRU(a...; ka...) = Flux.Recur(CcatGRUCell(a...; ka...))
 Flux.Recur(m::CcatGRUCell) = Flux.Recur(m, m.state0)

@@ -61,11 +61,15 @@ function Base.show(io::IO, l::MixRNNCell)
 end
 
 """
-    MixRNN(in::Integer, out::Integer, σ = tanh)
-The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
-output fed back into the input each time step.
-"""
+    MixRNN(in, actions, out, num_experts, σ = tanh)
 
+Mixing between `num_experts` [`AARNN`](@ref) cells. Uses the weighting
+
+```julia
+h′ = sum(θ[i] .* expert_h′[i] for i in 1:length(θ)) ./ sum(θ)
+```
+
+"""
 MixRNN(a...; ka...) = Flux.Recur(MixRNNCell(a...; ka...))
 Flux.Recur(m::MixRNNCell) = Flux.Recur(m, m.state0)
 
@@ -122,11 +126,18 @@ function Base.show(io::IO, l::MixElRNNCell)
   print(io, "MixElRNNCell()")
 end
 
-"""
-    MixElRNN(in::Integer, out::Integer, σ = tanh)
-The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
-output fed back into the input each time step.
-"""
 
+"""
+    MixElRNN(in, actions, out, num_experts, σ = tanh)
+
+Mixing between `num_experts` [`AARNN`](@ref) cells. Uses the weighting
+
+```julia
+h′ = sum(θ[i] .* expert_h′[i] for i in 1:length(θ)) ./ sum(θ)
+```
+
+(here θ[i] is a vector).
+
+"""
 MixElRNN(a...; ka...) = Flux.Recur(MixElRNNCell(a...; ka...))
 Flux.Recur(m::MixElRNNCell) = Flux.Recur(m, m.state0)

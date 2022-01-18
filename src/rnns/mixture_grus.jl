@@ -66,14 +66,17 @@ Flux.@functor MixGRUCell
 Base.show(io::IO, l::MixGRUCell) =
   print(io, "MixGRUCell()")
 
-"""
-    MixGRU(in::Integer, out::Integer)
-[Additive Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
-"""
 
+"""
+    MixGRU(in, actions, out, num_experts)
+
+Mixing between `num_experts` [`AAGRU`](@ref) cells. Uses the weighting
+
+```julia
+h′ = sum(θ[i] .* expert_h′[i] for i in 1:length(θ)) ./ sum(θ)
+```
+
+"""
 MixGRU(a...; ka...) = Flux.Recur(MixGRUCell(a...; ka...))
 Flux.Recur(m::MixGRUCell) = Flux.Recur(m, m.state0)
 
@@ -126,13 +129,17 @@ Flux.@functor MixElGRUCell
 Base.show(io::IO, l::MixElGRUCell) =
   print(io, "MixElGRUCell()")
 
-"""
-    MixElGRU(in::Integer, out::Integer)
-[Additive Action Gated Recurrent Unit](https://arxiv.org/abs/1406.1078) layer. Behaves like an
-RNN but generally exhibits a longer memory span over sequences.
-See [this article](https://colah.github.io/posts/2015-08-Understanding-LSTMs/)
-for a good overview of the internals.
-"""
 
+"""
+    MixElGRU(in, actions, out, num_experts)
+
+Mixing between `num_experts` [`AAGRU`](@ref) cells. Uses the weighting
+
+```julia
+h′ = sum(θ[i] .* expert_h′[i] for i in 1:length(θ)) ./ sum(θ)
+```
+
+(here `θ[i]` is a vector).
+"""
 MixElGRU(a...; ka...) = Flux.Recur(MixElGRUCell(a...; ka...))
 Flux.Recur(m::MixElGRUCell) = Flux.Recur(m, m.state0)

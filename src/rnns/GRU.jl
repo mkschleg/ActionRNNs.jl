@@ -240,7 +240,7 @@ Base.show(io::IO, l::FacTucMAGRUCell) =
 """
     FacTucMAGRU(in, actions, out, factors)
 Factored Multiplicative Action Gated Recurrent Unit layer. Behaves like an
-[`FacMARNN`](@ref) but uses a GRU internal structure.
+[`FacTucMARNN`](@ref) but uses a GRU internal structure.
 """
 FacTucMAGRU(a...; ka...) = Flux.Recur(FacTucMAGRUCell(a...; ka...))
 Flux.Recur(m::FacTucMAGRUCell) = Flux.Recur(m, m.state0)

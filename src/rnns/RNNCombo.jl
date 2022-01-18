@@ -20,22 +20,22 @@ struct CaddRNNCell{F,A,V,T,S} <: AbstractActionRNN
 end
 
 CaddRNNCell(in::Integer,
-          na::Integer,
-          out::Integer,
-          σ=tanh;
-          init=Flux.glorot_uniform,
-          initb=Flux.zeros,
-          init_state=Flux.zeros) = 
-              CaddRNNCell(σ,
-                        Flux.ones(2),
-                        init(out, in),
-                        init(out, na),
-                        init(out, out),
-                        initb(out),
-                        init(na, out, in; ignore_dims=1),
-                        init(na, out, out; ignore_dims=1),
-                        initb(out, na),
-                        init_state(out, 1))
+            na::Integer,
+            out::Integer,
+            σ=tanh;
+            init=Flux.glorot_uniform,
+            initb=Flux.zeros,
+            init_state=Flux.zeros) = 
+                CaddRNNCell(σ,
+                            Flux.ones(2),
+                            init(out, in),
+                            init(out, na),
+                            init(out, out),
+                            initb(out),
+                            init(na, out, in; ignore_dims=1),
+                            init(na, out, out; ignore_dims=1),
+                            initb(out, na),
+                            init_state(out, 1))
 
 function (m::CaddRNNCell)(h, x::Tuple{A, X}) where {A, X}
     σ, w, Wi, Wa, Wha, ba = m.σ, m.w, m.Wi, m.Wa, m.Wha, m.ba
@@ -75,11 +75,15 @@ function Base.show(io::IO, l::CaddRNNCell)
 end
 
 """
-    CaddRNN(in::Integer, out::Integer, σ = tanh)
-The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
-output fed back into the input each time step.
-"""
+    CaddRNN(in, actions, out, σ = tanh)
 
+Mixing between [`AARNN`](@ref) and [`MARNN`](@ref) through a weighting
+
+```julia
+h′ = (w[1]*new_hAA + w[2]*new_hMA) ./ sum(w)
+```
+
+"""
 CaddRNN(a...; ka...) = Flux.Recur(CaddRNNCell(a...; ka...))
 Flux.Recur(m::CaddRNNCell) = Flux.Recur(m, m.state0)
 
@@ -150,12 +154,17 @@ function Base.show(io::IO, l::CcatRNNCell)
   print(io, ")")
 end
 
-"""
-    CcatRNN(in::Integer, out::Integer, σ = tanh)
-The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
-output fed back into the input each time step.
-"""
 
+"""
+    CcatRNN(in, actions, out, σ = tanh)
+
+Mixing between [`AARNN`](@ref) and [`MARNN`](@ref) through
+
+```julia
+h′ = cat(AA_h′, MA_h′)
+```
+
+"""
 CcatRNN(a...; ka...) = Flux.Recur(CcatRNNCell(a...; ka...))
 Flux.Recur(m::CcatRNNCell) = Flux.Recur(m, m.state0)
 
@@ -241,10 +250,13 @@ function Base.show(io::IO, l::CaddElRNNCell)
 end
 
 """
-    CaddElRNN(in::Integer, out::Integer, σ = tanh)
-The most basic recurrent layer; essentially acts as a `Dense` layer, but with the
-output fed back into the input each time step.
-"""
+    CaddElRNN(in, actions, out, σ = tanh)
 
+Mixing between [`AARNN`](@ref) and [`MARNN`](@ref) through a weighting
+
+```julia
+h′ = (AA_θ .* AA_h′ .+ MA_θ .* MA_h′) ./ (AA_θ .+ MA_θ)
+```
+"""
 CaddElRNN(a...; ka...) = Flux.Recur(CaddElRNNCell(a...; ka...))
 Flux.Recur(m::CaddElRNNCell) = Flux.Recur(m, m.state0)
