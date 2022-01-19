@@ -1,12 +1,5 @@
 
-# module DirTMazeConsistency
-
-# import ..ActionRNNsTests: @run_experiment, CONS_SAVE_DIR
-
-
-
 include("../../experiment/dir_tmaze_er.jl")
-# const main_experiment = DirectionalTMazeERExperiment.main_experiment
 
 DTMAZE_ER_BASE_CONFIG = 
     Dict{String,Any}(
@@ -51,6 +44,11 @@ DTMAZE_ER_BASE_CONFIG =
         @test dir_tmaze_check(ret, -1157.3124f0)
     end
 
+    @testset "FacMARNN" begin
+        ret = @run_experiment DirectionalTMazeERExperiment  "FacMARNN" Consistency.DTMAZE_ER_BASE_CONFIG factors=8 init_style="tensor"
+        @test dir_tmaze_check(ret, -1334.2004f0)
+    end
+
     @testset "GRU" begin
         ret = @run_experiment DirectionalTMazeERExperiment  "GRU" Consistency.DTMAZE_ER_BASE_CONFIG
         @test dir_tmaze_check(ret, -849.3139f0)
@@ -66,8 +64,12 @@ DTMAZE_ER_BASE_CONFIG =
         @test dir_tmaze_check(ret, -1173.9962f0)
     end
 
+    @testset "FacMAGRU" begin
+        ret = @run_experiment DirectionalTMazeERExperiment  "FacMAGRU" Consistency.DTMAZE_ER_BASE_CONFIG factors=8 init_style="tensor"
+        @test dir_tmaze_check(ret, -1426.1183f0)
+    end
 
-# end
+    
 end
 
 

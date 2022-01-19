@@ -12,10 +12,6 @@ tuple_hidden_state(rnn::Flux.Recur) = rnn.state isa Tuple
 
 A function which takes a model and a function and returns the locations where the function returns true.
 This only supports composing chaings twice.
-
-    find_layers_with_recur(model)
-
-Finds layers with recur.
 """
 function find_layers_with_eq(eq::Function, model)
     layer_indecies = Union{Int, Tuple}[]
@@ -32,6 +28,11 @@ function find_layers_with_eq(eq::Function, model)
     return layer_indecies
 end
 
+"""
+    find_layers_with_recur(model)
+
+Finds layers with recur. Uses [`find_layers_with_eq`](@ref).
+"""
 find_layers_with_recur(model) = find_layers_with_eq(model) do (l)
     l isa Flux.Recur
 end
@@ -40,8 +41,6 @@ end
     contains_comp(comp::Function, model)
 
 Check if a layer of a model returns true with comp.
-
-    contains_layer_type(model, type)
 """
 function contains_comp(comp::Function, model)
     is_true = false
@@ -50,10 +49,20 @@ function contains_comp(comp::Function, model)
     return is_true
 end
 
+"""
+    contains_layer_type(model, type)
+
+Check if the model has a specific layer type.
+"""
 contains_layer_type(model, type) = contains_comp(model) do (l)
      (l isa type) || (l isa Flux.Recur && l.cell isa type)
 end
 
+"""
+    contains_rnn_type(m, rnn_type)
+
+Checks if the model has a specific rnn type.
+"""
 contains_rnn_type(m, rnn_type) = begin
     if rnn_type <: Flux.Recur
         contains_layer_type(m, rnn_type.parameters[1])
@@ -62,6 +71,11 @@ contains_rnn_type(m, rnn_type) = begin
     end
 end
 
+"""
+    needs_action_input(m)
+
+Checks if the model needs action input as a tuple.
+"""
 needs_action_input(m) = contains_comp(m) do (l)
     _needs_action_input(l)
 end
@@ -69,12 +83,22 @@ end
 
 ###### Symbols #######
 
+"""
+    hs_symbol_layer(l, idx)
+
+Get symbol of current layer's hidden state layer.
+"""
 hs_symbol_layer(l, idx) = if tuple_hidden_state(l)
     Symbol("hs_h_$(idx)"), Symbol("hs_c_$(idx)")
 else
     Symbol("hs_$(idx)")
 end
 
+"""
+    get_hs_symbol_list(model)
+
+Get list of hidden state symbols for all rnn layers.
+"""
 function get_hs_symbol_list(model)
     hs_symbol = Symbol[]
     rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, model)
@@ -94,6 +118,14 @@ end
 
 ########## Reset Functions ############
 
+
+"""
+    reset!(m, h_init::Dict)
+    reset!(m::Flux.Recur, h_init)
+
+Reset the hidden state according to the dict h_init with keys from [`get_hs_symbol_list`](@ref). If model
+is a recur just replace the hidden state. 
+"""
 function reset!(m, h_init::Dict)
     rnn_idx = find_layers_with_recur(m) # find_layers_with_eq((l)->l isa Flux.Recur, m)
     for idx ∈ rnn_idx
@@ -471,3 +503,4 @@ function modify_hs_in_er!(::SequenceReplay, args...)
 end
 
 include("RNNUtil_deprec.jl")
+

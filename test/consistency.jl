@@ -27,6 +27,7 @@ end
 
 include("consistency/ringworld_er.jl")
 include("consistency/dir_tmaze.jl")
+include("consistency/image_dir_tmaze.jl")
 
 
 end

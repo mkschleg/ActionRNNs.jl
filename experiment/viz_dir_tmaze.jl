@@ -133,7 +133,7 @@ function construct_agent(env, parsed, rng)
                          parsed["hs_learnable"])
 end
 
-function main_experiment(parsed = default_config(); working=false, progress=false, verbose=false)
+function main_experiment(parsed = default_config(); progress=false, testing=false, overwrite=false)
 
     if "cell_numhidden" ∈ keys(parsed)
         parsed["cell"] = parsed["cell_numhidden"][1]
@@ -147,7 +147,7 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         delete!(parsed, "numhidden_factors")
     end
     
-    experiment_wrapper(parsed, working) do parsed
+    experiment_wrapper(parsed; use_git_info=false, testing=testing, overwrite=overwrite) do parsed
 
         num_steps = parsed["steps"]
 
