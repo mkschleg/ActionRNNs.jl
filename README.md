@@ -50,7 +50,7 @@ julia> plot(mean(reshape(rmse, 1000, 300); dims=1)') #this will plot a windowed 
 Adding a consistency test requires you know which experiment you are targeting, what cell, and the various arguments you want. For example. There is some magic macros in the ActionRNNsTests to make this simpler. Bellow is the easiest way to find the test for an experiment with an example in ringworld_er.  This workflow is still WIP, but this should get you all you need to add new cells to the files in `tests/consistency`.
 
 ```julia
-push!(LOAD_PATH, "../ActionRNNs/test/")
+push!(LOAD_PATH, "../ActionRNNs.jl/test/")
 using ReTest
 import ActionRNNsTests: ActionRNNsTests, Consistency.@run_experiment
 begin
