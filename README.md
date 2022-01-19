@@ -65,7 +65,7 @@ end
 We use ReTest to run all our tests. This allows for testing certain experiments or cells across all experiments.
 
 ```julia
-push!(LOAD_PATH, "../ActionRNNs/test/")
+push!(LOAD_PATH, "../ActionRNNs.jl/test/")
 using ReTest; import ActionRNNsTests
 retest() # Run all tests
 retest("AARNN") # Run all AARNN tests
