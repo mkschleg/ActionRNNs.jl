@@ -3,7 +3,7 @@
 
 ## Setup
 
-Clone repository locally, install Julia v1.1.x. In the ActionRNN folder.
+Clone repository locally, install Julia v1.6.x. In the ActionRNN folder.
 
 Start the julia repl with `julia`
 
