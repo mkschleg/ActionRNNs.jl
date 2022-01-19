@@ -17,8 +17,8 @@ julia> ]instantiate
 ## To run the example experiment
 
 ```julia
-julia> using Revise; includet("experiment/ringworld_action_rnn.jl")
-julia> ret = RingWorldRNNExperiment.main_experiment(["--truncation", "5", "--opt", "Descent", "--optparams", "0.1", "--cell", "RNN", "--seed", "1", "--steps", "300000", "--numhidden", "7", "--exp_loc", "ringworld_rnn_action_sweep_sgd", "--working", "--progress"])
+julia> using Revise; includet("experiment/ringworld_er.jl")
+julia> ret = RingWorldRNNExperiment.main_experiment(; progress=true)
 ```
 
 This should run a Ring World experiment with the action RNN. This return a dictionary containing predictions and errors. You should easily be able to analyze the error and see relatively good performance here.
