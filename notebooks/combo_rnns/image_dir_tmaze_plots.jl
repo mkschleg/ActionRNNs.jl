@@ -208,7 +208,7 @@ data_dist_final = RPU.get_line_data_for(
 
 # ╔═╡ b1beea3f-28c4-4d6e-9738-601ac71e51df
 let
-	truncation = 20
+	truncation = 12
 # 	boxplot(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
 # 		label = "DMA",
 # 		color=cell_colors["MAGRU"],
@@ -293,13 +293,13 @@ let
 	# 	color=cell_colors["MAGRU"], title="AA nh: 132, MA nh: 64, truncation: $(truncation)")
 	
 	
-	boxplot!(data_dist_combo, Dict("numhidden"=>111, "truncation"=>truncation, "cell"=>"CaddRNN"); 
-		label = "CaR",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo, Dict("numhidden"=>111, "truncation"=>truncation, "cell"=>"CaddRNN"); 
-		label = "CaR",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo, Dict("numhidden"=>111, "truncation"=>truncation, "cell"=>"CaddRNN"); 
+	# 	label = "CaR",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo, Dict("numhidden"=>111, "truncation"=>truncation, "cell"=>"CaddRNN"); 
+	# 	label = "CaR",
+	# 	color=cell_colors["FacMARNN"])
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>52, "truncation"=>truncation, "cell"=>"CaddGRU"); 
 		label = "CaG",
@@ -326,13 +326,13 @@ let
 		color=cell_colors["MAGRU"])
 	
 	
-	boxplot!(data_dist_combo, Dict("numhidden"=>89, "truncation"=>truncation, "cell"=>"CcatRNN"); 
-		label = "CcR",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo, Dict("numhidden"=>89, "truncation"=>truncation, "cell"=>"CcatRNN"); 
-		label = "CcR",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo, Dict("numhidden"=>89, "truncation"=>truncation, "cell"=>"CcatRNN"); 
+	# 	label = "CcR",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo, Dict("numhidden"=>89, "truncation"=>truncation, "cell"=>"CcatRNN"); 
+	# 	label = "CcR",
+	# 	color=cell_colors["FacMARNN"])
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>44, "truncation"=>truncation, "cell"=>"CcatGRU"); 
 		label = "CcG",
@@ -345,7 +345,7 @@ end
 
 # ╔═╡ 9725440a-b7d8-4b6b-b8e2-64b4cec96feb
 let
-	truncation = 20
+	truncation = 12
 # 	boxplot(data_dist, Dict("numhidden"=>64, "truncation"=>truncation, "cell"=>"MAGRU"); 
 # 		label = "DMA",
 # 		color=cell_colors["MAGRU"],
@@ -430,13 +430,13 @@ let
 		color=cell_colors["MAGRU"], title="AA nh: 70, MA nh: 32, truncation: $(truncation)")
 	
 	
-		boxplot!(data_dist_combo, Dict("numhidden"=>58, "truncation"=>truncation, "cell"=>"CaddRNN"); 
-		label = "CaR",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo, Dict("numhidden"=>58, "truncation"=>truncation, "cell"=>"CaddRNN"); 
-		label = "CaR",
-		color=cell_colors["FacMARNN"])
+	# 	boxplot!(data_dist_combo, Dict("numhidden"=>58, "truncation"=>truncation, "cell"=>"CaddRNN"); 
+	# 	label = "CaR",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo, Dict("numhidden"=>58, "truncation"=>truncation, "cell"=>"CaddRNN"); 
+	# 	label = "CaR",
+	# 	color=cell_colors["FacMARNN"])
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>26, "truncation"=>truncation, "cell"=>"CaddGRU"); 
 		label = "CaG",
@@ -463,13 +463,13 @@ let
 		color=cell_colors["MAGRU"])
 	
 	
-	boxplot!(data_dist_combo, Dict("numhidden"=>49, "truncation"=>truncation, "cell"=>"CcatRNN"); 
-		label = "CcR",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo, Dict("numhidden"=>49, "truncation"=>truncation, "cell"=>"CcatRNN"); 
-		label = "CcR",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo, Dict("numhidden"=>49, "truncation"=>truncation, "cell"=>"CcatRNN"); 
+	# 	label = "CcR",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo, Dict("numhidden"=>49, "truncation"=>truncation, "cell"=>"CcatRNN"); 
+	# 	label = "CcR",
+	# 	color=cell_colors["FacMARNN"])
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>23, "truncation"=>truncation, "cell"=>"CcatGRU"); 
 		label = "CcG",
