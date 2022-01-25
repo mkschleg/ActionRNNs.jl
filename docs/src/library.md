@@ -14,8 +14,6 @@ Pages = ["library.md"]
 Pages = ["library.md"]
 ```
 
-# ActionRNNs.jl
-
 ## Cells
 
 ```@docs
@@ -73,6 +71,56 @@ ActionRNNs.build_rnn_layer
 ```
 
 ## Agents
+
+```@docs
+ActionRNNs.MinimalRLCore.AbstractAgent
+```
+
+### Experience Replay Agents
+```@docs
+ActionRNNs.AbstractERAgent
+```
+
+```@docs
+ActionRNNs.get_replay_buffer
+ActionRNNs.get_learning_update
+ActionRNNs.get_device
+ActionRNNs.get_action_and_prob
+ActionRNNs.MinimalRLCore.start!(agent::ActionRNNs.AbstractERAgent, s, rng; kwargs...)
+ActionRNNs.MinimalRLCore.step!(agent::ActionRNNs.AbstractERAgent, env_s_tp1, r, terminal, rng; kwargs...)
+ActionRNNs.update!(agent::ActionRNNs.AbstractERAgent{<:ActionRNNs.ControlUpdate}, rng)
+ActionRNNs.update!(agent::ActionRNNs.AbstractERAgent{<:ActionRNNs.PredictionUpdate}, rng)
+ActionRNNs.update_target_network!
+```
+
+#### Instantiations
+```@docs
+ActionRNNs.DRQNAgent
+ActionRNNs.DRTDNAgent
+```
+
+### Online Agents
+
+
+### Tools/Utils
+
+<!-- ```@docs -->
+<!-- ActionRNNs.UpdateTimer -->
+<!-- ActionRNNs.make_obs_list -->
+<!-- ActionRNNs.obs_init -->
+<!-- ActionRNNs.image_init -->
+<!-- ActionRNNs.make_replay -->
+<!-- ActionRNNs.get_state_from_experience -->
+<!-- ActionRNNs.get_information_from_experience -->
+<!-- ActionRNNs.build_new_feat -->
+<!-- ``` -->
+
+### Feature Constructors
+
+<!-- ```@docs -->
+<!-- ActionRNNs.IdentityFeatureCreator -->
+<!-- ActionRNNs.AddDimFeatureCreator -->
+<!-- ``` -->
 
 ## Environments
 

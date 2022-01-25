@@ -1,12 +1,28 @@
 
+# mutable struct AGENTSTEPSTUFF{Φ}
+#     statelist
+#     s_t::Φ
+#     action::Int
+#     am1::Int
+#     action_prob::Float64
+#     beg::Bool
+# end
 
-"""
-    Basic DRQNAgent.
-"""
+# mutable struct AGENTMODELSTUFF
+#     model::M
+#     target_network::TN
+#     # hs stuff?
+    
+# end
 
-mutable struct DRQNAgent{LU, ER, TN, DEV, O, M, F, Φ,  Π, HS<:AbstractMatrix{Float32}} <: AbstractERAgent{LU, ER, TN, DEV}
+# mutable struct HSStuff
+# end
+
+
+mutable struct DRQNAgent{LU, ER, TN, DEV, O, M, F, Φ,  Π, HS<:AbstractMatrix{Float32}, HST} <: AbstractERAgent{LU, ER, TN, DEV}
     lu::LU
     opt::O
+    
     model::M
     target_network::TN
 
@@ -24,13 +40,13 @@ mutable struct DRQNAgent{LU, ER, TN, DEV, O, M, F, Φ,  Π, HS<:AbstractMatrix{F
     
     s_t::Φ
     π::Π
-    γ::Float32
+    # γ::Float32
     
     action::Int
     am1::Int
     action_prob::Float64
     
-    hs_learnable::Bool
+    hs_strategy::HST
     beg::Bool
     cur_step::Int
 
@@ -38,11 +54,22 @@ mutable struct DRQNAgent{LU, ER, TN, DEV, O, M, F, Φ,  Π, HS<:AbstractMatrix{F
     device::DEV
 end
 
+get_hs_replay_strategy(agent::DRQNAgent) = agent.hs_strategy
 
+
+#=
+Constructors
+=#
+
+"""
+    DRQNAgent
+
+An intense function... lol.
+"""
 function DRQNAgent(model,
                    opt,
                    τ,
-                   γ,
+                   update,
                    feature_creator,
                    feature_size,
                    env_state_size,
@@ -52,7 +79,7 @@ function DRQNAgent(model,
                    update_time,
                    target_update_time,
                    acting_policy,
-                   hs_learnable)
+                   hs_strategy)
 
     dev = Device(model)
     # @info dev
@@ -70,7 +97,7 @@ function DRQNAgent(model,
     update_timer = UpdateTimer(warm_up, update_time)
     trg_update_timer = UpdateTimer(0, target_update_time)
 
-    DRQNAgent(QLearningSUM(γ),
+    DRQNAgent(update, #QLearningSUM(γ),
               opt,
               model,
               deepcopy(model),
@@ -84,15 +111,15 @@ function DRQNAgent(model,
               τ,
               init_state,
               acting_policy,
-              γ,
-              1, 1, 0.0, hs_learnable, true, 0,
+              # γ,
+              1, 1, 0.0, hs_strategy, true, 0,
               typeof(hidden_state_init)(), dev)
 end
 
 function ImageDRQNAgent(model,
                         opt,
                         τ,
-                        γ,
+                        update,
                         env_state_shape,
                         env_state_type,
                         replay_size,
@@ -101,7 +128,7 @@ function ImageDRQNAgent(model,
                         update_time,
                         target_update_time,
                         acting_policy,
-                        hs_learnable)
+                        hs_strategy)
 
     dev = Device(model)
     @info dev
@@ -124,7 +151,7 @@ function ImageDRQNAgent(model,
     update_timer = UpdateTimer(warm_up, update_time)
     trg_update_timer = UpdateTimer(0, target_update_time)
 
-    DRQNAgent(QLearningHUBER(γ),
+    DRQNAgent(update, #QLearningHUBER(γ),
               opt,
               model,
               deepcopy(model),
@@ -139,8 +166,8 @@ function ImageDRQNAgent(model,
               τ,
               init_state,
               acting_policy,
-              γ,
-              1, 1, 0.0, hs_learnable, true, 0,
+              # γ,
+              1, 1, 0.0, hs_strategy, true, 0,
               typeof(hidden_state_init)(), dev)
 end
 

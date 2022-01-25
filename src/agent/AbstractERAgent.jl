@@ -4,6 +4,8 @@
 """
     AbstractERAgent
 
+The abstract struct for building experience replay agents.
+
 example agent:
 mutable struct DRQNAgent{ER, Φ,  Π, HS<:AbstractMatrix{Float32}} <: AbstractERAgent
     lu::LearningUpdate
@@ -41,12 +43,39 @@ end
 """
 abstract type AbstractERAgent{LU, ER, TN, DEV} <: AbstractAgent end
 
+"""
+    get_replay_buffer(agent::AbstractERAgent)
+
+Get the replay buffer from the agent.
+"""
 get_replay_buffer(agent::AbstractERAgent) = agent.replay
+
+"""
+    get_learning_update(agent::AbstractERAgent)
+
+Get the learning update from the agent.
+"""
 get_learning_update(agent::AbstractERAgent) = agent.lu
+
+"""
+    get_device(agent::AbstractERAgent)
+
+Get the current device from the agent.
+"""
 get_device(agent::AbstractERAgent) = agent.device
 
+"""
+    get_hs_replay_strategy(agent::AbstractERAgent)
 
+Get the replay strategy of the agent.
+"""
+get_hs_replay_strategy(agent::AbstractERAgent) = @error "Need to implement `get_hs_replay_strategy`"
 
+"""
+    get_action_and_prob(π, values, rng)
+
+Get action and the associated probability of taking the action.
+"""
 function get_action_and_prob(π, values, rng)
     action = 0
     action_prob = 0.0
@@ -60,72 +89,48 @@ function get_action_and_prob(π, values, rng)
     action, action_prob
 end
 
+"""
+    start!(agent::AbstractERAgent, s, rng; kwargs...)
 
+Start the agent for a new episode. 
+"""
 function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
 
-    if true #agent.device isa GPU
-        #=
-        new probably more sensible behaviour. 
-        
-        The new behaviour uses a starting action of agent.action=1 
-        in constructing the initial agent.s_t and adding to agent.state_list.
-        =#
-        agent.action = 1
-        agent.am1 = 1
-        agent.beg = true
+    #=
+    new probably more sensible behaviour. 
+    
+    The new behaviour uses a starting action of agent.action=1 
+    in constructing the initial agent.s_t and adding to agent.state_list.
+    =#
+    agent.action = 1
+    agent.am1 = 1
+    agent.beg = true
 
-        empty!(agent.state_list)
+    empty!(agent.state_list)
 
-        if agent.replay isa ImageReplay
-            start_statebuffer!(agent.replay, s)
-        end
-
-        agent.s_t = build_new_feat(agent, s, agent.action)
-        push!(agent.state_list, agent.s_t)
-        
-        Flux.reset!(agent.model)
-        values = [agent.model(s_t) for s_t in agent.state_list][end] 
-        
-        agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
-        
-        agent.hidden_state_init = get_initial_hidden_state(agent.model)
-        
-        return agent.action
-    else
-        #=
-        Old behaviour.
-
-        The old behaviour uses the action sampled from the 
-        inistial state to build the agent.state_list and 
-        agent.s_t. This doesn't seem sensible, and a weird decision.
-        Kept for backward compatibility.
-        =#
-        agent.action = 1
-        agent.am1 = 1
-        agent.beg = true
-
-        s_t = build_new_feat(agent, s, agent.action)
-        
-        Flux.reset!(agent.model)
-        values = agent.model(s_t)
-
-        agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
-        
-        empty!(agent.state_list)
-
-        if agent.replay isa ImageReplay
-            start_statebuffer!(agent.replay, s)
-        end
-
-        push!(agent.state_list, build_new_feat(agent, s, agent.action))
-        agent.hidden_state_init = get_initial_hidden_state(agent.model)
-        agent.s_t = build_new_feat(agent, s, agent.action)
-        
-        return agent.action
+    if agent.replay isa ImageReplay
+        start_statebuffer!(agent.replay, s)
     end
+
+    agent.s_t = build_new_feat(agent, s, agent.action)
+    push!(agent.state_list, agent.s_t)
+    
+    Flux.reset!(agent.model)
+    values = [agent.model(s_t) for s_t in agent.state_list][end] 
+    
+    agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
+    
+    agent.hidden_state_init = get_initial_hidden_state(agent.model)
+    
+    return agent.action
+
 end
 
+"""
+    step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
+step! for an experience replay agent.
+"""
 function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
     push!(agent.state_list,
@@ -185,8 +190,12 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     return (preds=values, h=cur_hidden_state, action=agent.action, update_state=us)
 end
 
+"""
+    update!(agent::AbstractERAgent{<:ControlUpdate}, rng)
 
-function update!(agent::AbstractERAgent{LU}, rng) where {LU<:ControlUpdate}
+Update the parameters of the model.
+"""
+function update!(agent::AbstractERAgent{<:ControlUpdate}, rng)
 
     τ = agent.τ
     batch_size = agent.batch_size
@@ -207,15 +216,29 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:ControlUpdate}
                        agent.opt,
                        agent.hs_tr_init,
                        params; device=get_device(agent))
-    
-    if agent.hs_learnable
-        modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt, get_device(agent))
-    end
+
+    # if get_hidden_state_replay_strategy(agent) #agent.hs_strategy
+    modify_hs_in_er!(
+        get_hs_replay_strategy(agent),
+        agent.replay,
+        agent.model,
+        exp,
+        exp_idx,
+        agent.hs_tr_init,
+        us.grads,
+        agent.opt,
+        get_device(agent))
+    # end
     
     us
 end
 
-function update!(agent::AbstractERAgent{LU}, rng) where {LU<:PredictionUpdate}
+"""
+    update!(agent::AbstractERAgent{<:PredictionUpdate}, rng)
+
+Update the parameters of the model.
+"""
+function update!(agent::AbstractERAgent{<:PredictionUpdate}, rng)
 
     τ = agent.τ
     batch_size = agent.batch_size
@@ -241,13 +264,25 @@ function update!(agent::AbstractERAgent{LU}, rng) where {LU<:PredictionUpdate}
                        params)
 
     
-    if agent.hs_learnable
-        modify_hs_in_er!(agent.replay, agent.model, exp, exp_idx, agent.hs_tr_init, us.grads, agent.opt)
-    end
+        modify_hs_in_er!(
+            get_hs_replay_strategy(agent),
+            agent.replay,
+            agent.model,
+            exp,
+            exp_idx,
+            agent.hs_tr_init,
+            us.grads,
+            agent.opt)
+    
     us 
 
 end
 
+"""
+    update_target_network!
+
+Update the target network.
+"""
 update_target_network!(agent::AbstractERAgent) = begin
     update_target_network!(agent.model, agent.target_network)
 end

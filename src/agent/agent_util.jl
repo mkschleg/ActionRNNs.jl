@@ -201,3 +201,6 @@ MinimalRLCore.feature_size(fc::AddDimFeatureCreator) = (fc.env_state_shape..., 1
 (fc::AddDimFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
 
 
+
+include("../hs_strategies.jl")
+

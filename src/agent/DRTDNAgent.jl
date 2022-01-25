@@ -36,6 +36,7 @@ mutable struct DRTDNAgent{H, O, C, CT, F, LU, ER, DEV, Φ,  Π, HS<:AbstractMatr
     device::DEV
 end
 
+get_hs_replay_strategy(agent::DRTDNAgent) = agent.hs_learnable
 
 function DRTDNAgent(horde,
                     model,
