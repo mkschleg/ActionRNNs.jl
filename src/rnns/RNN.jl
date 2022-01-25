@@ -146,7 +146,7 @@ function FacMARNNCell(args...;
     rnn_init(args...; kwargs...)
 end
 
-FacMARNNCell_standard(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
+FacMARNNCell_standard(in, actions, out, factors, activation=tanh; init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros, rng=Random.GLOBAL_RNG) = 
     FacMARNNCell(activation,
                  init(out, factors),
                  init(factors, in),
@@ -155,7 +155,7 @@ FacMARNNCell_standard(in, actions, out, factors, activation=tanh; hs_learnable=t
                  initb(out, actions),
                  init_state(out, 1))
 
-FacMARNNCell_ignore(in, actions, out, factors, activation=tanh; hs_learnable=true, init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros) = 
+FacMARNNCell_ignore(in, actions, out, factors, activation=tanh; init=Flux.glorot_uniform, initb=Flux.zeros, init_state=Flux.zeros, rng=Random.GLOBAL_RNG) = 
     FacMARNNCell(activation,
                  init(out, factors; ignore_dims=2),
                  init(factors, in),
@@ -165,11 +165,17 @@ FacMARNNCell_ignore(in, actions, out, factors, activation=tanh; hs_learnable=tru
                  init_state(out, 1))
 
 function FacMARNNCell_tensor(in, actions, out, factors, activation=tanh;
-                            hs_learnable=true, init=glorot_uniform,
-                            initb=Flux.zeros, init_state=Flux.zeros)
+                             init=glorot_uniform,
+                             initb=Flux.zeros,
+                             init_state=Flux.zeros,
+                             rng=Random.GLOBAL_RNG)
 
     W_t = init(actions, out, in+out; ignore_dims=1)
-    W_d = cp_als(W_t, factors)
+    W_d = cp_als(W_t, factors,
+                 init=[rand(rng, Float32, actions, factors),
+                       rand(rng, Float32, out, factors),
+                       rand(rng, Float32, in+out, factors)])
+
 
     W_a, W_o, W_hi = W_d.fmat
     W_o .*= W_d.lambda'

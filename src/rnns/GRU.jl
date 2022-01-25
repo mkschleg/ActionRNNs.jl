@@ -111,7 +111,11 @@ function FacMAGRUCell(args...; init_style="standard", kwargs...)
 end
 
 
-FacMAGRUCell_standard(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros) =
+FacMAGRUCell_standard(in, na, out, factors;
+                      init = glorot_uniform,
+                      initb = Flux.zeros,
+                      init_state = Flux.zeros,
+                      rng=Random.GLOBAL_RNG) =
     FacMAGRUCell(init(out * 3, factors),
                  init(factors, in),
                  init(factors, out),
@@ -119,10 +123,17 @@ FacMAGRUCell_standard(in, na, out, factors; init = glorot_uniform, initb = Flux.
                  initb(out * 3, na),
                  init_state(out,1))
 
-function FacMAGRUCell_tensor(in, na, out, factors; init = glorot_uniform, initb = Flux.zeros, init_state = Flux.zeros)
+function FacMAGRUCell_tensor(in, na, out, factors;
+                             init = glorot_uniform,
+                             initb = Flux.zeros,
+                             init_state = Flux.zeros,
+                             rng=Random.GLOBAL_RNG)
 
     W_t = init(na, out*3, in+out; ignore_dims=1)
-    W_d = cp_als(W_t, factors)
+    W_d = cp_als(W_t, factors,
+                 init=[rand(rng, Float32, na, factors),
+                       rand(rng, Float32, out*3, factors),
+                       rand(rng, Float32, in+out, factors)])
     
     W_a, W_o, W_hi = W_d.fmat
     W_o .*= W_d.lambda'

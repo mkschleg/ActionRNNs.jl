@@ -46,7 +46,7 @@ DTMAZE_ER_BASE_CONFIG =
 
     @testset "FacMARNN" begin
         ret = @run_experiment DirectionalTMazeERExperiment  "FacMARNN" Consistency.DTMAZE_ER_BASE_CONFIG factors=8 init_style="tensor"
-        @test dir_tmaze_check(ret, -1271.2988f0)
+        @test dir_tmaze_check(ret, -1352.9984f0)
     end
 
     @testset "GRU" begin
@@ -66,7 +66,7 @@ DTMAZE_ER_BASE_CONFIG =
 
     @testset "FacMAGRU" begin
         ret = @run_experiment DirectionalTMazeERExperiment  "FacMAGRU" Consistency.DTMAZE_ER_BASE_CONFIG factors=8 init_style="tensor"
-        @test dir_tmaze_check(ret, -1448.6187f0)
+        @test dir_tmaze_check(ret, -1375.6237f0)
     end
 
     

@@ -142,7 +142,8 @@ function build_rnn_layer(::BuildFactored, rnn_type,
     rnn_type(in, actions, out, factors;
              init_style=init_style,
              init=init_func,
-             initb=initb)
+             initb=initb,
+             rng=rng)
 
 end
 
