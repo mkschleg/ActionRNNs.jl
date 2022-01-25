@@ -44,7 +44,7 @@ image_dir_tmaze_loss_check(results, value) = sum(results.save_results.losses) ==
 
     @testset "FacMAGRU" begin
         ret = @run_experiment VisualDirectionalTMazeERExperiment "FacMAGRU" IMGDIRTMAZE_BASE_CONFIG factors=8 init_style="tensor"
-        @test image_dir_tmaze_rew_check(ret, -2001.0f0) && image_dir_tmaze_loss_check(ret, 5.0309463f0)
+        @test image_dir_tmaze_rew_check(ret, -2000.0f0) && image_dir_tmaze_loss_check(ret, 4.3609962f0)
     end
 
 end

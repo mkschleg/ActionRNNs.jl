@@ -121,7 +121,7 @@ function construct_agent(env, parsed, rng)
     ActionRNNs.ImageDRQNAgent(chain,
                          opt,
                          τ,
-                         γ,
+                         ActionRNNs.QLearningHUBER(γ),
                          (28, 28, 1),
                          UInt8,
                          parsed["replay_size"],

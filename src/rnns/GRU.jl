@@ -105,11 +105,8 @@ end
 function FacMAGRUCell(args...; init_style="standard", kwargs...)
     init_cell_name = "FacMAGRUCell_$(init_style)"
     rnn_init = getproperty(ActionRNNs, Symbol(init_cell_name))
-    ret = rnn_init(args...; kwargs...)
-    println(typeof(ret))
-    ret
+    rnn_init(args...; kwargs...)
 end
-
 
 FacMAGRUCell_standard(in, na, out, factors;
                       init = glorot_uniform,
