@@ -3,7 +3,7 @@
 
 ## Setup
 
-Clone repository locally, install Julia v1.1.x. In the ActionRNN folder.
+Clone repository locally, install Julia v1.6.x. In the ActionRNN folder.
 
 Start the julia repl with `julia`
 
@@ -17,8 +17,8 @@ julia> ]instantiate
 ## To run the example experiment
 
 ```julia
-julia> using Revise; includet("experiment/ringworld_action_rnn.jl")
-julia> ret = RingWorldRNNExperiment.main_experiment(["--truncation", "5", "--opt", "Descent", "--optparams", "0.1", "--cell", "RNN", "--seed", "1", "--steps", "300000", "--numhidden", "7", "--exp_loc", "ringworld_rnn_action_sweep_sgd", "--working", "--progress"])
+julia> using Revise; includet("experiment/ringworld_er.jl")
+julia> ret = RingWorldRNNExperiment.main_experiment(; progress=true)
 ```
 
 This should run a Ring World experiment with the action RNN. This return a dictionary containing predictions and errors. You should easily be able to analyze the error and see relatively good performance here.
@@ -50,7 +50,7 @@ julia> plot(mean(reshape(rmse, 1000, 300); dims=1)') #this will plot a windowed 
 Adding a consistency test requires you know which experiment you are targeting, what cell, and the various arguments you want. For example. There is some magic macros in the ActionRNNsTests to make this simpler. Bellow is the easiest way to find the test for an experiment with an example in ringworld_er.  This workflow is still WIP, but this should get you all you need to add new cells to the files in `tests/consistency`.
 
 ```julia
-push!(LOAD_PATH, "../ActionRNNs/test/")
+push!(LOAD_PATH, "../ActionRNNs.jl/test/")
 using ReTest
 import ActionRNNsTests: ActionRNNsTests, Consistency.@run_experiment
 begin
@@ -65,7 +65,7 @@ end
 We use ReTest to run all our tests. This allows for testing certain experiments or cells across all experiments.
 
 ```julia
-push!(LOAD_PATH, "../ActionRNNs/test/")
+push!(LOAD_PATH, "../ActionRNNs.jl/test/")
 using ReTest; import ActionRNNsTests
 retest() # Run all tests
 retest("AARNN") # Run all AARNN tests

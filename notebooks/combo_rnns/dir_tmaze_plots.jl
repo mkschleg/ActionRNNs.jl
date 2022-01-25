@@ -103,14 +103,17 @@ ic_dir_deep_final, dd_dir_deep_final = RPU.load_data(at("dir_tmaze_er_deep_a_fin
 # ╔═╡ c7f9c051-5024-4ff8-a19a-8cad57c05123
 ic_dir_final, dd_dir_final = RPU.load_data(at("final_dir_tmaze_er_rnn_rmsprop_10_2/"))
 
-# ╔═╡ d3c612a3-7e0c-489c-98cc-9fde857cf27a
-ic_dir_combo_add, dd_dir_combo_add = RPU.load_data(at("dir_tmaze_er_combo_add/"))
-
 # ╔═╡ 538d0e68-c644-4306-a030-a4a1bdefa97b
 ic_dir_combo_cat, dd_dir_combo_cat = RPU.load_data(at("dir_tmaze_er_combo_cat/"))
 
+# ╔═╡ f3754707-6a54-4fd8-82bd-43df03c6a57e
+ic_dir_combo_add, dd_dir_combo_add = RPU.load_data(at("dir_tmaze_er_combo_add/"))
+
+# ╔═╡ a9777b89-3716-4032-8b17-a12aba186d0c
+ic_dir_combo_el, dd_dir_combo_el = RPU.load_data(at("dir_tmaze_er_combo_el/"))
+
 # ╔═╡ 6211a38a-7b53-4054-970e-c29ad17de646
-ic_dir[1].parsed_args["steps"]
+ic_dir_final[1].parsed_args["steps"]
 
 # ╔═╡ e822182e-b485-4a95-a08c-efe1540ff6ad
 data = RPU.get_line_data_for(
@@ -151,50 +154,6 @@ let
 	plt
 end
 
-# ╔═╡ 0eb4c818-b533-4695-a0c7-53e72023281f
-let 
-	args_list = [
-		Dict("numhidden"=>10, "truncation"=>12),
-		Dict("numhidden"=>15, "truncation"=>12),
-		Dict("numhidden"=>20, "truncation"=>12),
-	]
-	
-	plot(data, args_list, palette=RPU.custom_colorant)
-end
-
-# ╔═╡ 35a8c33f-12bb-4859-8f49-19a852354559
-let 
-	args_list = [
-		Dict("numhidden"=>10, "truncation"=>20),
-		Dict("numhidden"=>15, "truncation"=>20),
-		Dict("numhidden"=>20, "truncation"=>20),
-	]
-	
-	plot(data, args_list, palette=RPU.custom_colorant)
-end
-
-# ╔═╡ 5c3ddaed-47b6-465b-b4c5-bc0fb30c8601
-data_sens = RPU.get_line_data_for(
-	ic_dir_combo,
-	["numhidden", "truncation", "eta"],
-	[];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ 37af922e-ed3c-4aec-a4cf-c403c49a9ba9
-let
-	plot(data_sens, 
-	 	 Dict("numhidden"=>10, "truncation"=>12); 
-		 sort_idx="eta", z=1.97, lw=2, palette=ReproducePlotUtils.custom_colorant)
-	plot!(data_sens, 
-	 	  Dict("numhidden"=>15, "truncation"=>20); 
-	 	  sort_idx="eta", z=1.97, lw=2, palette=ReproducePlotUtils.custom_colorant)
-	plot!(data_sens, 
-	  Dict("numhidden"=>20, "truncation"=>12); 
-	  sort_idx="eta", z=1.97, lw=2, palette=ReproducePlotUtils.custom_colorant)
-end
-
 # ╔═╡ fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
 data_dist = RPU.get_line_data_for(
 	ic_dir,
@@ -222,15 +181,6 @@ data_dist_final = RPU.get_line_data_for(
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
 	get_data=(x)->RPU.get_MUE(x, :successes))
 
-# ╔═╡ ff776339-f8a3-4204-962f-da9fd8b5bbe4
-data_dist_combo_add = RPU.get_line_data_for(
-	ic_dir_combo_add,
-	["numhidden", "truncation", "cell"],
-	["eta"];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
 # ╔═╡ b4805558-8a0c-4942-8462-d02b34452222
 data_dist_combo_cat = RPU.get_line_data_for(
 	ic_dir_combo_cat,
@@ -239,6 +189,285 @@ data_dist_combo_cat = RPU.get_line_data_for(
 	comp=findmax,
 	get_comp_data=(x)->RPU.get_MUE(x, :successes),
 	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ 9110fc79-d8e9-4f5f-8d37-33f6b467678e
+data_dist_combo_add = RPU.get_line_data_for(
+	ic_dir_combo_add,
+	["numhidden", "truncation", "cell"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ 94c2860e-c291-4bbc-ab5e-85abf598106e
+data_dist_combo_el = RPU.get_line_data_for(
+	ic_dir_combo_el,
+	["numhidden", "truncation", "cell", "num_experts"],
+	["eta"];
+	comp=findmax,
+	get_comp_data=(x)->RPU.get_MUE(x, :successes),
+	get_data=(x)->RPU.get_MUE(x, :successes))
+
+# ╔═╡ 9ffd1176-dc7d-4fb3-b66a-13bc85b5413b
+let
+	truncation = 12
+	boxplot(data_dist_final, Dict("numhidden"=>30, "cell"=>"AARNN"); 
+		label="AAR", 
+		color=cell_colors["AARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>30, "cell"=>"AARNN"); 
+		label="AAR", 
+		color=cell_colors["AARNN"])
+	
+	boxplot!(data_dist_final, Dict("numhidden"=>18, "cell"=>"MARNN"); 
+		label="MAR", 
+		color=cell_colors["MARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>18, "cell"=>"MARNN"); 
+		label="MAR", 
+		color=cell_colors["MARNN"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"CaddRNN", "numhidden"=>15, "truncation"=>truncation, "num_experts"=>0); 
+		#label_idx="cell", 
+		label = "CaR",
+		color=cell_colors["RNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"CaddRNN", "numhidden"=>15, "truncation"=>truncation, "num_experts"=>0); 
+		#label_idx="cell", 
+		label = "CaR",
+		color=cell_colors["RNN"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"CaddElRNN", "numhidden"=>15, "truncation"=>truncation, "num_experts"=>0); 
+		#label_idx="cell", 
+		label = "CaER",
+		color=cell_colors["AARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"CaddElRNN", "numhidden"=>15, "truncation"=>truncation, "num_experts"=>0); 
+		#label_idx="cell", 
+		label = "CaER",
+		color=cell_colors["AARNN"])
+	
+	boxplot!(data_dist_combo_cat, Dict("numhidden"=>11, "truncation"=>12, "cell"=>"CcatRNN"); 
+		label = "CcR11",
+		color=cell_colors["FacMARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_cat, Dict("numhidden"=>11, "truncation"=>12, "cell"=>"CcatRNN"); 
+		label = "CcR11",
+		color=cell_colors["FacMARNN"])
+	
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
+		#label_idx="cell", 
+		label = "MR1",
+		color=cell_colors["MARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
+		#label_idx="cell", 
+		label = "MR1",
+		color=cell_colors["MARNN"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
+		#label_idx="cell", 
+		label = "MER1",
+		color=cell_colors["FacMARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
+		#label_idx="cell", 
+		label = "MER1",
+		color=cell_colors["FacMARNN"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
+		#label_idx="cell", 
+		label = "MR2",
+		color=cell_colors["MARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
+		#label_idx="cell", 
+		label = "MR2",
+		color=cell_colors["MARNN"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
+		#label_idx="cell", 
+		label = "MER2",
+		color=cell_colors["FacMARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
+		#label_idx="cell", 
+		label = "MER2",
+		color=cell_colors["FacMARNN"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
+		#label_idx="cell", 
+		label = "MR3",
+		color=cell_colors["MARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
+		#label_idx="cell", 
+		label = "MR3",
+		color=cell_colors["MARNN"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
+		#label_idx="cell", 
+		label = "MER3",
+		color=cell_colors["FacMARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
+		#label_idx="cell", 
+		label = "MER3",
+		color=cell_colors["FacMARNN"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
+		#label_idx="cell", 
+		label = "MR5",
+		color=cell_colors["MARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
+		#label_idx="cell", 
+		label = "MR5",
+		color=cell_colors["MARNN"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
+		#label_idx="cell", 
+		label = "MER5",
+		color=cell_colors["FacMARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
+		#label_idx="cell", 
+		label = "MER5",
+		color=cell_colors["FacMARNN"],
+		title="Dir TMaze ER RNN, truncation: $(truncation)")
+	
+end
+
+# ╔═╡ 7103c832-4bb1-46e1-bec0-9905a45aa18f
+begin	
+	truncation=12
+	boxplot(data_dist_final, Dict("numhidden"=>17, "cell"=>"AAGRU"); 
+		label="AAG", 
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>17, "cell"=>"AAGRU"); 
+		label="AAG", 
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_final, Dict("numhidden"=>10, "cell"=>"MAGRU"); 
+		label="MAG", 
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_final, Dict("numhidden"=>10, "cell"=>"MAGRU"); 
+		label="MAG", 
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"CaddGRU", "numhidden"=>8, "truncation"=>truncation, "num_experts"=>0); 
+		#label_idx="cell", 
+		label = "CaG",
+		color=cell_colors["GRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"CaddGRU", "numhidden"=>8, "truncation"=>truncation, "num_experts"=>0); 
+		#label_idx="cell", 
+		label = "CaG",
+		color=cell_colors["GRU"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"CaddElGRU", "numhidden"=>8, "truncation"=>truncation, "num_experts"=>0); 
+		#label_idx="cell", 
+		label = "CaEG",
+		color=cell_colors["AAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"CaddElGRU", "numhidden"=>8, "truncation"=>truncation, "num_experts"=>0); 
+		#label_idx="cell", 
+		label = "CaEG",
+		color=cell_colors["AAGRU"])
+	
+	boxplot!(data_dist_combo_cat, Dict("numhidden"=>4, "truncation"=>12, "cell"=>"CcatGRU"); 
+		label = "CcG6",
+		color=cell_colors["FacMAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_cat, Dict("numhidden"=>4, "truncation"=>12, "cell"=>"CcatGRU"); 
+		label = "CcG6",
+		color=cell_colors["FacMAGRU"])
+	
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
+		#label_idx="cell", 
+		label = "MG1",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
+		#label_idx="cell", 
+		label = "MG1",
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
+		#label_idx="cell", 
+		label = "MEG1",
+		color=cell_colors["FacMAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
+		#label_idx="cell", 
+		label = "MEG1",
+		color=cell_colors["FacMAGRU"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
+		#label_idx="cell", 
+		label = "MG2",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
+		#label_idx="cell", 
+		label = "MG2",
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
+		#label_idx="cell", 
+		label = "MEG2",
+		color=cell_colors["FacMAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
+		#label_idx="cell", 
+		label = "MEG2",
+		color=cell_colors["FacMAGRU"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
+		#label_idx="cell", 
+		label = "MG3",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
+		#label_idx="cell", 
+		label = "MG3",
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
+		#label_idx="cell", 
+		label = "MEG3",
+		color=cell_colors["FacMAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
+		#label_idx="cell", 
+		label = "MEG3",
+		color=cell_colors["FacMAGRU"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
+		#label_idx="cell", 
+		label = "MG5",
+		color=cell_colors["MAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
+		#label_idx="cell", 
+		label = "MG5",
+		color=cell_colors["MAGRU"])
+	
+	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
+		#label_idx="cell", 
+		label = "MEG5",
+		color=cell_colors["FacMAGRU"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
+		#label_idx="cell", 
+		label = "MEG5",
+		color=cell_colors["FacMAGRU"], xtickfontsize=8, 
+		title="Dir TMaze ER GRU, truncation: $(truncation)")
+end
 
 # ╔═╡ 78102549-6117-4348-bff2-bbc52f92fc80
 let
@@ -853,242 +1082,6 @@ let
 		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
 end
 
-# ╔═╡ e2a991a9-580d-44eb-86ff-468686fcae11
-let
-	args_list_l = [
-		Dict("internal"=>14, "numhidden"=>10, "replay_size"=>20000, "truncation"=>20, "cell"=>"AAGRU"),
-		Dict("internal"=>20, "numhidden"=>18, "replay_size"=>20000, "truncation"=>20, "cell"=>"AARNN"),
-	]
-	boxplot(data_dist, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-end
-
-# ╔═╡ 305f8ac8-8f5f-4ec4-84a6-867f69a8887c
-ic_fac, dd_fac = RPU.load_data("../local_data/dir_tmaze_er_fac_rnn_rmsprop_10/")
-
-# ╔═╡ 533cba3d-7fc5-4d66-b545-b15ffc8ab6d8
-data_fac_sens_eta = RPU.get_line_data_for(
-	ic_fac,
-	["numhidden", "cell", "replay_size", "factors", "eta"],
-	[];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ 39752286-a6db-439d-aca0-1be4821bfc2b
-let
-	args_list = [
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10),
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU", "factors"=>10)]
-	plot(data_fac_sens_eta, args_list; sort_idx="eta", labels=["FacMARNN" "FacMAGRU"])
-end
-
-# ╔═╡ 7d611b39-f9a8-43e4-951e-9d812cbd4384
-data_fac_sens = RPU.get_line_data_for(
-	ic_fac,
-	["numhidden", "cell", "replay_size", "factors"],
-	["eta"];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ a8949e02-61f5-456a-abee-2bad91d2df05
-let
-	args_list = [
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN"),
-		Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU")]
-	plot(data_fac_sens, args_list; sort_idx="factors", labels=["FacMARNN" "FacMAGRU"])
-end
-
-# ╔═╡ 4b654ad2-93cf-455e-9c7b-982766560205
-let
-	plts = []
-	for rs ∈ dd_fac["replay_size"]
-		
-		args_list = [
-			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMARNN"),
-			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMAGRU")]
-		push!(plts, plot(data_fac_sens, args_list; sort_idx="factors", labels=["FacMARNN" "FacMAGRU"], title=rs, color = 	[cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], legend=nothing, z=1.97, lw=2, xlabel="Factors", ylabel="Success"))
-	end
-	plot(plts..., size=(800, 600))
-end
-
-# ╔═╡ 2dbcb518-2fda-44c4-bfc0-b422a8da9c35
-let
-	args_list = [
-		Dict("numhidden"=>25, "replay_size"=>10000, "cell"=>"FacMARNN", "factors"=>10),
-		Dict("numhidden"=>15, "replay_size"=>10000, "cell"=>"FacMAGRU", "factors"=>10)]
-	boxplot(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
-	dotplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
-	args_list_l = [
-		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"GRU"),
-		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU"),
-		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU"),
-		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"RNN"),
-		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN"),
-		Dict("numhidden"=>18, "truncation"=>12, "cell"=>"MARNN")]
-	boxplot!(data_10_dist, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_10_dist, args_list_l; label_idx="cell",
-				color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),)
-	# dotplot!(data_10_dist, args_list_l; 
-	# 	label_idx="cell", 
-	# 	color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-end
-
-# ╔═╡ 7f630af5-a608-47d3-be13-589b9731798e
-ic_fac_init, dd_fac_init = RPU.load_data("../local_data/dir_tmaze_er_fac_rnn_init_rmsprop_10/")
-
-# ╔═╡ c60ee6c5-85e4-407c-8272-801085296084
-
-
-# ╔═╡ f297e4f3-5826-4f90-8f24-ae731232f63b
-data_fac_init_sens_eta = RPU.get_line_data_for(
-	ic_fac_init,
-	["numhidden", "cell", "init_style", "replay_size", "factors", "eta"],
-	[];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ baf539d2-bdd9-40be-bca7-2af231d7063d
-let
-	args_list = [
-		Dict("numhidden"=>25, "replay_size"=>10000, "cell"=>"FacMARNN", "factors"=>15, "init_style"=>"tensor"),
-		Dict("numhidden"=>15, "replay_size"=>10000, "cell"=>"FacMAGRU", "factors"=>15, "init_style"=>"tensor")]
-	plot(data_fac_init_sens_eta, args_list; sort_idx="eta", labels=["FacMARNN" "FacMAGRU"])
-end
-
-# ╔═╡ 4480eb51-352d-49ff-8181-96e6bf03cab3
-data_fac_init_sens = RPU.get_line_data_for(
-	ic_fac_init,
-	["numhidden", "cell", "replay_size", "factors", "init_style"],
-	["eta"];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ 800cd6d3-177f-4542-b4b5-38f24265876a
-d = data_fac_init_sens[1]
-
-# ╔═╡ 10a832cc-574b-4012-ab9e-4cd40f9bb9c8
-d.swept_params
-
-# ╔═╡ 8500402b-28aa-41ed-96d7-450903bc90d0
-let
-	plts = []
-	rsrs = [10000, 20000]
-	for (rs, ins) ∈ Iterators.product(rsrs, dd_fac_init["init_style"])
-		
-		args_list = [
-			Dict("numhidden"=>25, "replay_size"=>rs, "cell"=>"FacMARNN", "init_style"=>ins),
-			Dict("numhidden"=>15, "replay_size"=>rs, "cell"=>"FacMAGRU", "init_style"=>ins)]
-		push!(plts, plot(data_fac_init_sens, args_list; sort_idx="factors", labels=["FacMARNN" "FacMAGRU"], title="$((rs, ins))", color = 	[cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], lw = 2, legend=nothing))
-	end
-	plot(plts...)
-end
-
-# ╔═╡ 20e3d6d4-bec8-4a42-8e5c-01c6f60600d7
-plt_args_list = let
-	args_list = [
-		Dict("numhidden"=>10, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.0003125), #num_params = 1303
-		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"MAGRU", "eta"=>0.0003125), #num_params = 3499
-		Dict("numhidden"=>15, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.00125), #num_params = 1053
-		Dict("numhidden"=>17, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.0003125),
-		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"AAGRU", "eta"=>0.00125), #num_params = 1703
-		Dict("numhidden"=>20, "truncation"=>12, "cell"=>"GRU", "eta"=>0.00125),
-		Dict("numhidden"=>18, "truncation"=>12, "cell"=>"MARNN", "eta"=>0.0003125), #num_params = 463
-		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"AARNN", "eta"=>0.0003125),
-		Dict("numhidden"=>30, "truncation"=>12, "cell"=>"RNN", "eta"=>1.953125e-5)
-	]
-
-	# FileIO.save("../final_runs/dir_tmaze_10.jld2", "args", args_list)
-	
-	plt_keys = ["numhidden", "truncation", "cell"]
-	[Dict(k=>args_list[i][k] for k ∈ plt_keys) for i in 1:length(args_list)]
-end
-
-# ╔═╡ c9ab1109-4513-412c-8b84-9ae02d65acf7
-
-
-# ╔═╡ 24b79fb2-acfe-47e8-976d-231fa4ce2a10
-let	
-	params = [
-		Dict("cell"=>"FacMAGRU", "numhidden"=>15, "init_style"=>"tensor"),
-		Dict("cell"=>"FacMARNN", "numhidden"=>25, "init_style"=>"tensor")
-	]
-	# dd_fac_init["truncation"] = [12]
-	get_final_argument_list(params, data_fac_init_sens, dd_fac_init, ["factors", "replay_size"], ["eta"])
-end
-
-# ╔═╡ 7333fe0d-02fe-4d74-9427-95826c485334
-ic_20, dd_20 = RPU.load_data("../local_data/dir_tmaze_er_rnn_rmsprop_10_20k/")
-
-# ╔═╡ 72a17826-a498-4cd5-9523-d20a1bab5c30
-data_10_dist_20 = RPU.get_line_data_for(
-	ic_20,
-	["cell"],
-	["eta"];
-	comp=findmax,
-	get_comp_data=(x)->RPU.get_MUE(x, :successes),
-	get_data=(x)->RPU.get_MUE(x, :successes))
-
-# ╔═╡ 55e67b77-bd4f-4841-aa16-81d5630a0f0a
-let
-	plt = plot()
-	# args_list = [
-	# 	Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10)]
-	# violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]])
-	# boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
-
-	args_list_l = [
-		Dict("cell"=>"GRU"),
-		Dict("cell"=>"AAGRU"),
-		Dict("cell"=>"MAGRU")]
-	violin!(data_10_dist_20, args_list_l; label_idx="cell",
-				color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :), linecolor=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-	boxplot!(data_10_dist_20, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=2, ylims=(0.4, 1.0), tickdir=:out, grid=false, linecolor=:black, fillalpha=0.75)
-
-	args_list = [Dict("numhidden"=>15, "replay_size"=>20000, "cell"=>"FacMAGRU", "factors"=>10)]
-	
-		violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMAGRU"]], linecolor = [cell_colors["FacMAGRU"]])
-	boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
-	
-	args_list_l = [		
-		Dict("cell"=>"RNN"),
-		Dict("cell"=>"AARNN"),
-		Dict("cell"=>"MARNN")]
-	violin!(data_10_dist_20, args_list_l; label_idx="cell",
-				color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :), linecolor=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-	boxplot!(data_10_dist_20, args_list_l; 
-		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=2, ylims=(0.4, 1.0), tickdir=:out, grid=false, linecolor=:black, fillalpha=0.75)
-	
-	
-	args_list = [Dict("numhidden"=>20, "replay_size"=>20000, "cell"=>"FacMARNN", "factors"=>10)]
-	
-	violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"]], linecolor = [cell_colors["FacMARNN"]])
-	boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
-	
-	savefig("../plots/dir_tmaze_20k_buffer.pdf")
-	plt
-	# dotplot!(data_10_dist, args_list_l; 
-	# 	label_idx="cell", 
-	# 	color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-end
-
 # ╔═╡ Cell order:
 # ╠═ac8f3d1b-82af-4917-bf1c-d7afc16fc43a
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
@@ -1103,45 +1096,23 @@ end
 # ╠═0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
 # ╠═cefbb7a2-2a1c-43a2-ba9a-77369f80177d
 # ╠═c7f9c051-5024-4ff8-a19a-8cad57c05123
-# ╠═d3c612a3-7e0c-489c-98cc-9fde857cf27a
 # ╠═538d0e68-c644-4306-a030-a4a1bdefa97b
-# ╟─6211a38a-7b53-4054-970e-c29ad17de646
+# ╠═f3754707-6a54-4fd8-82bd-43df03c6a57e
+# ╠═a9777b89-3716-4032-8b17-a12aba186d0c
+# ╠═6211a38a-7b53-4054-970e-c29ad17de646
 # ╠═e822182e-b485-4a95-a08c-efe1540ff6ad
 # ╠═025f23f6-040e-44df-8183-915cb4d1ee25
 # ╠═c1b80cfd-dbb8-41c5-a778-66b112e1c091
 # ╠═e4cc9109-d8b1-4bff-a176-3627e24ab757
-# ╠═0eb4c818-b533-4695-a0c7-53e72023281f
-# ╠═35a8c33f-12bb-4859-8f49-19a852354559
-# ╟─5c3ddaed-47b6-465b-b4c5-bc0fb30c8601
-# ╠═37af922e-ed3c-4aec-a4cf-c403c49a9ba9
 # ╠═fc961ab4-c7c6-4e7b-91be-3e5fbb18d667
 # ╠═2dfb9219-2e99-4ee0-bf1b-464da02358a2
 # ╠═c3e8037d-fd67-4609-9c54-716d3707d25c
-# ╠═ff776339-f8a3-4204-962f-da9fd8b5bbe4
 # ╠═b4805558-8a0c-4942-8462-d02b34452222
+# ╠═9110fc79-d8e9-4f5f-8d37-33f6b467678e
+# ╠═94c2860e-c291-4bbc-ab5e-85abf598106e
+# ╠═9ffd1176-dc7d-4fb3-b66a-13bc85b5413b
+# ╠═7103c832-4bb1-46e1-bec0-9905a45aa18f
 # ╠═78102549-6117-4348-bff2-bbc52f92fc80
 # ╠═f2c005aa-e4d6-449c-a345-ef2fea5ee03e
 # ╠═0b15129e-a281-49bc-9c87-f3db376e01ea
 # ╠═b1beea3f-28c4-4d6e-9738-601ac71e51df
-# ╠═e2a991a9-580d-44eb-86ff-468686fcae11
-# ╠═305f8ac8-8f5f-4ec4-84a6-867f69a8887c
-# ╠═533cba3d-7fc5-4d66-b545-b15ffc8ab6d8
-# ╠═39752286-a6db-439d-aca0-1be4821bfc2b
-# ╠═7d611b39-f9a8-43e4-951e-9d812cbd4384
-# ╠═a8949e02-61f5-456a-abee-2bad91d2df05
-# ╠═4b654ad2-93cf-455e-9c7b-982766560205
-# ╠═2dbcb518-2fda-44c4-bfc0-b422a8da9c35
-# ╠═7f630af5-a608-47d3-be13-589b9731798e
-# ╠═c60ee6c5-85e4-407c-8272-801085296084
-# ╠═f297e4f3-5826-4f90-8f24-ae731232f63b
-# ╠═baf539d2-bdd9-40be-bca7-2af231d7063d
-# ╠═4480eb51-352d-49ff-8181-96e6bf03cab3
-# ╠═800cd6d3-177f-4542-b4b5-38f24265876a
-# ╠═10a832cc-574b-4012-ab9e-4cd40f9bb9c8
-# ╠═8500402b-28aa-41ed-96d7-450903bc90d0
-# ╠═20e3d6d4-bec8-4a42-8e5c-01c6f60600d7
-# ╠═c9ab1109-4513-412c-8b84-9ae02d65acf7
-# ╠═24b79fb2-acfe-47e8-976d-231fa4ce2a10
-# ╠═7333fe0d-02fe-4d74-9427-95826c485334
-# ╠═72a17826-a498-4cd5-9523-d20a1bab5c30
-# ╠═55e67b77-bd4f-4841-aa16-81d5630a0f0a

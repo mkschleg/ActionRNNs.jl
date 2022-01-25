@@ -247,13 +247,13 @@ let
 # 		label = "CaddRNN",
 # 		color=cell_colors["FacMARNN"])
 	
-	boxplot!(data_dist_combo, Dict("numhidden"=>114, "cell"=>"CaddRNN"); 
-		label = "CaR",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(-50, 150), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo, Dict("numhidden"=>114, "cell"=>"CaddRNN"); 
-		label = "CaR",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo, Dict("numhidden"=>114, "cell"=>"CaddRNN"); 
+	# 	label = "CaR",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(-50, 150), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo, Dict("numhidden"=>114, "cell"=>"CaddRNN"); 
+	# 	label = "CaR",
+	# 	color=cell_colors["FacMARNN"])
 	
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>54, "cell"=>"CaddGRU"); 
@@ -282,13 +282,13 @@ let
 		color=cell_colors["MAGRU"])
 	
 	
-	boxplot!(data_dist_combo, Dict("numhidden"=>92, "cell"=>"CcatRNN"); 
-		label = "CcR",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(-50, 150), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo, Dict("numhidden"=>92, "cell"=>"CcatRNN"); 
-		label = "CcR",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo, Dict("numhidden"=>92, "cell"=>"CcatRNN"); 
+	# 	label = "CcR",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(-50, 150), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo, Dict("numhidden"=>92, "cell"=>"CcatRNN"); 
+	# 	label = "CcR",
+	# 	color=cell_colors["FacMARNN"])
 	
 	
 	boxplot!(data_dist_combo, Dict("numhidden"=>45, "cell"=>"CcatGRU"); 
