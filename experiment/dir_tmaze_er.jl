@@ -183,6 +183,7 @@ function main_experiment(parsed = default_config(); progress=false, testing=fals
         
         env = DirectionalTMaze(parsed["size"])
         agent = construct_agent(env, parsed, rng)
+        @show typeof(agent)
 
         
         logger = SimpleLogger(

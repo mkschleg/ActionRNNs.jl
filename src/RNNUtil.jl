@@ -162,8 +162,16 @@ end
 
 
 function _get_hidden_state(ghs_func::Function, model)
+
+    dev = Device(model)
     
-    h_state = Dict{Symbol, AbstractMatrix{Float32}}()
+    h_state = if dev isa GPU
+        Dict{Symbol, CuArray{Float32, 2}}()
+    else
+        Dict{Symbol, Matrix{Float32}}()
+    end
+    
+    
     rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, c)
     for idx ∈ rnn_idx
         if tuple_hidden_state(model[idx])

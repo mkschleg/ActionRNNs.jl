@@ -16,14 +16,14 @@ function get_mem!(f, device::GPU, symbol)
     get!(f, device.memory, symbol)
 end
 
-is_gpu(x) = false
-is_gpu(x::Flux.CUDA.CuArray) = true
-is_gpu(x::Dense) = is_gpu(x.W)
-is_gpu(x::Conv) = is_gpu(x.weight)
-is_gpu(x::Tuple) = is_gpu(x[1])
-is_gpu(x::Flux.Recur) = is_gpu(x.state)
+is_gpu(x)::Bool = false
+is_gpu(x::CuArray)::Bool = true
+is_gpu(x::Dense)::Bool = is_gpu(x.W)
+is_gpu(x::Conv)::Bool = is_gpu(x.weight)
+is_gpu(x::Tuple)::Bool = is_gpu(x[1])
+is_gpu(x::Flux.Recur)::Bool = is_gpu(x.state)
 
-is_gpu(model::Flux.Chain) = begin
+is_gpu(model::Flux.Chain)::Bool = begin
     ig = false
     foreach(x -> ig = ig || is_gpu(x),
             Flux.functor(model)[1])

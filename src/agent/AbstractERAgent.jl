@@ -44,11 +44,11 @@ end
 abstract type AbstractERAgent{LU, ER, TN, DEV} <: AbstractAgent end
 
 """
-    get_replay_buffer(agent::AbstractERAgent)
+    get_replay(agent::AbstractERAgent)
 
 Get the replay buffer from the agent.
 """
-get_replay_buffer(agent::AbstractERAgent) = agent.replay
+get_replay(agent::AbstractERAgent) = agent.replay
 
 """
     get_learning_update(agent::AbstractERAgent)
@@ -108,8 +108,9 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
 
     empty!(agent.state_list)
 
-    if agent.replay isa ImageReplay
-        start_statebuffer!(agent.replay, s)
+    replay = get_replay(agent)
+    if replay isa ImageReplay
+        start_statebuffer!(replay, s)
     end
 
     agent.s_t = build_new_feat(agent, s, agent.action)
@@ -133,13 +134,20 @@ step! for an experience replay agent.
 """
 function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
-    push!(agent.state_list,
+    replay = get_replay(agent)
+    state_list = agent.state_list
+    model = agent.model
+
+
+    push!(state_list,
           build_new_feat(agent, env_s_tp1, agent.action))
 
+
+    
     ####
     # Add new experience to replay buffer
     ####
-    hs_sym_list = get_hs_symbol_list(agent.model)
+    hs_sym_list = get_hs_symbol_list(model)
     add_ret = add_exp!(agent,
                        env_s_tp1,
                        r,
@@ -152,11 +160,11 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     ###
     # Update model
     ###
-    us = if agent.update_timer(length(agent.replay))
+    us = if agent.update_timer(length(replay))
         update!(agent, rng)
     end
     
-    if agent.target_update_timer(length(agent.replay))
+    if agent.target_update_timer(length(replay))
         update_target_network!(agent)
     end
 
@@ -167,14 +175,17 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     ####
     # Get predictions and manage hidden state
     ####i
-    reset!(agent.model, agent.hidden_state_init)
-    values = [agent.model(obs) for obs in agent.state_list][end]
+    reset!(model, agent.hidden_state_init)
+    values = [model(obs) for obs in state_list][end]
 
-    cur_hidden_state = get_hidden_state(agent.model)
+    cur_hidden_state = get_hidden_state(model)
 
-    if DataStructures.isfull(agent.state_list)
+    if DataStructures.isfull(state_list)
         agent.hidden_state_init =
-            get_next_hidden_state!(agent.model, agent.hidden_state_init, agent.state_list[1])
+            get_next_hidden_state!(
+                model,
+                agent.hidden_state_init,
+                state_list[1])
     end
 
     ####

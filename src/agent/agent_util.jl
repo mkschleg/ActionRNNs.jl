@@ -84,7 +84,11 @@ end
 Gets the tuple of required details for the update of the agent.
 """
 get_information_from_experience(agent::AbstractERAgent, exp) = 
-    get_information_from_experience(get_device(agent), get_replay_buffer(agent), get_learning_update(agent), agent.s_t, exp)
+    get_information_from_experience(
+        get_device(agent),
+        get_replay(agent),
+        get_learning_update(agent),
+        agent.s_t, exp)
 
 function get_information_from_experience(device, ::EpisodicSequenceReplay, ::ControlUpdate, s_t, exp)
     s = get_state_from_experience(s_t, exp)
