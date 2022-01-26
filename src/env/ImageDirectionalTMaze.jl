@@ -1,4 +1,5 @@
 using Colors
+import MLDatasets
 
 mutable struct ImageDirTMaze{TM, L} <: AbstractEnvironment
     env::TM
@@ -30,9 +31,9 @@ end
 @forward ImageDirTMaze.env Base.show
 
 function ImageDirTMaze(size)
-    d = Flux.Data.MNIST.images()
-    d_r = [collect(reshape(reinterpret(UInt8, d[i]), 28, 28, 1)) for i ∈ 1:length(d)]
-    l = Flux.Data.MNIST.labels()
+    d, l = MLDatasets.MNIST.traindata();
+    proc = (img) -> collect(reinterpret(UInt8, reshape(img', 28, 28, 1)))
+    d_r = proc.(eachslice(d, dims=3))
     ImageDirTMaze(
         DirectionalTMaze(size),
         zero(d_r[1]),
