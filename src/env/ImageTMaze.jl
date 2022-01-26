@@ -1,4 +1,4 @@
-using Colors
+import MLDatasets
 
 mutable struct ImageTMaze{TM, L} <: AbstractEnvironment
     env::TM
@@ -16,9 +16,10 @@ end
 @forward ImageTMaze.env Base.show
 
 function ImageTMaze(size)
-    d = Flux.Data.MNIST.images()
-    d_r = [collect(reshape(reinterpret(UInt8, d[i]), 28, 28, 1)) for i ∈ 1:length(d)]
-    l = Flux.Data.MNIST.labels()
+    d, l = MLDatasets.MNIST.traindata();
+    proc = (img) -> collect(reinterpret(UInt8, reshape(img', 28, 28, 1)))
+    d_r = proc.(eachslice(d, dims=3))
+    
     ImageTMaze(
         TMaze(size),
         zero(d_r[1]),
@@ -27,9 +28,10 @@ function ImageTMaze(size)
 end
 
 function ImageVariableTMaze(size)
-    d = Flux.Data.MNIST.images()
-    d_r = [collect(reshape(reinterpret(UInt8, d[i]), 28, 28, 1)) for i ∈ 1:length(d)]
-    l = Flux.Data.MNIST.labels()
+    d, l = MLDatasets.MNIST.traindata();
+    proc = (img) -> collect(reinterpret(UInt8, reshape(img', 28, 28, 1)))
+    d_r = proc.(eachslice(d, dims=3))
+    
     ImageTMaze(
         VariableTMaze(size),
         zero(d_r[1]),

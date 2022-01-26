@@ -1,4 +1,3 @@
-using Colors
 import MLDatasets
 
 mutable struct ImageDirTMaze{TM, L} <: AbstractEnvironment
