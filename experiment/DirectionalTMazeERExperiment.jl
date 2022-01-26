@@ -1,5 +1,7 @@
 module DirectionalTMazeERExperiment
 
+# include("../src/ActionRNNs.jl")
+
 import Flux
 import JLD2
 
@@ -56,40 +58,6 @@ function default_config()
         "hs_learnable" => true,
         
         "gamma"=>0.99)
-end
-
-
-function working_config()
-    Dict{String,Any}(
-        "save_dir" => "tmp/dir_tmaze_er",
-
-        "seed" => 2,
-        "steps" => 150000,
-        "size" => 10,
-
-        "cell" => "MAGRU",
-        "numhidden" => 10,
-
-        "deep" => false,
-        "internal_a" => 5,
-        "internal_o" => 20,
-
-        "opt" => "RMSProp",
-        "eta" => 0.0005,
-        "rho" =>0.99,
-
-        "replay_size"=>20000,
-        "warm_up" => 1000,
-        "batch_size"=>8,
-        "update_wait"=>4,
-        "target_update_wait"=>1000,
-        "truncation" => 12,
-
-        "hs_learnable" => true,
-        
-        "gamma"=>0.99)
-
-    
 end
 
 function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
@@ -164,7 +132,10 @@ function construct_agent(env, parsed, rng)
                          parsed["hs_learnable"])
 end
 
-function main_experiment(parsed = default_config(); progress=false, testing=false, overwrite=false)
+function main_experiment(parsed;
+                         progress=false,
+                         testing=false,
+                         overwrite=false)
 
     if "cell_numhidden" ∈ keys(parsed)
         parsed["cell"] = parsed["cell_numhidden"][1]
@@ -240,6 +211,33 @@ function main_experiment(parsed = default_config(); progress=false, testing=fals
     end
 end
 
+function working_experiment()
+    args = Dict{String,Any}(
+        "save_dir" => "tmp/dir_tmaze_er",
+
+        "seed" => 2,
+        "steps" => 150000,
+        "size" => 10,
+
+        "cell" => "MAGRU",
+        "numhidden" => 10,
+
+        "opt" => "RMSProp",
+        "eta" => 0.0005,
+        "rho" =>0.99,
+
+        "replay_size"=>20000,
+        "warm_up" => 1000,
+        "batch_size"=>8,
+        "update_wait"=>4,
+        "target_update_wait"=>1000,
+        "truncation" => 12,
+
+        "hs_learnable" => true,
+        
+        "gamma"=>0.99)
+    main_experiment(args; progress=true)
+end
 
 
 end

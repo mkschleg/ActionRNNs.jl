@@ -1,4 +1,4 @@
-module VisualDirectionalTMazeERExperiment
+module ImageDirectionalTMazeERExperiment
 
 
 import MinimalRLCore: MinimalRLCore, run_episode!, get_actions

@@ -1,6 +1,7 @@
 
 
-include("../../experiment/viz_dir_tmaze.jl")
+# include("../../experiment/viz_dir_tmaze.jl")
+import ImageDirectionalTMazeERExperiment
 
 IMGDIRTMAZE_BASE_CONFIG = Dict{String,Any}(
         "save_dir" => "tmp/viz_dir_tmaze",
@@ -33,17 +34,17 @@ image_dir_tmaze_loss_check(results, value) = sum(results.save_results.losses) ==
 @testset "Consistency.ImageDirTMaze" begin
     
     @testset "AAGRU" begin
-        ret = @run_experiment VisualDirectionalTMazeERExperiment "AAGRU" IMGDIRTMAZE_BASE_CONFIG
+        ret = @run_experiment ImageDirectionalTMazeERExperiment "AAGRU" IMGDIRTMAZE_BASE_CONFIG
         @test image_dir_tmaze_rew_check(ret, -1987.0f0) && image_dir_tmaze_loss_check(ret, 3.8237302f0)
     end
 
     @testset "MAGRU" begin
-        ret = @run_experiment VisualDirectionalTMazeERExperiment "MAGRU" IMGDIRTMAZE_BASE_CONFIG
+        ret = @run_experiment ImageDirectionalTMazeERExperiment "MAGRU" IMGDIRTMAZE_BASE_CONFIG
         @test image_dir_tmaze_rew_check(ret, -2008.0f0) && image_dir_tmaze_loss_check(ret, 2.0507567f0)
     end
 
     @testset "FacMAGRU" begin
-        ret = @run_experiment VisualDirectionalTMazeERExperiment "FacMAGRU" IMGDIRTMAZE_BASE_CONFIG factors=8 init_style="tensor"
+        ret = @run_experiment ImageDirectionalTMazeERExperiment "FacMAGRU" IMGDIRTMAZE_BASE_CONFIG factors=8 init_style="tensor"
         @test image_dir_tmaze_rew_check(ret, -2000.0f0) && image_dir_tmaze_loss_check(ret, 4.3609962f0)
     end
 

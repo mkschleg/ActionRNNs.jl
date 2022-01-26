@@ -1,13 +1,7 @@
 module ActionRNNsTests
 
-using ActionRNNs, ReTest
-
-include("consistency.jl")
-include("unit_tests.jl")
-
-# @testset "unit" begin
-    
-# end
+include("ActionRNNsConsistency.jl")
+include("ActionRNNsUnitTests.jl")
 
 end
 

@@ -9,7 +9,7 @@ const EAST = 2
 const SOUTH = 3
 const WEST = 4
 
-const STEP_REW = -0.f0
+const STEP_REW = -0.1f0
 const GOOD_REW = 4f0
 const BAD_REW = -100f0
 
@@ -91,7 +91,7 @@ function get_goal_state((width, height), goal_idx)
     end
 end
 
-obs_size(env::Torus2d) = maximum(env.anchors)
+obs_size(env::Torus2d) = maximum(env.anchors)+1+4
 
 Base.size(env::Torus2d) = env.size
 
@@ -118,7 +118,7 @@ end
 
 MinimalRLCore.get_actions(env::Torus2d) = [Torus2dConst.NORTH, Torus2dConst.EAST, Torus2dConst.SOUTH, Torus2dConst.WEST]
 
-function MinimalRLCore.environment_step!(env::Torus2d, action::Int)
+function MinimalRLCore.environment_step!(env::Torus2d, action::Int, rng=Random.GLOBAL_RNG)
 
     @assert action ∈ get_actions(env)
     
@@ -212,7 +212,7 @@ function fully_observable_state(env::Torus2d)
 end
 
 function partially_observable_state(env::Torus2d)
-    obs = zeros(Float32, obs_size(env)+1+4)
+    obs = zeros(Float32, obs_size(env))
     obs_idx = 1 + get_anchor(env)
     obs[obs_idx] = 1
     obs[end-env.goal_idx] = 1

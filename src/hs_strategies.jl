@@ -1,6 +1,6 @@
 
 struct HSStale end
-struct HSLearn end
+struct HSMinimize end
 struct HSRefil end
 
 
@@ -8,6 +8,14 @@ struct HSRefil end
 modify_hs_in_er!(hs_strategy::Bool, args...; kwargs...) = if hs_strategy
     modify_hs_in_er_by_grad!(args...; kwargs...)
 end
+
+modify_hs_in_er!(hs_strategy::HSMinimize, args...; kwargs...) = 
+    modify_hs_in_er_by_grad!(args...; kwargs...)
+
+
+modify_hs_in_er!(hs_strategy::HSStale, args...; kwargs...) = nothing
+   
+
 
 """
     modify_hs_in_er!

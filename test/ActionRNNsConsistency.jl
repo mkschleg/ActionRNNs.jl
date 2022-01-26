@@ -1,4 +1,4 @@
-module Consistency
+module ActionRNNsConsistency
 
 using ReTest, ActionRNNs
 

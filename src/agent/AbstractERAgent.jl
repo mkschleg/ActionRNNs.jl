@@ -94,7 +94,7 @@ end
 
 Start the agent for a new episode. 
 """
-function MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
+function MinimalRLCore.start!(agent::AbstractERAgent, s, rng=Random.GLOBAL_RNG; kwargs...)
 
     #=
     new probably more sensible behaviour. 
@@ -132,7 +132,7 @@ end
 
 step! for an experience replay agent.
 """
-function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng; kwargs...)
+function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng=Random.GLOBAL_RNG; kwargs...)
 
     replay = get_replay(agent)
     state_list = agent.state_list

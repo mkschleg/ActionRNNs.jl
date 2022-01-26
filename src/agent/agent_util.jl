@@ -191,7 +191,7 @@ mutable struct IdentityFeatureCreator{ES} <: AbstractFeatureConstructor
 end
 
 MinimalRLCore.create_features(fc::IdentityFeatureCreator, s, a) = s
-MinimalRLCore.feature_size(fc::IdentityFeatureCreator) = fc.env_state_size
+MinimalRLCore.feature_size(fc::IdentityFeatureCreator) = fc.env_state_shape
 
 (fc::IdentityFeatureCreator)(s, a) = s
 
