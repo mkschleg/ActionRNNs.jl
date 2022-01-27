@@ -1,7 +1,21 @@
 
+
+
+"""
+    HSStale
+"""
 struct HSStale end
+
+"""
+    HSMinimize
+"""
 struct HSMinimize end
+
+"""
+    HSRefil
+"""
 struct HSRefil end
+
 
 
 
@@ -11,7 +25,6 @@ end
 
 modify_hs_in_er!(hs_strategy::HSMinimize, args...; kwargs...) = 
     modify_hs_in_er_by_grad!(args...; kwargs...)
-
 
 modify_hs_in_er!(hs_strategy::HSStale, args...; kwargs...) = nothing
    
@@ -69,10 +82,11 @@ function modify_hs_in_er_by_grad!(replay::ImageReplay, model, act_exp, exp_idx, 
 end
 
 
+
 function modify_hs_in_er_by_grad!(replay, model, exp, exp_idx, hs, grads = nothing, opt = nothing, device=CPU())
 
     if device isa GPU
-        error("GPU Not yet supported for $(typeof(replay)) in modify_hs_in_er!")
+        error("GPU Not yet supported for $(typeof(replay)) in modify_hs_in_er_by_grad!")
     end
     
     rnn_idx = find_layers_with_recur(model) # find_layers_with_eq((l)->l isa Flux.Recur, model)

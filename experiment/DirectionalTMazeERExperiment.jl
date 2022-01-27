@@ -174,7 +174,6 @@ function main_experiment(parsed;
     end
 
     experiment_wrapper(parsed; use_git_info=false, testing=testing, overwrite=overwrite) do parsed
-
         
         num_steps = parsed["steps"]
 
