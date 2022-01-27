@@ -22,6 +22,15 @@ function (sl::SimpleLogger)(args...; kwargs...)
     end
 end
 
+
+
+macro CreateSimpleLogger
+    
+end
+
+
+
+
 mutable struct UpdateStateAnalysis{T}
     data::T
     f_map::Dict{Symbol, Function}

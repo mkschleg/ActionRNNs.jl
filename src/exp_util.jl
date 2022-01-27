@@ -15,4 +15,6 @@ include("exp_util/experiment.jl")
 include("exp_util/simple_logger.jl")
 include("exp_util/flux.jl")
 
+include("exp_util/macros.jl")
+
 end

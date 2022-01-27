@@ -2,14 +2,15 @@ module DirectionalTMazeERExperiment
 
 # include("../src/ActionRNNs.jl")
 
-import Flux
+# import Flux
 import JLD2
+import ActionRNNs: ActionRNNs, DirectionalTMaze, ExpUtils, MinimalRLCore, Flux
 
-import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
-import ActionRNNs: ActionRNNs, DirectionalTMaze, ExpUtils
-
+import MinimalRLCore: run_episode!, get_actions
 import .ExpUtils: experiment_wrapper, TMazeUtils, FluxUtils
 import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad
+import .ExpUtils: Macros
+import .Macros: @info_str, @generate_config_funcs
 
 using Statistics
 using Random
@@ -19,7 +20,6 @@ using Random
 
 const TMU = TMazeUtils
 const FLU = FluxUtils
-
 
 #=
 Default performance:
@@ -33,31 +33,62 @@ Time: 0:02:28
   preds:      Float32[0.369189, 0.48326853, 0.993273]
 
 =#
-function default_config()
-    Dict{String,Any}(
-        "save_dir" => "tmp/dir_tmaze_er",
+# function default_config()
+#     Dict{String,Any}(
+@generate_config_funcs begin
 
-        "seed" => 2,
-        "steps" => 150000,
-        "size" => 10,
+    info"""
+    Experiment details.
+    --------------------
+    - `seed::Int`: seed of RNG
+    - `steps::Int`: Number of steps taken in the experiment
+    """
+    "seed" => 2
+    "steps" => 150000
 
-        "cell" => "MAGRU",
-        "numhidden" => 10,
+    info"""
+    Environment details
+    -------------------
+    This experiment uses the DirectionalTMaze environment. The usable args are:
+    - `size::Int`: Size of the hallway in directional tmaze.
+    """
+    "size" => 10
+    
+    info"""
+    agent details
+    -------------
+    ### RNN
+    The RNN used for this experiment and its total hidden size, 
+    as well as a flag to use (or not use) zhu's deep 
+    action network.
+    - `cell::String`: The typeof cell. Many types are possible.
+    - `deepaction::Bool`: Whether to use Zhu et. al.'s deep action 4 RNNs idea.
+    - `numhidden::Int`:  Size of hidden state in RNNs.
+    """
+    "cell" => "MAGRU"
+    "deepaction" => false
+    "numhidden" => 10
 
-        "opt" => "RMSProp",
-        "eta" => 0.0005,
-        "rho" =>0.99,
+    info"""
+    ### Optimizer details
+    Flux optimizers are used. See flux documentation and ExpUtils.Flux for details.
+    - `opt::String`: The name of the optimizer used
+    - Parameters defined by the particular optimizer.
+    """
+    "opt" => "RMSProp"
+    "eta" => 0.0005
+    "rho" =>0.99
 
-        "replay_size"=>20000,
-        "warm_up" => 1000,
-        "batch_size"=>8,
-        "update_wait"=>4,
-        "target_update_wait"=>1000,
-        "truncation" => 12,
+    "replay_size"=>20000
+    "warm_up" => 1000
+    "batch_size"=>8
+    "update_wait"=>4
+    "target_update_wait"=>1000
+    "truncation" => 12
 
-        "hs_learnable" => true,
-        
-        "gamma"=>0.99)
+    "hs_learnable" => true
+    
+    "gamma"=>0.99
 end
 
 function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
@@ -119,7 +150,6 @@ function construct_agent(env, parsed, rng)
                          opt,
                          τ,
                          ActionRNNs.QLearningSUM(γ),
-                         # γ,
                          fc,
                          fs,
                          3,

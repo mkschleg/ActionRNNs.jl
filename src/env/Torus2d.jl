@@ -24,7 +24,7 @@ mutable struct Torus2dv3 <: AbstractEnvironment
     goal_idx::Int
     anchors::Matrix{Int}
     fix_goal::Bool
-    po::Bool
+    obs_strategy::Symbol
     non_euclidean::Bool
 end
 
@@ -34,7 +34,7 @@ function Torus2dv3(width,
                    height,
                    anchors,
                    rng=Random.GLOBAL_RNG;
-                   po=true,
+                   obs_strategy=:seperate,
                    non_euclidean=false,
                    fix_goal=false,
                    goal_idx=1)
@@ -48,7 +48,7 @@ function Torus2dv3(width,
                   goal_idx, # goal_idx
                   anchor_matrix,
                   fix_goal,
-                  po,
+                  Symbol(obs_strategy),
                   non_euclidean)
 end
 
@@ -91,7 +91,14 @@ function get_goal_state((width, height), goal_idx)
     end
 end
 
-obs_size(env::Torus2d) = maximum(env.anchors)+1+4
+obs_size(env::Torus2d) = if env.obs_strategy == :full
+    3
+elseif env.obs_strategy == :seperate
+    maximum(env.anchors)+1+4
+elseif env.obs_strategy == :aliased
+    2+4
+end
+
 
 Base.size(env::Torus2d) = env.size
 
@@ -196,10 +203,14 @@ function MinimalRLCore.is_terminal(env::Torus2d) # -> determines if the agent_st
 end
 
 function MinimalRLCore.get_state(env::Torus2d) # -> get state of agent
-    if env.po
-        return partially_observable_state(env)
+    if env.obs_strategy == :full
+        fully_observable_state(env)
+    elseif env.obs_strategy == :seperate
+        partial_obs_seperate(env)
+    elseif env.obs_strategy == :aliased
+        partial_obs_aliased(env)
     else
-        return fully_observable_state(env)
+
     end
 end
 
@@ -211,10 +222,21 @@ function fully_observable_state(env::Torus2d)
     st
 end
 
-function partially_observable_state(env::Torus2d)
+function partial_obs_seperate(env::Torus2d)
     obs = zeros(Float32, obs_size(env))
     obs_idx = 1 + get_anchor(env)
     obs[obs_idx] = 1
+    obs[end-env.goal_idx] = 1
+    return obs
+end
+
+function partial_obs_aliased(env::Torus2d)
+    obs = zeros(Float32, obs_size(env))
+    if get_anchor(env) > 0
+        obs[2] = 1
+    else
+        obs[1] = 1
+    end
     obs[end-env.goal_idx] = 1
     return obs
 end

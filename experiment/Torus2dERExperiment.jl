@@ -48,6 +48,7 @@ function default_config()
         "width" => 5,
         "height" => 5,
         "num_anchors" => 5,
+        "obs_strategy" => "seperate",
         "non_euclidean" =>  true,
         "fix_goal" => false,
         "goal_idx" => 1,
@@ -141,7 +142,7 @@ function construct_agent(env, config, rng)
     # fc = TMU.StandardFeatureCreator{false}()
     fc = ActionRNNs.IdentityFeatureCreator(ActionRNNs.obs_size(env))
     fs = MinimalRLCore.feature_size(fc)
-    @show fs
+
     num_actions = length(get_actions(env))
 
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
@@ -179,7 +180,7 @@ function construct_env(config)
         config["width"],
         config["height"],
         config["num_anchors"];
-        po=true,
+        obs_strategy=config["obs_strategy"],
         non_euclidean=config["non_euclidean"],
         fix_goal=config["fix_goal"],
         goal_idx=config["goal_idx"]
@@ -247,6 +248,56 @@ function main_experiment(config = default_config(); progress=false, testing=fals
     end
 end
 
+
+function working_experiment()
+    args = Dict{String,Any}(
+        "save_dir" => "tmp/torus2d",
+
+        #= MD
+        # Experiment details.
+        ------------------
+        =#
+        "seed" => 2, # seed of RNG
+        "steps" => 150000, # number of total steps in experiment.
+        
+        #= MD
+        Environment details
+        -------------------
+        =#
+        "width" => 3,
+        "height" => 30,
+        "num_anchors" => 5,
+        "obs_strategy" => "aliased",
+        "non_euclidean" =>  true,
+        "fix_goal" => false,
+        "goal_idx" => 1,
+        
+        #= MD
+        agent details
+        -------------
+        =#
+        "cell" => "MARNN",
+        "deepaction" => false,
+        "numhidden" => 10,
+
+        "opt" => "RMSProp",
+        "eta" => 0.0005,
+        "rho" =>0.99,
+
+        "replay_size"=>20000,
+        "warm_up" => 1000,
+        "batch_size"=>8,
+        "update_wait"=>4,
+        "target_update_wait"=>1000,
+        
+        "lupdate" => "QLearning",
+        "gamma"=>0.99,
+        "truncation" => 12,
+        "hs_strategy" => "minimize")
+
+    main_experiment(args, progress=true)
+    
+end
 
 
 end
