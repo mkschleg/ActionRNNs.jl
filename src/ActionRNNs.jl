@@ -23,6 +23,6 @@ include("Environments.jl")
 include("Agent.jl")
 
 include("exp_util.jl")
-
+include("construct.jl")
 
 end # module

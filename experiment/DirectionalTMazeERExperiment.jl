@@ -33,8 +33,6 @@ Time: 0:02:28
   preds:      Float32[0.369189, 0.48326853, 0.993273]
 
 =#
-# function default_config()
-#     Dict{String,Any}(
 @generate_config_funcs begin
 
     info"""
@@ -60,10 +58,11 @@ Time: 0:02:28
     ### RNN
     The RNN used for this experiment and its total hidden size, 
     as well as a flag to use (or not use) zhu's deep 
-    action network.
+    action network. See 
     - `cell::String`: The typeof cell. Many types are possible.
     - `deepaction::Bool`: Whether to use Zhu et. al.'s deep action 4 RNNs idea.
-    - `numhidden::Int`:  Size of hidden state in RNNs.
+        -`internal_a::Int`: the size of the action representation layer when `deepaction=true`
+    - `numhidden::Int`:  Size of hidden state in RNNs.   
     """
     "cell" => "MAGRU"
     "deepaction" => false
@@ -71,7 +70,7 @@ Time: 0:02:28
 
     info"""
     ### Optimizer details
-    Flux optimizers are used. See flux documentation and ExpUtils.Flux for details.
+    Flux optimizers are used. See flux documentation and `ExpUtils.Flux.get_optimizer` for details.
     - `opt::String`: The name of the optimizer used
     - Parameters defined by the particular optimizer.
     """
@@ -79,24 +78,42 @@ Time: 0:02:28
     "eta" => 0.0005
     "rho" =>0.99
 
+    info"""
+    ### Learning update and replay details including:
+    - Replay: 
+        - `replay_size::Int`: How many transitions are stored in the replay.
+        - `warm_up::Int`: How many steps for warm-up (i.e. before learning begins).
+    """
     "replay_size"=>20000
     "warm_up" => 1000
+    
+    info"""
+    - Update details: 
+        - `lupdate::String`: Learning update name
+        - `gamma::Float`: the discount for learning update.
+        - `batch_size::Int`: size of batch
+        - `truncation::Int`: Length of sequences used for training.
+        - `update_wait::Int`: Time between updates (counted in agent interactions)
+        - `target_update_wait::Int`: Time between target network updates (counted in agent interactions)
+        - `hs_strategy::String`: Strategy for dealing w/ hidden state in buffer.
+    """
+    "lupdate" => "QLearning"
+    "gamma"=>0.99    
     "batch_size"=>8
+    "truncation" => 12
+    
     "update_wait"=>4
     "target_update_wait"=>1000
-    "truncation" => 12
 
-    "hs_learnable" => true
-    
-    "gamma"=>0.99
+    "hs_strategy" => "minimize"
+
 end
 
-function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
+function build_deep_action_rnn_layers(config, in, actions, out, rng)
 
 
     # Deep actions for RNNs from Zhu et al 2018
-    internal_a = parsed["internal_a"]
-    internal_o = parsed["internal_o"]
+    internal_a = config["internal_a"]
 
     init_func, initb = ActionRNNs.get_init_funcs(rng)
     
@@ -105,24 +122,25 @@ function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
         Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
     )
 
-    obs_stream = Flux.Chain(
-        Flux.Dense(in, internal_o, Flux.relu, initW=init_func)
-    )
+    obs_stream = identity
+    #     Flux.Chain(
+    #     Flux.Dense(in, internal_o, Flux.relu, initW=init_func)
+    # )
 
     (ActionRNNs.DualStreams(action_stream, obs_stream),
      ActionRNNs.build_rnn_layer(internal_o, internal_a, out, parsed, rng))
 end
 
-function build_ann(in, actions::Int, parsed, rng)
+function build_ann(config, in, actions::Int, rng)
     
-    nh = parsed["numhidden"]
+    nh = config["numhidden"]
     init_func, initb = ActionRNNs.get_init_funcs(rng)
 
-    deep_action = get(parsed, "deep", false)
+    deep_action = get(config, "deep", false)
     rnn = if deep_action
-        build_deep_action_rnn_layers(in, actions, nh, parsed, rng)
+        build_deep_action_rnn_layers(config, in, actions, nh, rng)
     else
-        (ActionRNNs.build_rnn_layer(in, actions, nh, parsed, rng),)
+        (ActionRNNs.build_rnn_layer(config, in, actions, nh, rng),)
     end
 
     Flux.Chain(rnn...,
@@ -131,20 +149,20 @@ function build_ann(in, actions::Int, parsed, rng)
 end
 
 
-function construct_agent(env, parsed, rng)
+function construct_agent(env, config, rng)
 
     fc = TMU.StandardFeatureCreator{false}()
     fs = MinimalRLCore.feature_size(fc)
     num_actions = length(get_actions(env))
 
-    γ = Float32(parsed["gamma"])
-    τ = parsed["truncation"]
+    γ = Float32(config["gamma"])
+    τ = config["truncation"]
 
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
 
-    opt = FLU.get_optimizer(parsed)
+    opt = FLU.get_optimizer(config)
 
-    chain = build_ann(fs, num_actions, parsed, rng)
+    chain = build_ann(config, fs, num_actions, rng)
 
     ActionRNNs.DRQNAgent(chain,
                          opt,
@@ -153,35 +171,35 @@ function construct_agent(env, parsed, rng)
                          fc,
                          fs,
                          3,
-                         parsed["replay_size"],
-                         parsed["warm_up"],
-                         parsed["batch_size"],
-                         parsed["update_wait"],
-                         parsed["target_update_wait"],
+                         config["replay_size"],
+                         config["warm_up"],
+                         config["batch_size"],
+                         config["update_wait"],
+                         config["target_update_wait"],
                          ap,
-                         parsed["hs_learnable"])
+                         config["hs_learnable"])
 end
 
-function main_experiment(parsed;
+function main_experiment(config;
                          progress=false,
                          testing=false,
                          overwrite=false)
 
-    if "cell_numhidden" ∈ keys(parsed)
-        parsed["cell"] = parsed["cell_numhidden"][1]
-        parsed["numhidden"] = parsed["cell_numhidden"][2]
-        delete!(parsed, "cell_numhidden")
+    if "cell_numhidden" ∈ keys(config)
+        config["cell"] = config["cell_numhidden"][1]
+        config["numhidden"] = config["cell_numhidden"][2]
+        delete!(config, "cell_numhidden")
     end
 
-    experiment_wrapper(parsed; use_git_info=false, testing=testing, overwrite=overwrite) do parsed
+    experiment_wrapper(config; use_git_info=false, testing=testing, overwrite=overwrite) do config
         
-        num_steps = parsed["steps"]
+        num_steps = config["steps"]
 
-        seed = parsed["seed"]
+        seed = config["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = DirectionalTMaze(parsed["size"])
-        agent = construct_agent(env, parsed, rng)
+        env = DirectionalTMaze(config["size"])
+        agent = construct_agent(env, config, rng)
 
         
         logger = SimpleLogger(

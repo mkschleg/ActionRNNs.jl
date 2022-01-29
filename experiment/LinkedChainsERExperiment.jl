@@ -49,7 +49,7 @@ const FLU = FluxUtils
     ### RNN
     The RNN used for this experiment and its total hidden size, 
     as well as a flag to use (or not use) zhu's deep 
-    action network.
+    action network. See [`build_rnn_layer`](@ref) for more details.
     - `cell::String`: The typeof cell. Many types are possible.
     - `deepaction::Bool`: Whether to use Zhu et. al.'s deep action 4 RNNs idea.
     - `numhidden::Int`:  Size of hidden state in RNNs.

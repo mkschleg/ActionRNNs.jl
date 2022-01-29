@@ -3,6 +3,17 @@ module FluxUtils
 
 using Flux
 
+"""
+    get_optimizer
+
+Return the Flux optimizer given a config dictionary. The optimizer
+name is found at key `"opt"`. The parameters also change based on the 
+optimizer. 
+
+- OneParamInit: `eta::Float`
+- TwoParamInit: `eta::Float`, `rho::Float`
+- AdamParamInit: `eta::Float`, `beta::Vector` or `(beta_m::Int, beta_v::Int)`
+"""
 function get_optimizer(parsed::Dict; opt_key="opt")
     opt_string = parsed[opt_key]
     get_optimizer(opt_string, parsed)

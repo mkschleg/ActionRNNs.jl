@@ -4,7 +4,7 @@ import Markdown: Markdown, MD, @md_str
 import TOML
 greet() = print("Hello World!")
 
-struct HelpStr
+struct InfoStr
     str::String
 end
 
@@ -35,13 +35,13 @@ end
 
 function get_help_str(default_config, __module__)
     start_str = "# Automatically generated docs for $(__module__) config."
-    help_str_strg = HelpStr[
-        HelpStr(start_str)
+    help_str_strg = InfoStr[
+        InfoStr(start_str)
     ]
     postwalk(default_config) do expr
         expr_str = string(expr)
         if length(expr_str) > 5 && (expr_str[1:5] == "help\"" || expr_str[1:5] == "info\"")
-            push!(help_str_strg, HelpStr(string(expr)[6:end-1]))
+            push!(help_str_strg, InfoStr(string(expr)[6:end-1]))
         end
         expr
     end
@@ -141,6 +141,86 @@ macro generate_config_funcs(default_config)
 end
 
 
+
+# macro construct_config_modes(name, modes, func_input, compat_bools=nothing)
+
+#     get_func_name = "get_" * string(name) * "_mode"
+#     build_func_name = "build_" * string(name)
+
+#     structs = []
+
+#     quote
+#         function $(esc(get_func_name))()
+#         end
+#     end
+# end
+
+#=
+struct NoPreNetwork end
+struct DeepAction end
+
+function get_pre_network_mode(mode)
+    @error "$(mode) not supported for pre_network"
+end
+
+get_pre_network_mode(mode::String) = get_pre_network_mode(Val(Symbol(String)))
+get_pre_network_mode(mode::Val{DeepAction}) = DeepAction()
+get_pre_network_mode(mode::Val{None}) = NoPreNetwork()
+
+build_pre_network(config, in, actions, rng) = begin
+    mode = if "pre_network" ∈ keys(config)
+        get_pre_network_mode(config["prenetwork_mode"])
+    elseif "deepaction" ∈ keys(config)
+        config["deepaction"] ? DeepAction() : NoPreNetwork()
+    elseif "deep" ∈ keys(config)
+        config["deep"] ? DeepAction() : NoPreNetwork()
+    else
+        @error """
+        This experiment requires prenetwork_mode, deepaction, or deep in the config.
+        If this is not apart of your config, you can add `deepaction=false` or
+        `pre_network="None"` for the old default behaviour.
+        """
+    end
+
+    build_pre_network(mode, in, actions, config, rng)
+end
+
+function build_pre_network(mode::DeepAction, config, in, actions, rng)
+    internal_a = config["internal_a"]
+
+    init_func, initb = ActionRNNs.get_init_funcs(rng)
+    action_stream = Flux.Chain(
+        (a)->Flux.onehotbatch(a, 1:actions),
+        Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
+    )
+    
+    obs_stream = identity
+
+    ActionRNNs.DualStreams(action_stream, obs_stream), (in=internal_o, actions=internal_a)
+end
+build_pre_network(mode::NoPreNetwork, config, in, actions, args...) = identity, (in=in, actions=actions)
+
+
+function build_ann(in, actions::Int, parsed, rng)
+
+    
+    pre_net, new_input_shapes = build_pre_network(config, in, actions, rng)
+
+    nh = parsed["numhidden"]
+    rnn = ActionRNNs.build_rnn_layer(
+        new_input_shapes.in,
+        new_input_shapes.actions,
+        nh,
+        parsed,
+        rng)
+
+    
+    init_func, initb = ActionRNNs.get_init_funcs(rng)
+    Flux.Chain(pre_net
+               rnn,
+               Flux.Dense(nh, actions; initW=init_func))
+end
+=#
 
 end # module
 

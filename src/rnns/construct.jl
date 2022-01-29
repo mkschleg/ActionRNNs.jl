@@ -110,6 +110,9 @@ build_rnn_layer(rnn_type, in, actions, out, parsed, rng; kwargs...) =
 
 """
     build_rnn_layer(::BuildActionRNN, args...; kwargs...)
+
+Standard Additive and Multiplicative cells.
+No extra parameters.
 """
 function build_rnn_layer(::BuildActionRNN,
                          rnn_type,
@@ -126,6 +129,11 @@ end
 
 """
     build_rnn_layer(::BuildFactored, args...; kwargs...)
+
+Factored (not tucker) cells.
+**Extra Config Options:**
+- `init_style::String`: They style of init. Check your cell for possible options.
+- `factors::Int`: Number of factors in factorization.
 """
 function build_rnn_layer(::BuildFactored, rnn_type,
                          in, actions, out,
@@ -149,6 +157,12 @@ end
 
 """
     build_rnn_layer(::BuildTucFactored, args...; kwargs...)
+
+Tucker Factored cells:
+**Extra Config Options:**
+- `in_factors::Int`: Number of factors in input matrix
+- `action_factors::Int`: Number of factors in action matrix
+- `out_factors::Int`: Number of factors in out matrix
 """
 function build_rnn_layer(::BuildTucFactored,
                          rnn_type,
@@ -177,6 +191,8 @@ end
 
 """
     build_rnn_layer(::BuildComboCat, args...; kwargs...)
+
+Combo cat AA/MA cells. No Extra Params.
 """
 function build_rnn_layer(::BuildComboCat, rnn_type,
                          in, actions, out,
@@ -193,6 +209,8 @@ end
 
 """
     build_rnn_layer(::BuildComboAdd, args...; kwargs...)
+
+Combo add AA/MA cells. No Extra Params.
 """
 function build_rnn_layer(::BuildComboAdd, rnn_type,
                          in, actions, out,
@@ -207,6 +225,10 @@ end
 
 """
     build_rnn_layer(::BuildMixed, args...; kwargs...)
+
+Mixed layers.
+**Extra Config Options**
+-`num_experts::Int`: number of parallel cells in mixture.
 """
 function build_rnn_layer(::BuildMixed, rnn_type,
                          in, actions, out,
@@ -225,6 +247,8 @@ end
 
 """
     build_rnn_layer(::BuildFlux, args...; kwargs...)
+
+Flux cell. No extra parameters.
 """
 function build_rnn_layer(::BuildFlux, rnn_type,
                          in, actions, out,

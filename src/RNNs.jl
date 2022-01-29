@@ -110,6 +110,3 @@ include("rnns/mixture_rnns.jl")
 include("rnns/mixture_grus.jl")
 
 
-include("rnns/construct.jl")
-
-
