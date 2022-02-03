@@ -236,7 +236,7 @@ Macros.@generate_working_function
 
 function main_experiment(config = default_config(); progress=false, testing=false, overwrite=false)
 
-    experiment_wrapper(config; use_git_info=false, testing=testing, overwrite=overwrite) do config
+    experiment_wrapper(config; use_git_info=false, testing=testing, overwrite=overwrite, hash_exclude_save_dir=true) do config
 
         num_steps = config["steps"]
 
@@ -249,10 +249,10 @@ function main_experiment(config = default_config(); progress=false, testing=fals
         =#
         env = construct_env(config, Random.GLOBAL_RNG)
         agent = construct_agent(env, config, Random.GLOBAL_RNG)
-
+        rnn_cell_to_log = find_rnn(agent.model)
         #=
         Log:
-        - totla_rews: the return per episode
+        - total_rews: the return per episode
         - losses: The average loss for an episode
         - total_step: the number of steps per episode
         =#
@@ -262,7 +262,7 @@ function main_experiment(config = default_config(); progress=false, testing=fals
             Dict(
                 :total_rews => (rew, steps, usa) -> rew,
                 :losses => (rew, steps, usa) -> usa[:loss]/steps,
-                :total_steps => (rew, steps, usa) -> steps,
+                :total_steps => (rew, steps, usa, a) -> steps,
             )
         )
 

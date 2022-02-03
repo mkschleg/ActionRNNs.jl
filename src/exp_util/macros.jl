@@ -109,6 +109,10 @@ macro generate_config_funcs(default_config)
             Config generated automatically from default_config. When you have finished 
             making changes to this config for your experiment comment out this line.
 
+            info \"\"\"
+
+            \"\"\"
+
             [config]
             $(save_info)
             exp_file = "$($src_file)"
