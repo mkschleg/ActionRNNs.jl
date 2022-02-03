@@ -1,5 +1,5 @@
 
-using KernelAbstractions, Tullio
+import KernelAbstractions, Tullio
 
 
 function q_learning_loss(q_t, a_t, r, terminal, γ, q_tp1)

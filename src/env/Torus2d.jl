@@ -269,8 +269,11 @@ RecipesBase.@recipe function f(env::Torus2d)
 
     CELL_SIZE=20#size(env)
     BG = Colors.RGB(1.0, 1.0, 1.0)
+
     BORDER = Colors.RGB(0.0, 0.0, 0.0)
     WALL = Colors.RGB(0.3, 0.3, 0.3)
+    WALL_1 = Colors.RGB(67/255, 36/255, 195/255)
+    WALL_2 = Colors.RGB(31/255, 103/255, 36/255)
     AC = Colors.RGB(0.69921875, 0.10546875, 0.10546875)
     GOAL = Colors.RGB(0.796875, 0.984375, 0.76953125)
     ANCHOR_GOAL = Colors.RGB(31/255, 103/255, 38/255)
@@ -305,10 +308,11 @@ RecipesBase.@recipe function f(env::Torus2d)
 
     screen = fill(BG, (s_y + 2)*CELL_SIZE, (s_x + 2)*CELL_SIZE)
 
-    screen[:, 1:CELL_SIZE] .= WALL
-    screen[1:CELL_SIZE, :] .= WALL
-    screen[end-(CELL_SIZE-1):end, :] .= WALL
-    screen[:, end-(CELL_SIZE-1):end] .= WALL
+
+    screen[1:CELL_SIZE, :] .= WALL_1
+    screen[end-(CELL_SIZE-1):end, :] .= WALL_1
+    screen[:, 1:CELL_SIZE] .= WALL_2
+    screen[:, end-(CELL_SIZE-1):end] .= WALL_2
 
     state = env.state
 

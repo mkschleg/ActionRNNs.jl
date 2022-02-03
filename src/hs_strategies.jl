@@ -16,9 +16,31 @@ struct HSMinimize end
 """
 struct HSRefil end
 
+function get_hs_strategy(hs_learnable::Bool)
+    if hs_learnable
+        HSRefil()
+    else
+        HSStale()
+    end
+end
+
+function get_hs_strategy(hs_strategy::Union{String, Symbol})
+    hs_sym = Symbol(hs_strategy)
+    get_hs_strategy(Val(hs_sym))
+end
+
+const _currently_supported_hs = [:minimize, :refil, :stale]
+get_hs_strategy(hs_strat::Val) = @error "$(typeof(hs_strat).parameters[1]) is not currently supported. Try $(_currently_suppoprted_hs)."
+get_hs_strategy(::Val{:minimize}) = HSMinimize()
+get_hs_strategy(::Val{:refil}) = HSRefil()
+get_hs_strategy(::Val{:stale}) = HSStale()
 
 
+"""
+    modify_hs_in_er!(hs_strategy::Bool, args...; kwargs...)
 
+Legacy function for hs_strategy as a boolean.
+"""
 modify_hs_in_er!(hs_strategy::Bool, args...; kwargs...) = if hs_strategy
     modify_hs_in_er_by_grad!(args...; kwargs...)
 end
@@ -27,6 +49,8 @@ modify_hs_in_er!(hs_strategy::HSMinimize, args...; kwargs...) =
     modify_hs_in_er_by_grad!(args...; kwargs...)
 
 modify_hs_in_er!(hs_strategy::HSStale, args...; kwargs...) = nothing
+
+modify_hs_in_er!(hs_strategy::HSRefil, args...; kwargs...) = @error "HSRefil not implemented yet..."
    
 
 

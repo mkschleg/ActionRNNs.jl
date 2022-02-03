@@ -137,10 +137,36 @@ macro generate_config_funcs(default_config)
             end
             
         end
+    end    
+end
+
+macro generate_working_function()
+    func_name = :working_experiment
+    quote
+        function $(esc(func_name))(;kwargs...)
+            config = $__module__.default_config()
+            for (n, v) in kwargs
+                config[string(n)] = v
+            end
+            $__module__.main_experiment(config; progress=true, testing=true)
+        end
     end
 end
 
-
+macro generate_ann_size_helper(construct_env=:construct_env, construct_agent=:construct_agent)
+    const_env_sym = construct_env
+    quote
+        function $(esc(:get_ann_size))(;kwargs...)
+            config = $__module__.default_config()
+            for (k, v) in kwargs
+                config[string(k)] = v
+            end
+            env = $(esc(const_env_sym))(config, $__module__.Random.GLOBAL_RNG)
+            agent = $(esc(construct_agent))(env, config, $__module__.Random.GLOBAL_RNG)
+            sum(length, $__module__.Flux.params(agent.model))
+        end
+    end
+end
 
 # macro construct_config_modes(name, modes, func_input, compat_bools=nothing)
 

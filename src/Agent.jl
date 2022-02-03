@@ -12,6 +12,8 @@ include("agent/ControlOnlineAgent.jl")
 
 include("agent/old_agents/PredERAgent.jl")
 
+include("agent/rand_agent.jl")
+
 
 
 

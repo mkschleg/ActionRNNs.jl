@@ -20,18 +20,8 @@ using Random
 
 const TMU = TMazeUtils
 const FLU = FluxUtils
-
 #=
-Default performance:
-
-Time: 0:02:28
-  episode:    5385
-  successes:  0.8351648351648352
-  loss:       1.0
-  l1:         0.0
-  action:     2
-  preds:      Float32[0.369189, 0.48326853, 0.993273]
-
+"[[:space:]]+info\"\\{3\\}\n\\([[:space:]]+.+\n\\)+[[:space:]]+\"\\{3\\}"
 =#
 @generate_config_funcs begin
 
@@ -97,6 +87,7 @@ Time: 0:02:28
         - `target_update_wait::Int`: Time between target network updates (counted in agent interactions)
         - `hs_strategy::String`: Strategy for dealing w/ hidden state in buffer.
     """
+
     "lupdate" => "QLearning"
     "gamma"=>0.99    
     "batch_size"=>8
@@ -107,50 +98,76 @@ Time: 0:02:28
 
     "hs_strategy" => "minimize"
 
+    info"""
+    ## Default performance:
+
+    Time: 0:02:28
+      episode:    5385
+      successes:  0.8351648351648352
+      loss:       1.0
+      l1:         0.0
+      action:     2
+      preds:      Float32[0.369189, 0.48326853, 0.993273]
+    """
 end
 
-function build_deep_action_rnn_layers(config, in, actions, out, rng)
-
-
-    # Deep actions for RNNs from Zhu et al 2018
-    internal_a = config["internal_a"]
-
-    init_func, initb = ActionRNNs.get_init_funcs(rng)
-    
-    action_stream = Flux.Chain(
-        (a)->Flux.onehotbatch(a, 1:actions),
-        Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
-    )
-
-    obs_stream = identity
-    #     Flux.Chain(
-    #     Flux.Dense(in, internal_o, Flux.relu, initW=init_func)
-    # )
-
-    (ActionRNNs.DualStreams(action_stream, obs_stream),
-     ActionRNNs.build_rnn_layer(internal_o, internal_a, out, parsed, rng))
-end
 
 function build_ann(config, in, actions::Int, rng)
     
     nh = config["numhidden"]
     init_func, initb = ActionRNNs.get_init_funcs(rng)
 
-    deep_action = get(config, "deep", false)
+
+    deep_action = "deep" ∈ keys ? config["deep"] : get(config, "deepaction", false)
+
     rnn = if deep_action
-        build_deep_action_rnn_layers(config, in, actions, nh, rng)
+        
+        #=
+        If we are using [zhu et al 2018]() style action embeddings
+        
+        DirectionalTMazeERExperiment only re-embeds the action encoding. Here we encode the integer as a 
+        one-hot encoding then pass to a dense layer w/ relu activation.
+        =#
+        
+        internal_a = config["internal_a"]
+
+        action_stream = Flux.Chain(
+            (a)->Flux.onehotbatch(a, 1:actions),
+            Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
+        )
+
+        #=
+        The obs stream will always be the identity function to make comparisons with non-action embeddings fair.
+        =#
+        
+        obs_stream = identity
+
+        #=
+        the pre-network is the [`DualStreams`](@ref) which allows for two paralle streams (for each of the tuple of inputs).
+        =#
+        
+        (ActionRNNs.DualStreams(action_stream, obs_stream),
+         ActionRNNs.build_rnn_layer(internal_o, internal_a, out, parsed, rng))
     else
         (ActionRNNs.build_rnn_layer(config, in, actions, nh, rng),)
-    end
+    end # if deep_action
 
     Flux.Chain(rnn...,
                Flux.Dense(nh, actions; initW=init_func))
     
 end
 
+"""
+    construct_agent
 
+Construct the agent for `DirectionalTMazeERExperiment`.
+"""
 function construct_agent(env, config, rng)
 
+    #=
+    Standard feature creator is identity but changes features to Float32. Does not encorporate actions into state.
+    =#
+    
     fc = TMU.StandardFeatureCreator{false}()
     fs = MinimalRLCore.feature_size(fc)
     num_actions = length(get_actions(env))
@@ -158,11 +175,37 @@ function construct_agent(env, config, rng)
     γ = Float32(config["gamma"])
     τ = config["truncation"]
 
+    #=
+    Set policy to always be [`ϵGreedy`](@ref)
+    =#
+    
     ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
 
+    #=
+    construct the optimizer from Flux. Only consider standard flux optimizers.
+    =#
+    
     opt = FLU.get_optimizer(config)
 
+    #=
+    Use config to build the neural network. See [`build_ann`](@ref) for more details.
+    =#
+    
     chain = build_ann(config, fs, num_actions, rng)
+
+    #=
+    Figuring out the hs_strategy. "hs_learnable" is for legacy experiments where we assumed
+    true => minimize
+    false => stale.
+    Otherwise it should be a string or symbol which passes to [`ActionRNNs.get_hs_strategy`](@ref).
+    =#
+    
+    hs_strategy = ActionRNNs.get_hs_strategy(
+        "hs_learnable" ∈ keys(config) ? config["hs_learnable"] : config["hs_strategy"])
+     
+    #=
+    This looks scary, but isn't.
+    =#
 
     ActionRNNs.DRQNAgent(chain,
                          opt,
@@ -177,8 +220,10 @@ function construct_agent(env, config, rng)
                          config["update_wait"],
                          config["target_update_wait"],
                          ap,
-                         config["hs_learnable"])
+                         hs_strategy)
 end
+
+Macros.@generate_working_function
 
 function main_experiment(config;
                          progress=false,
@@ -186,6 +231,7 @@ function main_experiment(config;
                          overwrite=false)
 
     if "cell_numhidden" ∈ keys(config)
+        @warning "\"cell_numhidden\" no longer supported. Use Reproduce utilities."
         config["cell"] = config["cell_numhidden"][1]
         config["numhidden"] = config["cell_numhidden"][2]
         delete!(config, "cell_numhidden")
@@ -201,7 +247,6 @@ function main_experiment(config;
         env = DirectionalTMaze(config["size"])
         agent = construct_agent(env, config, rng)
 
-        
         logger = SimpleLogger(
             (:total_rews, :losses, :successes, :total_steps, :l1),
             (Float32, Float32, Bool, Int, Float32),
@@ -217,6 +262,20 @@ function main_experiment(config;
         mean_loss = 1.0f0
         
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
+        generate_showvalues(eps, logger, usa, a, n) = () -> begin
+            pr_suc = if length(logger.data.successes) <= 1000
+                mean(logger.data.successes)
+            else
+                mean(logger.data.successes[end-1000:end])
+            end
+            [(:episode, eps),
+             (:successes, pr_suc),
+             (:loss, usa[:avg_loss]),
+             (:l1, usa[:l1]/n),
+             (:action, a.action),
+             (:preds, a.preds)]
+        end
+            
         eps = 1
         while sum(logger.data.total_steps) <= num_steps
             usa = UpdateStateAnalysis(
@@ -231,18 +290,7 @@ function main_experiment(config;
             n = 0
             total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
                 if progress
-                    pr_suc = if length(logger.data.successes) <= 1000
-                        mean(logger.data.successes)
-                    else
-                        mean(logger.data.successes[end-1000:end])
-                    end
-                    next!(prg_bar, showvalues=[(:episode, eps),
-                                               (:successes, pr_suc),
-                                               (:loss, usa[:avg_loss]),
-                                               (:l1, usa[:l1]/n),
-                                               (:action, a.action),
-                                               (:preds, a.preds)])
-                                               # (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
+                    next!(prg_bar, showvalues=generate_showvalues(eps, logger, usa, a, n))
                 end
                 success = success || (r == 4.0)
                 if !(a.update_state isa Nothing)
@@ -257,34 +305,5 @@ function main_experiment(config;
         (;save_results = save_results)
     end
 end
-
-function working_experiment()
-    args = Dict{String,Any}(
-        "save_dir" => "tmp/dir_tmaze_er",
-
-        "seed" => 2,
-        "steps" => 150000,
-        "size" => 10,
-
-        "cell" => "MAGRU",
-        "numhidden" => 10,
-
-        "opt" => "RMSProp",
-        "eta" => 0.0005,
-        "rho" =>0.99,
-
-        "replay_size"=>20000,
-        "warm_up" => 1000,
-        "batch_size"=>8,
-        "update_wait"=>4,
-        "target_update_wait"=>1000,
-        "truncation" => 12,
-
-        "hs_learnable" => true,
-        
-        "gamma"=>0.99)
-    main_experiment(args; progress=true)
-end
-
 
 end

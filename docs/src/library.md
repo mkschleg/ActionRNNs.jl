@@ -104,16 +104,16 @@ ActionRNNs.DRTDNAgent
 
 ### Tools/Utils
 
-<!-- ```@docs -->
-<!-- ActionRNNs.UpdateTimer -->
-<!-- ActionRNNs.make_obs_list -->
-<!-- ActionRNNs.obs_init -->
-<!-- ActionRNNs.image_init -->
-<!-- ActionRNNs.make_replay -->
-<!-- ActionRNNs.get_state_from_experience -->
-<!-- ActionRNNs.get_information_from_experience -->
-<!-- ActionRNNs.build_new_feat -->
-<!-- ``` -->
+```@docs
+ActionRNNs.UpdateTimer
+ActionRNNs.make_obs_list
+ActionRNNs.obs_init
+ActionRNNs.image_init
+ActionRNNs.make_replay
+ActionRNNs.get_state_from_experience
+ActionRNNs.get_information_from_experience
+ActionRNNs.build_new_feat
+```
 
 ### Feature Constructors
 

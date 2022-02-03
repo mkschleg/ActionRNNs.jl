@@ -1,6 +1,7 @@
 
-using CUDA, CUDAKernels, KernelAbstractions
-using LoopVectorization, Tullio
+import CUDA, CUDAKernels, KernelAbstractions
+import LoopVectorization
+import Tullio: Tullio, @tullio
 
 import Zygote: dropgrad
 

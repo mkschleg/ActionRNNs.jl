@@ -33,5 +33,8 @@ include("env/LunarLander.jl")
 export Torus2d
 include("env/Torus2d.jl")
 
+export MaskedGridWorld
+include("env/MaskedGridWorld.jl")
+
 export LinkedChains
 include("env/LinkedChains.jl")

@@ -48,6 +48,11 @@ obs_init(::GPU) = zeros(Float32, 1) |> gpu
 image_init(::CPU) = zeros(Float32, 1,1,1,1)
 image_init(::GPU) = zeros(Float32, 1,1,1,1) |> gpu
 
+"""
+    make_replay
+
+
+"""
 function make_replay(model, feature_size, replay_size, τ, feature_type=Float32)
     hs_type, hs_length, hs_symbol = ActionRNNs.get_hs_details_for_er(model)
     replay = EpisodicSequenceReplay(replay_size+τ-1,
@@ -61,7 +66,12 @@ end
 ####
 # Get info from experience
 ####
+"""
+    get_state_from_experiment
 
+Returns hidden state from experience sampled from an experience replay buffer. 
+This assumes the replay has `(:am1, :s, :a, :sp, :r, :t, :beg, hs_symbol...)` as columns.
+"""
 function get_state_from_experience(::Tuple, exp)
     get_state(seq) = seq.s
     s_1 = Flux.batchseq([[get_state.(seq); [seq[end].sp]] for seq in exp], zero(exp[1][1].s))
@@ -79,9 +89,10 @@ function get_state_from_experience(type, exp)
 end
 
 """
-    get_information_from_experiment(agent, exp)
+    get_information_from_experience(agent, exp)
 
-Gets the tuple of required details for the update of the agent.
+Gets the tuple of required details for the update of the agent. This is dispatched on the type of learning update. 
+You can use the helper abstract classes, or dispatch for your specific update.
 """
 get_information_from_experience(agent::AbstractERAgent, exp) = 
     get_information_from_experience(
@@ -166,9 +177,7 @@ function get_information_from_experience(::SequenceReplay, ::PredictionUpdate, s
     state_list, sp1, a, r, t, bprob, actual_seq_lengths
 end
 
-####
-# Build features for the model
-####
+
 """
     build_new_feat(agent, state, action)
 
@@ -203,8 +212,6 @@ MinimalRLCore.create_features(fc::AddDimFeatureCreator, s, a) = reshape(s, fc.en
 MinimalRLCore.feature_size(fc::AddDimFeatureCreator) = (fc.env_state_shape..., 1)
 
 (fc::AddDimFeatureCreator)(s, a) = MinimalRLCore.create_features(fc, s, a)
-
-
 
 include("../hs_strategies.jl")
 

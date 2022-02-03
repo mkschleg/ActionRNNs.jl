@@ -1,7 +1,7 @@
 
 using Flux # Neural Networks
-using KernelAbstractions, LoopVectorization # Loop vectorization and kernel abstractions
-using CUDA, CUDAKernels # GPUs
+import KernelAbstractions, LoopVectorization # Loop vectorization and kernel abstractions
+import CUDA, CUDAKernels # GPUs
 import TensorCore: ⊡ # boxdot Generalised matrix multiplication
 using Tullio
 

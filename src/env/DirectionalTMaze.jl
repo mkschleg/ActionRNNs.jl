@@ -31,10 +31,13 @@ const DTMC = DirectionalTMazeConst
 
 """
  DirectionalTMaze
+
+```
                  _
      _ _ _ _ _ _|_|
     |_|_|_|_|_|_|_|
                 |_|
+```
 """
 
 
