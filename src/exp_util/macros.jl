@@ -89,19 +89,20 @@ macro generate_config_funcs(default_config)
             local ao = filter((str)->str!="save_dir", $arg_order)
             cnfg = $(esc(func_name))()
             cnfg_filt = filter((p)->p.first != "save_dir", cnfg)
+            sv_path = get(cnfg, "save_dir", "<<ADD_SAVE_DIR>>")
 
             mod = $__module__
 
             save_info = if database
                 """
                 save_backend="mysql" # mysql only database backend supported
-                database="test_iter" # Database name
-                save_dir="$(cnfg["save_dir"])" # Directory name for exceptions, settings, and more!"""
+                database="<<SET DATABASE NAME>>" # Database name
+                save_dir="$(sv_path)" # Directory name for exceptions, settings, and more!"""
             else
                 """
                 save_backend="file" # file saving mode
                 file_type = "jld2" # using JLD2 as save type
-                save_dir="$(cnfg["save_dir"])" # save location"""
+                save_dir="$(sv_path)" # save location"""
             end
             
             toml_str = """
