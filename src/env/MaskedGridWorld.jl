@@ -49,13 +49,16 @@ function create_anchors(sze, anchors::Vector{CartesianIndex{2}}, args...)
 end
 
 function create_goals(sze, num_goals::Int, anchor_matrix, rng)
-    @assert *(sze...) - sum(anchor_matrix .!= 0) > num_goals
-    possible_states = CartesianIndices(sze)[anchor_matrix .== 0]
-    perm = randperm(rng, length(possible_states))[1:num_goals]
-    [(x=possible_states[i][1], y=possible_states[i][2], r=GOOD_REW) for i in perm]
+    create_goals(sze, (num_goals, GOOD_REW), anchor_matrix, rng)
+end
+
+function create_goals(sze, num_goals_and_rew::Tuple{Int, Float32}, anchor_matrix, rng)
+    num_goals, rew = num_goals_and_rew
+    create_goals(sze, fill(rew, num_goals), anchor_matrix, rng)
 end
 
 function create_goals(sze, rews::Vector{<:AbstractFloat}, anchor_matrix, rng)
+    num_goals = length(rews)
     @assert *(sze...) - sum(anchor_matrix .!= 0) > num_goals
     possible_states = CartesianIndices(sze)[anchor_matrix .== 0]
     perm = randperm(rng, length(possible_states))[1:num_goals]

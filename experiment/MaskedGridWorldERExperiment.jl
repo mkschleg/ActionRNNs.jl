@@ -1,3 +1,8 @@
+"""
+    MaskedGridWorldERExperiment
+
+Module for running a standard experiment in masked grid world.
+"""
 module MaskedGridWorldERExperiment
 
 import Flux
@@ -20,14 +25,20 @@ using Random
 const FLU = FluxUtils
 
 
-"""
-    default_config()
+default_opt_config = quote
+    info"""
+            ### Optimizer details
+            Flux optimizers are used. See flux documentation and `ExpUtils.Flux.get_optimizer` for details.
+            - `opt::String`: The name of the optimizer used
+            - Parameters defined by the particular optimizer.
+            """
+    "opt" => "RMSProp"
+    "eta" => 0.0005
+    "rho" =>0.99
+end
 
-The default config for torus2d.
-- TODO: test this config when experiment is up and running.
-"""
 
-@generate_config_funcs begin
+@generate_config_funcs quote
     info"""
             Experiment details.
             --------------------
@@ -49,6 +60,7 @@ The default config for torus2d.
     "height" => 10
     "num_anchors" => 10
     "num_goals" => 1
+    "goal_rew" => 4.0
 
     info"""
             agent details
@@ -59,7 +71,7 @@ The default config for torus2d.
             action network. See 
             - `cell::String`: The typeof cell. Many types are possible.
             - `deepaction::Bool`: Whether to use Zhu et. al.'s deep action 4 RNNs idea.
-                -`internal_a::Int`: the size of the action representation layer when `deepaction=true`
+                - `internal_a::Int`: the size of the action representation layer when `deepaction=true`
             - `numhidden::Int`:  Size of hidden state in RNNs.   
             """
     "cell" => "MARNN"
@@ -72,9 +84,9 @@ The default config for torus2d.
             - `opt::String`: The name of the optimizer used
             - Parameters defined by the particular optimizer.
             """
-    "opt" => "RMSProp",
-    "eta" => 0.0005,
-    "rho" =>0.99,
+    "opt" => "RMSProp"
+    "eta" => 0.0005
+    "rho" =>0.99
 
     info"""
         ### Learning update and replay details including:
@@ -87,6 +99,7 @@ The default config for torus2d.
     
     info"""
         - Update details: 
+            - `lupdate_agg::String`: the aggregation function for the QLearning update.
             - `gamma::Float`: the discount for learning update.
             - `batch_size::Int`: size of batch
             - `truncation::Int`: Length of sequences used for training.
@@ -103,8 +116,6 @@ The default config for torus2d.
     "target_update_wait"=>1000
 
     "hs_strategy" => "minimize"
-
-
 end
 
 function build_ann(in, actions::Int, config, rng=Random.GLOBAL_RNG)
@@ -150,18 +161,6 @@ function build_ann(in, actions::Int, config, rng=Random.GLOBAL_RNG)
                Flux.Dense(nh, actions; initW=init_func))
     
 end
-
-# function get_ann_size(;kwargs...)
-#     config = default_config()
-#     for (k, v) in kwargs
-#         config[string(k)] = v
-#     end
-#     env = construct_env(config, Random.GLOBAL_RNG)
-#     agent = construct_agent(env, config, Random.GLOBAL_RNG)
-#     sum(length, Flux.params(agent.model))
-# end
-
-
 
 function construct_agent(env, config, rng)
 
@@ -226,7 +225,7 @@ function construct_env(config, rng)
     ActionRNNs.MaskedGridWorld(config["width"],
                                config["height"],
                                config["num_anchors"],
-                               config["num_goals"],
+                               (config["num_goals"], Float32(config["goal_rew"])),
                                rng;
                                obs_strategy=:aliased,
                                pacman_wrapping=true)
@@ -241,22 +240,29 @@ function main_experiment(config = default_config(); progress=false, testing=fals
 
         num_steps = config["steps"]
 
-        # Initialize the RNG seed
+        # Initialize the RNG seed. use global rngs.
         seed = config["seed"]
-        # rng = Random.MersenneTwister(seed)
         Random.seed!(seed)
-        
+
+        #=
+        Construct environment and agent
+        =#
         env = construct_env(config, Random.GLOBAL_RNG)
         agent = construct_agent(env, config, Random.GLOBAL_RNG)
-        
+
+        #=
+        Log:
+        - totla_rews: the return per episode
+        - losses: The average loss for an episode
+        - total_step: the number of steps per episode
+        =#
         logger = SimpleLogger(
-            (:total_rews, :losses, :total_steps, :l1),
-            (Float32, Float32, Int, Float32),
+            (:total_rews, :losses, :total_steps),
+            (Float32, Float32, Int),
             Dict(
                 :total_rews => (rew, steps, usa) -> rew,
                 :losses => (rew, steps, usa) -> usa[:loss]/steps,
                 :total_steps => (rew, steps, usa) -> steps,
-                :l1 => (rew, steps, usa) -> usa[:l1]/steps
             )
         )
 
@@ -264,7 +270,6 @@ function main_experiment(config = default_config(); progress=false, testing=fals
         get_showvalues(eps, logger, usa, a, n) = () -> begin
             [(:episode, eps),
              (:loss, usa[:avg_loss]),
-             (:l1, usa[:l1]/n),
              (:action, a.action),
              (:preds, a.preds)]
         end
@@ -275,9 +280,8 @@ function main_experiment(config = default_config(); progress=false, testing=fals
         eps = 1
         while sum(logger.data.total_steps) <= num_steps
             usa = UpdateStateAnalysis(
-                (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
+                (loss = 0.0f0, avg_loss = 1.0f0),
                 Dict(
-                    :l1 => l1_grad,
                     :loss => (s, us) -> s + us.loss,
                     :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
                 ))
