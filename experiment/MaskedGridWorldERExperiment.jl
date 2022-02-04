@@ -262,7 +262,7 @@ function main_experiment(config = default_config(); progress=false, testing=fals
             Dict(
                 :total_rews => (rew, steps, usa) -> rew,
                 :losses => (rew, steps, usa) -> usa[:loss]/steps,
-                :total_steps => (rew, steps, usa, a) -> steps,
+                :total_steps => (rew, steps, usa) -> steps,
             )
         )
 
