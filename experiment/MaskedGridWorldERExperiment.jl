@@ -249,7 +249,7 @@ function main_experiment(config = default_config(); progress=false, testing=fals
         =#
         env = construct_env(config, Random.GLOBAL_RNG)
         agent = construct_agent(env, config, Random.GLOBAL_RNG)
-        rnn_cell_to_log = find_rnn(agent.model)
+
         #=
         Log:
         - total_rews: the return per episode
