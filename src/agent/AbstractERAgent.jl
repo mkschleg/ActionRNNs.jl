@@ -72,6 +72,14 @@ Get the replay strategy of the agent.
 get_hs_replay_strategy(agent::AbstractERAgent) = @error "Need to implement `get_hs_replay_strategy`"
 
 """
+    get_model(agent::AbstractERAgent)
+
+return the model from the agent.
+"""
+get_model(agent::AbstractERAgent) = agent.model
+
+
+"""
     get_action_and_prob(π, values, rng)
 
 Get action and the associated probability of taking the action.
@@ -90,7 +98,7 @@ function get_action_and_prob(π, values, rng)
 end
 
 """
-    start!(agent::AbstractERAgent, s, rng; kwargs...)
+        MinimalRLCore.start!(agent::AbstractERAgent, s, rng; kwargs...)
 
 Start the agent for a new episode. 
 """
@@ -128,7 +136,7 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng=Random.GLOBAL_RNG; 
 end
 
 """
-    step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng; kwargs...)
+    MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng; kwargs...)
 
 step! for an experience replay agent.
 """

@@ -1,6 +1,2 @@
 [deps]
-ActionRNNs = "8317d1c6-c5c3-11e9-1282-0f8c4be94ea0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-GVFHordes = "f93fb47c-41e6-11e9-1959-65f988fdca41"
-OpenAIGym = "41d6fcb8-dd24-11e8-2536-c3dc023218b5"
-ReproducePlotUtils = "c4339a9b-a0bc-4ed5-8923-5e6db10394ac"

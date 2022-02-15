@@ -30,17 +30,12 @@ end
 const DTMC = DirectionalTMazeConst
 
 """
- DirectionalTMaze
+    DirectionalTMaze
 
-```
-                 _
-     _ _ _ _ _ _|_|
-    |_|_|_|_|_|_|_|
-                |_|
-```
+Similar to [`ActionRNNs.TMaze`](@ref) but with a directional compoenet overlayed ontop. This also changes to 
+observation structure, where the agent must know what direction it is facing to get information
+about which goal is the good goal.
 """
-
-
 mutable struct DirectionalTMaze <: AbstractEnvironment
     size::Int
     goal_dir::Int

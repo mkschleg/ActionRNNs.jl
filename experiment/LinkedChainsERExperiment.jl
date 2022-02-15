@@ -42,6 +42,7 @@ const FLU = FluxUtils
     """
     "chain_sizes"=>[5, 10]
     "time_to_fork"=>0
+    "dynmode"=>"STRAIGHT"
 
     help"""
     agent details
@@ -85,7 +86,7 @@ const FLU = FluxUtils
     "replay_size"=>20000
     "warm_up" => 1000
     
-    "lupdate" => "QLearning"
+    "lupdate_agg" => "SUM"
     "gamma"=>0.99    
     "batch_size"=>8
     "update_wait"=>4
@@ -95,88 +96,147 @@ const FLU = FluxUtils
     "hs_strategy" => "minimize"
 end
 
-
-function build_deep_action_rnn_layers(in, actions, out, config, rng=Random.GLOBAL_RNG)
-
-
-    # Deep actions for RNNs from Zhu et al 2018
-    internal_a = config["internal_a"]
-    internal_o = config["internal_o"]
-
-    init_func, initb = ActionRNNs.get_init_funcs(rng)
-    
-    action_stream = Flux.Chain(
-        (a)->Flux.onehotbatch(a, 1:actions),
-        Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
-    )
-    obs_stream = identity
-
-    (ActionRNNs.DualStreams(action_stream, obs_stream),
-     ActionRNNs.build_rnn_layer(internal_o, internal_a, out, config, rng))
-end
-
-function build_ann(in, actions::Int, config, rng=Random.GLOBAL_RNG)
+function build_ann(config, in, actions::Int, rng)
     
     nh = config["numhidden"]
     init_func, initb = ActionRNNs.get_init_funcs(rng)
 
-    deep_action = get(config, "deepaction", false)
+
+    deep_action = config["deepaction"]
+
     rnn = if deep_action
-        build_deep_action_rnn_layers(in, actions, nh, config, rng)
+        
+        #=
+        If we are using [zhu et al 2018]() style action embeddings
+        
+        DirectionalTMazeERExperiment only re-embeds the action encoding. Here we encode the integer as a 
+        one-hot encoding then pass to a dense layer w/ relu activation.
+        =#
+        
+        internal_a = config["internal_a"]
+
+        action_stream = Flux.Chain(
+            (a)->Flux.onehotbatch(a, 1:actions),
+            Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
+        )
+
+        #=
+        The obs stream will always be the identity function to make comparisons with non-action embeddings fair.
+        =#
+        
+        obs_stream = identity
+
+        #=
+        the pre-network is the [`DualStreams`](@ref) which allows for two paralle streams (for each of the tuple of inputs).
+        =#
+        
+        (ActionRNNs.DualStreams(action_stream, obs_stream),
+         ActionRNNs.build_rnn_layer(internal_o, internal_a, nh, config, rng))
     else
-        (ActionRNNs.build_rnn_layer(in, actions, nh, config, rng),)
-    end
+        (ActionRNNs.build_rnn_layer(config, in, actions, nh, rng),)
+    end # if deep_action
 
     Flux.Chain(rnn...,
                Flux.Dense(nh, actions; initW=init_func))
     
 end
 
+"""
+    construct_agent
 
+Construct the agent for `DirectionalTMazeERExperiment`. See 
+"""
 function construct_agent(env, config, rng)
 
-    # fc = TMU.StandardFeatureCreator{false}()
+    #=
+    Standard feature creator is identity but changes features to Float32. Does not encorporate actions into state.
+    =#
     fc = ActionRNNs.IdentityFeatureCreator(ActionRNNs.obs_size(env))
     fs = MinimalRLCore.feature_size(fc)
-
+    
+    # fc = TMU.StandardFeatureCreator{false}()
+    # fs = MinimalRLCore.feature_size(fc)
     num_actions = length(get_actions(env))
 
-    ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
-    # ap = ActionRNNs.construct_policy(config, MinimalRLCore.get_actions(env))
+    #=
+    Set policy to always be [`ϵGreedy`](@ref)
+    =#
     
-    # γ = Float32(config["gamma"])
-    # lu = ActionRNNs.construct_control_update(config)
-    lu = ActionRNNs.QLearningSUM(Float32(config["gamma"]))
+    ap = ActionRNNs.ϵGreedy(0.1, MinimalRLCore.get_actions(env))
+
+
+    #=
+    Set learning rate aggregations
+    =#
+    lupdate_agg = config["lupdate_agg"]
+    lu = if lupdate_agg == "SUM"
+        ActionRNNs.QLearningSUM(Float32(config["gamma"]))
+    elseif lupdate_agg == "HUBER"
+        ActionRNNs.QLearningHUBER(Float32(config["gamma"]))
+    else
+        @error "$(lupdate_agg) not supported with QLearning"
+    end
+
+
+    #= 
+    Truncation value for BPTT.
+    =#
     τ = config["truncation"]
     
+    #=
+    construct the optimizer from Flux. Only consider standard flux optimizers.
+    =#
+    
     opt = FLU.get_optimizer(config)
-    chain = build_ann(fs, num_actions, config, rng)
+
+    #=
+    Use config to build the neural network. See [`build_ann`](@ref) for more details.
+    =#
+    
+    chain = build_ann(config, fs, num_actions, rng)
+
+    #=
+    Figuring out the hs_strategy. "hs_learnable" is for legacy experiments where we assumed
+    true => minimize
+    false => stale.
+    Otherwise it should be a string or symbol which passes to [`ActionRNNs.get_hs_strategy`](@ref).
+    =#
+    
+    hs_strategy = ActionRNNs.get_hs_strategy(config["hs_strategy"])
+     
+    #=
+    This looks scary, but isn't.
+    =#
 
     ActionRNNs.DRQNAgent(chain,
                          opt,
                          τ,
-                         lu, # γ,
+                         lu,
                          fc,
                          fs,
                          ActionRNNs.obs_size(env),
-                         # configure replay buffer
                          config["replay_size"],
                          config["warm_up"],
                          config["batch_size"],
                          config["update_wait"],
                          config["target_update_wait"],
-                         #
-                         ap, # acting policy
-                         ActionRNNs.HSMinimize())
+                         ap,
+                         hs_strategy)
 end
 
+
 function construct_env(config)
-    # 
-    ActionRNNs.LinkedChains{:CONT}(
-        config["time_to_fork"],
-        config["chain_sizes"]...
+    @show keys(config)
+    ActionRNNs.LinkedChains(
+        time_to_fork = config["time_to_fork"],
+        sizes = config["chain_sizes"],
+        termmode = :CONT,
+        dynmode = Symbol(config["dynmode"])
     )
 end
+
+Macros.@generate_ann_size_helper
+Macros.@generate_working_function
 
 function main_experiment(config = default_config(); progress=false, testing=false, overwrite=false)
 
@@ -186,7 +246,6 @@ function main_experiment(config = default_config(); progress=false, testing=fals
 
         # Initialize the RNG seed
         seed = config["seed"]
-        # rng = Random.MersenneTwister(seed)
         Random.seed!(seed)
         
         env = construct_env(config)
@@ -240,68 +299,6 @@ function main_experiment(config = default_config(); progress=false, testing=fals
         save_results = logger.data
         (;save_results = save_results)
     end
-end
-
-
-function working_experiment()
-    args = Dict{String,Any}(
-        "save_dir" => "tmp/linkedlist",
-
-        #= MD
-        # Experiment details.
-        ------------------
-        =#
-        "seed" => 2, # seed of RNG
-        "steps" => 150000, # number of total steps in experiment.
-        
-        #= MD
-        Environment details
-        -------------------
-        =#
-        "chain_sizes"=>[5, 10],
-        
-
-        #= MD
-        agent details
-        -------------
-        =#
-
-        #= MD
-        The RNN used for this experiment and its total hidden size, 
-        as well as a flag to use (or not use) zhu's deep 
-        action network.
-        =#
-        "cell" => "MARNN",
-        "deepaction" => false,
-        "numhidden" => 5,
-
-        #= MD
-        optimizer details
-        =#
-        "opt" => "RMSProp",
-        "eta" => 0.0005,
-        "rho" =>0.99,
-
-        #= MD
-        Learning update details including:
-        - ER: replay_size, warm_up
-        - LU: learning_update, batch_size, update_wait
-        - truncation is used by the agent to decide how long the temporal dependency is.
-        - hs_learnable: determines whether the hidden state is learned. Change to a mode?
-        =#
-        "replay_size"=>20000,
-        "warm_up" => 1000,
-        "batch_size"=>8,
-        "update_wait"=>4,
-        "target_update_wait"=>1000,
-        
-        "lupdate" => "QLearning",
-        "gamma"=>0.9,
-        "truncation" => 20,
-        "hs_strategy" => "minimize")
-
-    main_experiment(args, progress=true)
-    
 end
 
 

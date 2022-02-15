@@ -2,6 +2,15 @@
     MaskedGridWorldERExperiment
 
 Module for running a standard experiment in masked grid world.
+An experiment to compare different RNN cells using the [`ActionRNNs.MaskedGridWorld`](@ref) environment.
+
+Usage is detailed through the docs for 
+- [`MaskedGridWorldERExperiment.default_config`](@ref)
+- [`MaskedGridWorldERExperiment.main_experiment`](@ref)
+- [`MaskedGridWorldERExperiment.working_experiment`](@ref)
+- [`MaskedGridWorldERExperiment.construct_env`](@ref)
+- [`MaskedGridWorldERExperiment.construct_agent`](@ref)
+
 """
 module MaskedGridWorldERExperiment
 
@@ -23,19 +32,6 @@ using Random
 
 
 const FLU = FluxUtils
-
-
-default_opt_config = quote
-    info"""
-            ### Optimizer details
-            Flux optimizers are used. See flux documentation and `ExpUtils.Flux.get_optimizer` for details.
-            - `opt::String`: The name of the optimizer used
-            - Parameters defined by the particular optimizer.
-            """
-    "opt" => "RMSProp"
-    "eta" => 0.0005
-    "rho" =>0.99
-end
 
 
 @generate_config_funcs quote
@@ -108,9 +104,9 @@ end
             - `hs_strategy::String`: Strategy for dealing w/ hidden state in buffer.
         """
     "lupdate_agg" => "SUM"
-    "gamma"=>0.99    
+    "gamma"=>0.9    
     "batch_size"=>8
-    "truncation" => 12
+    "truncation" => 1
     
     "update_wait"=>4
     "target_update_wait"=>1000
@@ -152,7 +148,7 @@ function build_ann(in, actions::Int, config, rng=Random.GLOBAL_RNG)
         =#
 
         (ActionRNNs.DualStreams(action_stream, obs_stream),
-         ActionRNNs.build_rnn_layer(internal_o, internal_a, out, config, rng))
+         ActionRNNs.build_rnn_layer(internal_o, internal_a, nh, config, rng))
     else
         (ActionRNNs.build_rnn_layer(in, actions, nh, config, rng),)
     end # if deep_action
@@ -162,6 +158,12 @@ function build_ann(in, actions::Int, config, rng=Random.GLOBAL_RNG)
     
 end
 
+
+"""
+    construct_agent
+
+Construct the agent for `MaskedGridWorldERExperiment`. See 
+"""
 function construct_agent(env, config, rng)
 
 
@@ -209,7 +211,7 @@ function construct_agent(env, config, rng)
                          config["target_update_wait"],
                          #
                          ap, # acting policy
-                         ActionRNNs.HSMinimize())
+                         ActionRNNs.get_hs_strategy(config["hs_strategy"]))
 end
 
 """
@@ -234,6 +236,14 @@ end
 Macros.@generate_ann_size_helper
 Macros.@generate_working_function
 
+
+"""
+    main_experiment
+
+Run an experiment from config. See [`MaskedGridWorldERExperiment.working_experiment`](@ref) 
+for details on running on the command line and [`MaskedGridWorldERExperiment.default_config`](@ref) 
+for info about the default configuration.
+"""
 function main_experiment(config = default_config(); progress=false, testing=false, overwrite=false)
 
     experiment_wrapper(config; use_git_info=false, testing=testing, overwrite=overwrite, hash_exclude_save_dir=true) do config

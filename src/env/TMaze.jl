@@ -20,13 +20,10 @@ end
 const TMC = TMazeConst
 
 """
- TMaze           _
-     _ _ _ _ _ _|_|
-    |_|_|_|_|_|_|_|
-                |_|
+    TMaze
+
+TMaze as defined by [Bram Bakker](https://proceedings.neurips.cc/paper/2001/hash/a38b16173474ba8b1a95bcbc30d3b8a5-Abstract.html).
 """
-
-
 mutable struct TMaze <: AbstractEnvironment
     size::Int
     goal_dir::Int

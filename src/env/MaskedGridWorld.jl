@@ -72,6 +72,18 @@ end
 end
 
 
+"""
+    MaskedGridWorld
+
+This grid world gives observations on a random number of states which are aliased (or not given obs_strategy).
+This environment also has the pacman_wrapping flag which makes it so the edges wrap around.
+- `width::Int`: width of gw
+- `height::Int`: height of gw
+- `anchors::Int`: number of anchors (Int), or list of anchor states
+- `goals_or_rews`: number of goals, list of goals, or list of rewards.
+- `obs_strategy`: what obs are returned, :seperate, :full, aliased
+- `pacman_wrapping::Bool`: whether the walls are invisible and wrap around
+"""
 mutable struct MaskedGridWorld <: AbstractEnvironment
     size::Tuple{Int, Int}
     state::NamedTuple{(:x, :y), Tuple{Int64, Int64}}

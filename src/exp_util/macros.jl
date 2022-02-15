@@ -146,9 +146,14 @@ macro generate_config_funcs(default_config)
 end
 
 macro generate_working_function()
-    func_name = :working_experiment
     quote
-        function $(esc(func_name))(;kwargs...)
+        """
+            working_experiment
+
+        Creates a wrapper experiment where the main experiment is called with progress=true, testing=true 
+        and the config is the default_config with the addition of the keyword arguments.
+        """
+        function $(esc(:working_experiment))(;kwargs...)
             config = $__module__.default_config()
             for (n, v) in kwargs
                 config[string(n)] = v
@@ -161,6 +166,12 @@ end
 macro generate_ann_size_helper(construct_env=:construct_env, construct_agent=:construct_agent)
     const_env_sym = construct_env
     quote
+        """
+            get_ann_size
+
+        Helper function which constructs the environment and agent using default config and kwargs then returns
+        the number of parameters in the model.
+        """
         function $(esc(:get_ann_size))(;kwargs...)
             config = $__module__.default_config()
             for (k, v) in kwargs
@@ -168,7 +179,7 @@ macro generate_ann_size_helper(construct_env=:construct_env, construct_agent=:co
             end
             env = $(esc(const_env_sym))(config, $__module__.Random.GLOBAL_RNG)
             agent = $(esc(construct_agent))(env, config, $__module__.Random.GLOBAL_RNG)
-            sum(length, $__module__.Flux.params(agent.model))
+            sum(length, $__module__.Flux.params(get_model(agent)))
         end
     end
 end

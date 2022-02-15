@@ -47,8 +47,9 @@ _set_data_row!(x::Array{T, 5}, d::Array{T, 4}, idx) where {T} = x[:, :, :, :, id
 
 """
     push!(buffer, data)
-    Adds data to the buffer, where data is an array of collections of types defined in CircularBuffer._data_types
-    returns row of data of added d
+
+Adds data to the buffer, where data is an array of collections of types defined in CircularBuffer._data_types
+returns row of data of added d
 """
 function Base.push!(buffer::CB, data) where {CB<:CircularBuffer}
     ret = buffer._current_row
@@ -81,9 +82,10 @@ function Base.push!(buffer::CB, data::NamedTuple) where {CB<:CircularBuffer}
 end
 
 """
-    size(buffer)
-    Returns the current amount of data in the circular buffer.
-    If the full flag is true then we return the size of the whole data frame.
+    length(buffer)
+
+Returns the current amount of data in the circular buffer.
+If the full flag is true then we return the size of the whole data frame.
 """
 function Base.length(buffer::CircularBuffer)
     if buffer._full

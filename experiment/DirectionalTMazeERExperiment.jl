@@ -1,6 +1,17 @@
-module DirectionalTMazeERExperiment
+"""
+    DirectionalTMazeERExperiment
 
-# include("../src/ActionRNNs.jl")
+An experiment to compare different RNN cells using the [`ActionRNNs.DirectionalTMaze`](@ref) environment.
+
+Usage is detailed through the docs for 
+- [`DirectionalTMazeERExperiment.default_config`](@ref)
+- [`DirectionalTMazeERExperiment.main_experiment`](@ref)
+- [`DirectionalTMazeERExperiment.working_experiment`](@ref)
+- [`DirectionalTMazeERExperiment.construct_env`](@ref)
+- [`DirectionalTMazeERExperiment.construct_agent`](@ref)
+
+"""
+module DirectionalTMazeERExperiment
 
 # import Flux
 import JLD2
@@ -100,7 +111,7 @@ const FLU = FluxUtils
 
     info"""
     ## Default performance:
-
+    ```
     Time: 0:02:28
       episode:    5385
       successes:  0.8351648351648352
@@ -108,6 +119,7 @@ const FLU = FluxUtils
       l1:         0.0
       action:     2
       preds:      Float32[0.369189, 0.48326853, 0.993273]
+    ```
     """
 end
 
@@ -118,7 +130,7 @@ function build_ann(config, in, actions::Int, rng)
     init_func, initb = ActionRNNs.get_init_funcs(rng)
 
 
-    deep_action = "deep" ∈ keys ? config["deep"] : get(config, "deepaction", false)
+    deep_action = "deep" ∈ keys(config) ? config["deep"] : get(config, "deepaction", false)
 
     rnn = if deep_action
         
@@ -160,7 +172,7 @@ end
 """
     construct_agent
 
-Construct the agent for `DirectionalTMazeERExperiment`.
+Construct the agent for `DirectionalTMazeERExperiment`. See 
 """
 function construct_agent(env, config, rng)
 
@@ -223,15 +235,35 @@ function construct_agent(env, config, rng)
                          hs_strategy)
 end
 
+"""
+    construct_env
+
+Construct direction tmaze using:
+- `size::Int` size of hallway.
+"""
+function construct_env(config)
+    DirectionalTMaze(config["size"])
+end
+
+
+Macros.@generate_ann_size_helper
 Macros.@generate_working_function
 
+
+"""
+    main_experiment
+
+Run an experiment from config. See [`DirectionalTMazeERExperiment.working_experiment`](@ref) 
+for details on running on the command line and [`DirectionalTMazeERExperiment.default_config`](@ref) 
+for info about the default configuration.
+"""
 function main_experiment(config;
                          progress=false,
                          testing=false,
                          overwrite=false)
 
     if "cell_numhidden" ∈ keys(config)
-        @warning "\"cell_numhidden\" no longer supported. Use Reproduce utilities."
+        @warn "\"cell_numhidden\" no longer supported. Use Reproduce utilities."
         config["cell"] = config["cell_numhidden"][1]
         config["numhidden"] = config["cell_numhidden"][2]
         delete!(config, "cell_numhidden")
@@ -244,7 +276,7 @@ function main_experiment(config;
         seed = config["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = DirectionalTMaze(config["size"])
+        env = construct_env(config)
         agent = construct_agent(env, config, rng)
 
         logger = SimpleLogger(
@@ -259,7 +291,6 @@ function main_experiment(config;
             )
         )
 
-        mean_loss = 1.0f0
         
         prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
         generate_showvalues(eps, logger, usa, a, n) = () -> begin

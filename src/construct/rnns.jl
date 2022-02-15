@@ -93,7 +93,7 @@ Types of build types
 - `BuildMixed`: [`MixRNN`](@ref), [`MixElRNN`](@ref), [`MixElGRU`](@ref), [`MixGRU`](@ref)
 
 """
-function build_rnn_layer(in::Int, actions::Int, out::Int, parsed, rng)
+function build_rnn_layer(parsed::Dict, in::Int, actions::Int, out::Int, rng)
     rnn_type = if isdefined(ActionRNNs, Symbol(parsed["cell"]))
         getproperty(ActionRNNs, Symbol(parsed["cell"]))
     elseif isdefined(Flux, Symbol(parsed["cell"]))
@@ -104,6 +104,9 @@ function build_rnn_layer(in::Int, actions::Int, out::Int, parsed, rng)
 
     build_rnn_layer(rnn_type, in, actions, out, parsed, rng)
 end
+
+build_rnn_layer(in::Int, actions::Int, out::Int, parsed::Dict, rng) =
+    build_rnn_layer(parsed, in, actions, out, rng)
 
 build_rnn_layer(rnn_type, in, actions, out, parsed, rng; kwargs...) =
     build_rnn_layer(rnn_build_trait(rnn_type), rnn_type, in, actions, out, parsed, rng; kwargs...)

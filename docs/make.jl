@@ -1,10 +1,23 @@
 using Documenter
-using ActionRNNs
+
+import ActionRNNs: ActionRNNs, ExpUtils
+import DirectionalTMazeERExperiment
+import MaskedGridWorldERExperiment
 
 makedocs(
     sitename = "ActionRNNs",
     format = Documenter.HTML(),
-    modules = [ActionRNNs]
+    modules = [ActionRNNs,
+               DirectionalTMazeERExperiment,
+               MaskedGridWorldERExperiment],
+    pages = [
+        "library.md",
+        "Experiment" =>
+        [
+            "experiments/directional_tmaze.md",
+            "experiments/masked_gw.md"
+        ]
+    ]
 )
 
 # Documenter can also automatically deploy documentation to gh-pages.
