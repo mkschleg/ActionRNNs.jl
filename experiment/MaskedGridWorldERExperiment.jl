@@ -267,11 +267,10 @@ function main_experiment(config = default_config(); progress=false, testing=fals
         - total_step: the number of steps per episode
         =#
         logger = SimpleLogger(
-            (:total_rews, :losses, :total_steps),
-            (Float32, Float32, Int),
+            (:total_rews, :total_steps),
+            (Float32, Int),
             Dict(
                 :total_rews => (rew, steps, usa) -> rew,
-                :losses => (rew, steps, usa) -> usa[:loss]/steps,
                 :total_steps => (rew, steps, usa) -> steps,
             )
         )
@@ -317,8 +316,50 @@ function main_experiment(config = default_config(); progress=false, testing=fals
             logger(total_rew, steps, usa)
             eps += 1
         end
+
+        # Test agent:
+        # num_test_episodes = get(config, "num_test_episodes", 0)
+
+        ActionRNNs.turn_off_training(agent)
         
-        save_results = logger.data
+        test_states = [(x, y) for x in 1:config["width"], y in 1:config["height"]]
+        num_test_episodes = length(test_states)
+        prg_bar = ProgressMeter.Progress(num_test_episodes, "Episode: ")
+        trv = zeros(Float32, num_test_episodes)
+        tsv = zeros(Int, num_test_episodes)
+        
+        for eps in 1:num_test_episodes
+            ts = 0
+            tr = 0.0f0
+            s = MinimalRLCore.start!(env, test_states[eps])
+            agent_ret = MinimalRLCore.start!(agent, s)
+            
+            t = false
+            while (ts < 10000) && !t
+
+                s′, r, t = if agent_ret isa NamedTuple
+                    MinimalRLCore.step!(env, agent_ret.action)
+                else
+                    MinimalRLCore.step!(env, agent_ret)
+                end
+
+                if t
+                    agent_ret = MinimalRLCore.step!(agent, s′, r, t)
+                else
+                    agent_ret = MinimalRLCore.end!(agent, s′, r)
+                end                
+                tr += r
+                ts += 1
+            end
+            trv[eps] = tr
+            tsv[eps] = ts
+            if progress
+                next!(prg_bar)
+            end
+        end
+        
+        save_results = (;logger.data..., test_total_rews=trv, test_total_steps=tsv)
+
         (;save_results = save_results)
     end
 end

@@ -18,7 +18,7 @@ struct HSRefil end
 
 function get_hs_strategy(hs_learnable::Bool)
     if hs_learnable
-        HSRefil()
+        HSMinimize()
     else
         HSStale()
     end

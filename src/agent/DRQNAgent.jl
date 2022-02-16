@@ -52,10 +52,13 @@ mutable struct DRQNAgent{LU, ER, TN, DEV, O, M, F, Φ,  Π, HS<:AbstractMatrix{F
 
     hs_tr_init::Dict{Symbol, HS}
     device::DEV
+
+    training_mode::Bool
 end
 
 get_hs_replay_strategy(agent::DRQNAgent) = agent.hs_strategy
-
+training_mode(agent::DRQNAgent) = agent.training_mode
+set_training_mode(agent::DRQNAgent, mode) = agent.training_mode = mode
 
 #=
 Constructors
@@ -113,7 +116,7 @@ function DRQNAgent(model,
               acting_policy,
               # γ,
               1, 1, 0.0, hs_strategy, true, 0,
-              typeof(hidden_state_init)(), dev)
+              typeof(hidden_state_init)(), dev, true)
 end
 
 function ImageDRQNAgent(model,
@@ -166,7 +169,7 @@ function ImageDRQNAgent(model,
               acting_policy,
               # γ,
               1, 1, 0.0, hs_strategy, true, 0,
-              typeof(hidden_state_init)(), dev)
+              typeof(hidden_state_init)(), dev, true)
 end
 
 

@@ -78,6 +78,23 @@ return the model from the agent.
 """
 get_model(agent::AbstractERAgent) = agent.model
 
+"""
+    training_mode(agent::AbstractERAgent)
+
+returns bool whether the agent is in training mode.
+"""
+training_mode(agent::AbstractERAgent) = true
+
+"""
+    set_training_mode(agent::AbstractERAgent, mode::Bool)
+
+sets training mode to boolean value
+"""
+set_training_mode(agent::AbstractERAgent, mode) = @error "$(typeof(agent)) doesn't have `set_training_mode` implemented."
+
+turn_on_training(agent::AbstractERAgent) = set_training_mode(agent, true)
+turn_off_training(agent::AbstractERAgent) = set_training_mode(agent, false)
+
 
 """
     get_action_and_prob(π, values, rng)
@@ -150,36 +167,36 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     push!(state_list,
           build_new_feat(agent, env_s_tp1, agent.action))
 
+    us = if training_mode(agent)
+        ####
+        # Add new experience to replay buffer
+        ####
+        hs_sym_list = get_hs_symbol_list(model)
+        add_ret = add_exp!(agent,
+                           env_s_tp1,
+                           r,
+                           terminal,
+                           hs_sym_list,
+                           (agent.hidden_state_init[k] for k in hs_sym_list))
+        ###
+        # Update model
+        ###
+        us = if agent.update_timer(length(replay))
+            update!(agent, rng)
+        end
+        
+        if agent.target_update_timer(length(replay))
+            update_target_network!(agent)
+        end
 
-    
-    ####
-    # Add new experience to replay buffer
-    ####
-    hs_sym_list = get_hs_symbol_list(model)
-    add_ret = add_exp!(agent,
-                       env_s_tp1,
-                       r,
-                       terminal,
-                       hs_sym_list,
-                       (agent.hidden_state_init[k] for k in hs_sym_list))
-    
-    agent.beg = false
+        # progress update_timers
+        step!(agent.update_timer), step!(agent.target_update_timer)
 
-    ###
-    # Update model
-    ###
-    us = if agent.update_timer(length(replay))
-        update!(agent, rng)
+        us
     end
+
+    agent.beg = false # Set to false after adding experience.
     
-    if agent.target_update_timer(length(replay))
-        update_target_network!(agent)
-    end
-
-    # progress update_timers
-    step!(agent.update_timer), step!(agent.target_update_timer)
-
-
     ####
     # Get predictions and manage hidden state
     ####i
