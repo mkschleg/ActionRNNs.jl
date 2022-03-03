@@ -802,6 +802,12 @@ git-tree-sha1 = "f6250b16881adf048549549fba48b1161acdac8c"
 uuid = "c1c5ebd0-6772-5130-a774-d5fcae4a789d"
 version = "3.100.1+0"
 
+[[LERC_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "bf36f528eec6634efc60d7ec062008f171071434"
+uuid = "88015f11-f218-50d7-93a8-a6af411a945d"
+version = "3.0.0+1"
+
 [[LLVM]]
 deps = ["CEnum", "LLVMExtra_jll", "Libdl", "Printf", "Unicode"]
 git-tree-sha1 = "f8dcd7adfda0dddaf944e62476d823164cccc217"
@@ -810,9 +816,9 @@ version = "4.7.1"
 
 [[LLVMExtra_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "62115afed394c016c2d3096c5b85c407b48be96b"
+git-tree-sha1 = "67cc5406b15bd04ff72a45f628bec61d36078908"
 uuid = "dad2f222-ce93-54a1-a47d-0025e8a3acab"
-version = "0.0.13+1"
+version = "0.0.13+3"
 
 [[LZO_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -908,10 +914,10 @@ uuid = "4b2f31a3-9ecc-558c-b454-b3730dcb73e9"
 version = "2.35.0+0"
 
 [[Libtiff_jll]]
-deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Pkg", "Zlib_jll", "Zstd_jll"]
-git-tree-sha1 = "340e257aada13f95f98ee352d316c3bed37c8ab9"
+deps = ["Artifacts", "JLLWrappers", "JpegTurbo_jll", "LERC_jll", "Libdl", "Pkg", "Zlib_jll", "Zstd_jll"]
+git-tree-sha1 = "c9551dd26e31ab17b86cbd00c2ede019c08758eb"
 uuid = "89763e89-9b03-5906-acba-b20f662cd828"
-version = "4.3.0+0"
+version = "4.3.0+1"
 
 [[Libuuid_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1343,11 +1349,9 @@ version = "1.1.0"
 
 [[Reproduce]]
 deps = ["ArgParse", "BSON", "CodeTracking", "DBInterface", "DataFrames", "Dates", "Distributed", "FileIO", "Git", "HDF5", "JLD2", "JSON", "Logging", "MySQL", "Parallelism", "Pkg", "ProgressMeter", "Random", "Reexport", "SharedArrays", "Sockets", "TOML", "Tables"]
-git-tree-sha1 = "4066cee0b2a182a24a39a5ef8eec6d1a3d6b90b9"
-repo-rev = "main"
-repo-url = "https://github.com/mkschleg/Reproduce.jl.git"
+git-tree-sha1 = "56fb7ff8eaebf6d4373618378fb2b4c84c09ec2a"
 uuid = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
-version = "0.11.4-dev"
+version = "0.11.4"
 
 [[ReproducePlotUtils]]
 deps = ["DataFrames", "FileIO", "PlotUtils", "Plots", "RecipesBase", "Reproduce", "RollingFunctions", "Statistics", "StatsPlots"]
