@@ -86,21 +86,20 @@ end
 md"view processed data folder"
 
 # ╔═╡ 36f540ea-b945-4b2f-825f-f97a7ce2fb9b
-readdir("../../processed_data/")
+readdir("../processed_data/")
 
 # ╔═╡ f999a721-f26e-4cc5-8cc1-1732bb69b134
 begin
-	# error("Comment this out")
+	# error("stuff")
 	load_at = local_data
-	save_at = "../processed_data/dir_tmaze_fac_10.jld2"
-	results_folders = ["dir_tmaze_er/dir_tmaze_er_fac_rnn_rmsprop_10", 
-				   	   "dir_tmaze_er/dir_tmaze_er_fac_rnn_rmsprop_10_p2/"]
+	save_at = "../../processed_data/tmaze_10.jld2"
+	results_folders = ["./tmaze_er_rnn_rmsprop_10/"]
 	settings_filter = ["_GIT_INFO", "_SAVE", "save_dir"]
 end;
 
 # ╔═╡ 67d58fe0-6b1f-43a9-8c48-321bd9c5c518
 begin
-	line_params = ["numhidden", "factors", "replay_size", "truncation", "cell"]
+	line_params = ["numhidden", "truncation", "cell"]
 	sweep_params = ["eta"]
 end;
 
@@ -234,11 +233,16 @@ function find_best_params(df::DataFrame,
 	end
 
     values = zeros(length(params))
+	values_var = zeros(length(params))
+	values_stderr = zeros(length(params))
     for (p_idx, p) ∈ enumerate(params)
 		df_view = filter(df; view=false) do row
 			all([row[param_keys[i]] == p[i] for i ∈ 1:length(p)])
 		end
-        values[p_idx] = mean(load_runs(df_view, get_comp_data)[1])
+		res = load_runs(df_view, get_comp_data)[1]
+        values[p_idx] = mean(res)
+		values_var[p_idx] = var(res)
+		values_stderr[p_idx] = sqrt(var(res)/length(res))
     end
 
     v, idx = comp_func(values)
@@ -249,7 +253,7 @@ function find_best_params(df::DataFrame,
 	
     data, data_pms = load_runs(df_view, get_data)
 
-	data, data_pms, v, params[idx], values, params
+	data, data_pms, v, params[idx], (values, values_var, values_stderr), params
 	
 end
 
@@ -295,7 +299,7 @@ function get_data_for(
 					all(row[k] == vb_param[i] for (i, k) in enumerate(param_keys))
 				end
 
-				d_kinner = Dict(k=>pi[i] for (i, k) in enumerate(kinner))
+				d_kinner = Dict{String, Any}(k=>pi[i] for (i, k) in enumerate(kinner))
 				d_kinner[kouter] = po
 				d_sk_b = Dict(param_keys[i]=>vb_param[i] 
 					for i in 1:length(param_keys))
@@ -323,7 +327,10 @@ function get_data_for(
 					d["data"] = data
 				end
 				d["sweep_value_best"] = v_best
-				d["sweep_values"] = values
+				
+				d["sweep_values"] = values[1]
+				d["sweep_values_var"] = values[2]
+				d["sweep_values_stderr"] = values[3]
 
 				if !isassigned(df_ret_th,tid)
 					df_ret_th[tid] = DataFrame((k=>Vector{typeof(d[k])}() for k in keys(d))...)

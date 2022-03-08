@@ -86,21 +86,20 @@ end
 md"view processed data folder"
 
 # ╔═╡ 36f540ea-b945-4b2f-825f-f97a7ce2fb9b
-readdir("../../processed_data/")
+readdir("../processed_data/")
 
 # ╔═╡ f999a721-f26e-4cc5-8cc1-1732bb69b134
 begin
-	# error("Comment this out")
+	# error("stuff")
 	load_at = local_data
-	save_at = "../processed_data/dir_tmaze_fac_10.jld2"
-	results_folders = ["dir_tmaze_er/dir_tmaze_er_fac_rnn_rmsprop_10", 
-				   	   "dir_tmaze_er/dir_tmaze_er_fac_rnn_rmsprop_10_p2/"]
+	save_at = "../../processed_data/tmaze_fac_10.jld2"
+	results_folders = ["./tmaze_fac_er_rnn_init_rmsprop_10/"]
 	settings_filter = ["_GIT_INFO", "_SAVE", "save_dir"]
 end;
 
 # ╔═╡ 67d58fe0-6b1f-43a9-8c48-321bd9c5c518
 begin
-	line_params = ["numhidden", "factors", "replay_size", "truncation", "cell"]
+	line_params = ["cell", "init_style", "numhidden", "factors", "truncation", "replay_size"]
 	sweep_params = ["eta"]
 end;
 
@@ -115,7 +114,8 @@ if isfile(save_at)
 	**Key**: $(cur_save["compare_key"]),
 	**Custom?**: $(cur_save["custom_compare"]) \
 	
-	**CompareFunc**: $(cur_save["cust_compare_code"])
+	**CompareFunc**: \
+	$(cur_save["cust_compare_code"])
 	
 	**LineParams**: $(string(cur_save["line_params"])) \
 	**SweepParams**: $(string(cur_save["sweep_params"]))
@@ -234,11 +234,16 @@ function find_best_params(df::DataFrame,
 	end
 
     values = zeros(length(params))
+	values_var = zeros(length(params))
+	values_stderr = zeros(length(params))
     for (p_idx, p) ∈ enumerate(params)
 		df_view = filter(df; view=false) do row
 			all([row[param_keys[i]] == p[i] for i ∈ 1:length(p)])
 		end
-        values[p_idx] = mean(load_runs(df_view, get_comp_data)[1])
+		res = load_runs(df_view, get_comp_data)[1]
+        values[p_idx] = mean(res)
+		values_var[p_idx] = var(res)
+		values_stderr[p_idx] = sqrt(var(res)/length(res))
     end
 
     v, idx = comp_func(values)
@@ -249,7 +254,7 @@ function find_best_params(df::DataFrame,
 	
     data, data_pms = load_runs(df_view, get_data)
 
-	data, data_pms, v, params[idx], values, params
+	data, data_pms, v, params[idx], (values, values_var, values_stderr), params
 	
 end
 
@@ -295,7 +300,7 @@ function get_data_for(
 					all(row[k] == vb_param[i] for (i, k) in enumerate(param_keys))
 				end
 
-				d_kinner = Dict(k=>pi[i] for (i, k) in enumerate(kinner))
+				d_kinner = Dict{String, Any}(k=>pi[i] for (i, k) in enumerate(kinner))
 				d_kinner[kouter] = po
 				d_sk_b = Dict(param_keys[i]=>vb_param[i] 
 					for i in 1:length(param_keys))
@@ -323,7 +328,10 @@ function get_data_for(
 					d["data"] = data
 				end
 				d["sweep_value_best"] = v_best
-				d["sweep_values"] = values
+				
+				d["sweep_values"] = values[1]
+				d["sweep_values_var"] = values[2]
+				d["sweep_values_stderr"] = values[3]
 
 				if !isassigned(df_ret_th,tid)
 					df_ret_th[tid] = DataFrame((k=>Vector{typeof(d[k])}() for k in keys(d))...)
@@ -1752,7 +1760,7 @@ version = "0.9.1+5"
 # ╟─36bc2210-9b37-48f5-b0b1-7089576e1a64
 # ╠═9769195c-5075-4ad7-af6c-572dc433ca3a
 # ╟─a211294b-852d-447f-b538-66b50c531374
-# ╟─759eca80-b113-4d88-887e-6c762016ad72
+# ╠═759eca80-b113-4d88-887e-6c762016ad72
 # ╟─607a92d2-5d70-4ff5-89a9-9a0fb638a3db
 # ╟─a6fcd030-9486-409b-89df-1c0e1e43c76b
 # ╟─c24aa3ab-d9de-47c9-b4b0-6b642e2333f0

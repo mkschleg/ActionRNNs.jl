@@ -1,7 +1,10 @@
+authors = ["Matthew Schlegel <mkschleg@gmail.com>"]
 name = "ActionRNNs"
 uuid = "8317d1c6-c5c3-11e9-1282-0f8c4be94ea0"
-authors = ["Matthew Schlegel <mkschleg@gmail.com>"]
 version = "0.1.0"
+
+[compat]
+julia = "1.5"
 
 [deps]
 Adapt = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
@@ -46,5 +49,5 @@ TensorToolbox = "9c690861-8ade-587a-897e-15364bc6f718"
 Tullio = "bc48ee85-29a4-5162-ae0b-a64e1601d4bc"
 Zygote = "e88e6eb3-aa80-5325-afca-941959d7151f"
 
-[compat]
-julia = "1.5"
+[extras]
+CPUSummary = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"

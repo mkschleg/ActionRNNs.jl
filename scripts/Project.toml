@@ -1,6 +1,9 @@
 [deps]
 DBInterface = "a10d1c49-ce27-4219-8d33-6db1a4562965"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 MySQL = "39abe10b-433b-5dbd-92d4-e302a9df00cd"
 ProgressLogging = "33c8b6b6-d38a-422a-b730-caa89a2f386c"

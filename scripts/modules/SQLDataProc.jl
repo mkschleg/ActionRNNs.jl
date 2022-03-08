@@ -1,10 +1,12 @@
 module SQLDataProc
 
+
+# using TerminalLoggers
 using DataFrames, Query
-using TerminalLoggers
 using Statistics, ProgressLogging
 using MySQL, DBInterface
 using MacroTools
+using FileIO
 
 function connect(database)
     conn = DBInterface.connect(MySQL.Connection, "", "", option_file=joinpath(homedir(), ".my.cnf"))
@@ -13,8 +15,17 @@ function connect(database)
 end
 
 function get_param_table(conn)
-    DBInterface.execute(conn, "select * from params;")
+    DataFrame(DBInterface.execute(conn, "select * from params;"))
 end
+
+function get_tables(conn)
+    
+end
+
+function create_indexes(table_selector::Function, conn)
+    
+end
+
 
 function proc_vec_data(conn, table, hashes=UInt[]; _pre_name="", kwargs...)
 
@@ -46,6 +57,41 @@ function proc_vec_data(conn, table, hashes=UInt[]; _pre_name="", kwargs...)
     DataFrame(;_HASH=hashes, (Symbol(_pre_name*string(k))=>v for (k, v) in ret_strg)...)
 end
 
+function proc_control_data(database; save=nothing, vector_tables=["stps"=>"results_total_steps", "rews"=>"results_total_rews"])
+    conn = connect(database)
+    params = get_param_table(conn)
+    
+    results = [
+        SQLDataProc.proc_vec_data(
+            conn,
+            vt;
+            _pre_name=vt_n * "_",
+            avg=(d)->mean(d),
+            var=(d)->var(d),
+            cnt=(d)->length(d), 
+            avg_end=(d)->end_mean(d, 100),
+            var_end=(d)->end_var(d, 100),
+            cnt_end=(d)->end_count(d, 100)) for (vt_n, vt) in vector_tables]
+
+    # results_rews = SQLDataProc.proc_vec_data(
+    #     conn,
+    #     "results_total_rews";
+    #     _pre_name="rews_",
+    #     avg=(d)->mean(d),
+    #     var=(d)->var(d),
+    #     avg_end=(d)->end_mean(d, 100),
+    #     var_end=(d)->end_var(d, 100))
+
+    DBInterface.close!(conn)
+    params_and_results = DataFrames.innerjoin(params, results..., on=:_HASH)
+
+    params_and_results = SQLDataProc.simplify_dataframe((d)->[collect(d)], params_and_results)
+    if !isnothing(save)
+        FileIO.save(save, "params_and_results", params_and_results)
+    end
+    params_and_results
+end
+
 function end_agg(agg::Function, d, num_steps::Int)
     if length(d) < num_steps
         agg(d)
@@ -72,12 +118,50 @@ end
 end_count(d, num_steps_or_perc) = end_agg(length, d, num_steps_or_perc)
 
 
-function collapse_group(grp_df)
-    for n in names(grp_df)
-        grp_df[]
-    end
-    
+collapse_group(grp_df) = collapse_group_agg(grp_df) do c
+    [collect(c)]
 end
+
+function collapse_group_agg(agg::Function, grp_df)
+    values = []
+    nms = names(grp_df)
+    for n in nms
+        vs = unique(grp_df[!, Symbol(n)])
+        if length(vs) != 1
+            push!(values, agg(skipmissing(grp_df[!, n])))
+        else
+            push!(values, vs[1])
+        end
+    end
+    DataFrame(;(Symbol(n)=>v for (n, v) in zip(nms, values))...)
+end
+
+function simplify_dataframe(agg::Function, df; special_keys=["_HASH", "_GIT_INFO", "seed"])
+    nms = filter((d)->d ∉ special_keys, names(df, Between(1, :_GIT_INFO)))
+    grps = groupby(df, Symbol.(nms))
+    reduce(vcat, [collapse_group_agg(agg, grp) for grp in grps])
+end
+
+function get_diff_dict(params)
+    dfs = Dict{String, Any}()
+    for clm in filter((clm)-> (clm != "_GIT_INFO") && (clm != "_HASH"), clms[!, :COLUMN_NAME])
+	df = DataFrame(
+	    DBInterface.execute(
+		conn,
+		"SELECT DISTINCT($(clm)) FROM params"))
+	if length(df[:, clm]) > 1
+	    dfs[clm] = df[:, clm]
+	end
+    end
+    dfs
+end
+
+
+function best_from_sweep_param(o, df, sweep_params, avg_params=["seed"])
+    nms = filter((d)->d ∉ avg_params && d ∉ sweep_params, names(df, Between(1, :_HASH))[1:end-1])
+    grps = groupby(df, Symbol.(nms))
+    reduce(vcat, [DataFrame(sort(grp, o)[1, :]) for grp in grps])
+end    
 
 
 end
