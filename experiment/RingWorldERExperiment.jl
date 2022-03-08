@@ -5,7 +5,8 @@ using MinimalRLCore
 import ActionRNNs: ActionRNNs, ExpUtils, RingWorld, glorot_uniform
 
 import .ExpUtils: RingWorldUtils, FluxUtils, experiment_wrapper
-
+import .ExpUtils: Macros
+import .Macros: @info_str, @generate_config_funcs
 
 import Flux
 import JLD2
@@ -81,36 +82,114 @@ function default_config()
 
 end
 
-function build_deep_action_rnn_layers(in, actions, out, parsed, rng)
+@generate_config_funcs begin
 
-    # Deep actions for RNNs from Zhu et al 2018
-    internal_a = parsed["internal_a"]
-    
-    init_func, initb = ActionRNNs.get_init_funcs(rng)
-    
-    action_stream = Flux.Chain(
-        (a)->Flux.onehotbatch(a, 1:actions),
-        Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
-    )
+    info"""
+        Experiment details.
+    --------------------
+    - `seed::Int`: seed of RNG
+    - `steps::Int`: Number of steps taken in the experiment
+    - `synopsis::Bool`: Report full results or a synopsis.
+    """
+    "seed" => 1,
+    "synopsis" => false,
+    "steps" => 200000,
 
-    obs_stream = identity
-        # Flux.Dense(in, internal_o, Flux.relu, initW=init_func)
-    # )
+    info"""
+    Environment details
+    -------------------
+    This experiment uses the RingWorld environment. The usable args are:
+    - `size::Int`: Number of states in the ring.
+    """
+    "size" => 6,
     
-    (ActionRNNs.DualStreams(action_stream, obs_stream),
-     ActionRNNs.build_rnn_layer(in, internal_a, out, parsed, rng))
+    info"""
+    agent details
+    -------------
+    ### RNN
+    The RNN used for this experiment and its total hidden size, 
+    as well as a flag to use (or not use) zhu's deep 
+    action network. See 
+    - `cell::String`: The typeof cell. Many types are possible.
+    - `deepaction::Bool`: Whether to use Zhu et. al.'s deep action 4 RNNs idea.
+        -`internal_a::Int`: the size of the action representation layer when `deepaction=true`
+    - `numhidden::Int`:  Size of hidden state in RNNs.   
+    """
+    "cell" => "MARNN",
+    "numhidden" => 6,
+    "deepaction" => false,
+
+    info"""
+    ### Prediction Problem
+    Define the prediction problem for the experiment.
+    - `outhorde::String`: The horde used to construct the targets.
+    - `outgamma::Float64`: The discount (used by specific hordes).
+    """
+    "outhorde" => "onestep",
+    "outgamma" => 0.9,
+
+    info"""
+    ### Optimizer details
+    Flux optimizers are used. See flux documentation and `ExpUtils.Flux.get_optimizer` for details.
+    - `opt::String`: The name of the optimizer used
+    - Parameters defined by the particular optimizer.
+    """
+    "opt" => "RMSProp",
+    "eta" => 0.001,
+    "rho" => 0.9,
+
+    info"""
+    ### Learning update and replay details including:
+    - Replay: 
+        - `replay_size::Int`: How many transitions are stored in the replay.
+        - `warm_up::Int`: How many steps for warm-up (i.e. before learning begins).
+    """
+    "replay_size"=>1000,
+    "warm_up" => 1000,
+    
+    info"""
+    - Update details: 
+        - `batch_size::Int`: size of batch
+        - `truncation::Int`: Length of sequences used for training.
+        - `update_freq::Int`: Time between updates (counted in agent interactions)
+        - `target_update_freq::Int`: Time between target network updates (counted in agent interactions)
+        - `hs_learnable::Bool`: Strategy for dealing w/ hidden state in buffer.
+    """
+    "truncation" => 3,
+    "batch_size"=>4,
+    "update_freq"=>4,
+    "target_update_freq"=>1000,
+    "hs_learnable"=>true
 end
 
-function build_ann(in, actions, out, parsed, rng)
+function build_ann(in, actions, out, config, rng)
     
-    nh = parsed["numhidden"]
+    nh = config["numhidden"]
     init_func, initb = ActionRNNs.get_init_funcs(rng)
 
-    deep_action = get(parsed, "deep", false)
-    rnn = if deep_action
-        build_deep_action_rnn_layers(in, actions, nh, parsed, rng)
+    deep_action = if "deepaction" ∈ keys(config)
+        config["deepaction"]
     else
-        (ActionRNNs.build_rnn_layer(in, actions, nh, parsed, rng),)
+        get(config, "deep", false)
+    end
+    
+    rnn = if deep_action
+        internal_a = config["internal_a"]
+    
+        init_func, initb = ActionRNNs.get_init_funcs(rng)
+        
+        action_stream = Flux.Chain(
+            (a)->Flux.onehotbatch(a, 1:actions),
+            Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
+        )
+
+        obs_stream = identity
+        
+        (ActionRNNs.DualStreams(action_stream, obs_stream),
+         ActionRNNs.build_rnn_layer(in, internal_a, out, config, rng))
+
+    else
+        (ActionRNNs.build_rnn_layer(in, actions, nh, config, rng),)
     end
 
     Flux.Chain(rnn...,
@@ -119,19 +198,19 @@ function build_ann(in, actions, out, parsed, rng)
 end
 
 
-function construct_agent(parsed, rng)
+function construct_agent(env, config, rng)
 
     fc = RWU.StandardFeatureCreator{false}()
     fs = size(fc)
 
-    out_horde = RWU.get_horde(parsed, "out")
-    τ = parsed["truncation"]
+    out_horde = RWU.get_horde(config, "out")
+    τ = config["truncation"]
 
     ap = ActionRNNs.RandomActingPolicy([0.5, 0.5])
 
-    opt = FLU.get_optimizer(parsed)
+    opt = FLU.get_optimizer(config)
 
-    chain = build_ann(fs, 2, length(out_horde), parsed, rng)
+    chain = build_ann(fs, 2, length(out_horde), config, rng)
 
     ActionRNNs.DRTDNAgent(out_horde,
                           chain,
@@ -140,37 +219,44 @@ function construct_agent(parsed, rng)
                           fc,
                           fs,
                           1,
-                          parsed["replay_size"],
-                          parsed["warm_up"],
-                          parsed["batch_size"],
-                          parsed["update_freq"],
-                          parsed["target_update_freq"],
+                          config["replay_size"],
+                          config["warm_up"],
+                          config["batch_size"],
+                          config["update_freq"],
+                          config["target_update_freq"],
                           ap,
-                          parsed["hs_learnable"])
+                          config["hs_learnable"])
 
 end
 
-function main_experiment(parsed=default_config(); progress=false, testing=false, overwrite=false)
+function construct_env(config)
+    RingWorld(config["size"])
+end
 
-    if "numhidden_factors" ∈ keys(parsed)
-        parsed["numhidden"] = parsed["numhidden_factors"][1]
-        parsed["factors"] = parsed["numhidden_factors"][2]
+Macros.@generate_ann_size_helper
+Macros.@generate_working_function
+
+function main_experiment(config; progress=false, testing=false, overwrite=false)
+
+    if "numhidden_factors" ∈ keys(config)
+        config["numhidden"] = config["numhidden_factors"][1]
+        config["factors"] = config["numhidden_factors"][2]
     end
     
-    experiment_wrapper(parsed, use_git_info=false, testing=testing, overwrite=overwrite) do (parsed)
+    experiment_wrapper(config, use_git_info=false, testing=testing, overwrite=overwrite) do (config)
         
-        num_steps = parsed["steps"]
-        seed = parsed["seed"]
+        num_steps = config["steps"]
+        seed = config["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = RingWorld(parsed["size"])
-        agent = construct_agent(parsed, rng)
+        env = RingWorld(config["size"])
+        agent = construct_agent(config, rng)
 
         out_pred_strg, out_err_strg =
-            experiment_loop(env, agent, parsed["outhorde"], num_steps, rng; prgs=progress)
+            experiment_loop(env, agent, config["outhorde"], num_steps, rng; prgs=progress)
         
         results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg])
-        save_results = results_synopsis(results, Val(parsed["synopsis"]))
+        save_results = results_synopsis(results, Val(config["synopsis"]))
         (save_results=save_results)
     end
 end
