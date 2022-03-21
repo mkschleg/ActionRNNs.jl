@@ -76,6 +76,10 @@ for cell_func in [Flux.RNN, Flux.GRU, Flux.LSTM]
     end
 end
 
+struct BuildAGMoE end
+
+@create_rnn_build_trait AGMoERNNCell BuildAGMoE
+
 
 """
     build_rnn_layer(in, actions, out, parsed, rng)
@@ -256,3 +260,4 @@ function build_rnn_layer(::BuildFlux, rnn_type,
                          init_func=get_init_funcs(rng)[1], kwargs...)
     rnn_type(in, out; init=init_func)
 end
+

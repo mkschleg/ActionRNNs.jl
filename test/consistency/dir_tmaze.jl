@@ -29,7 +29,7 @@ DTMAZE_ER_BASE_CONFIG =
 
 @testset "Consistency.DirTMazeER" begin
 
-    dir_tmaze_check(results, value) = sum(results.save_results.total_rews) == value
+    dir_tmaze_check(results, value) = sum(results.save_results[:total_rews]) == value
     @testset "RNN" begin
         ret = @run_experiment DirectionalTMazeERExperiment  "RNN" DTMAZE_ER_BASE_CONFIG
         @test dir_tmaze_check(ret, -1368.7032f0)

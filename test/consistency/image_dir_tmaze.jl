@@ -28,8 +28,8 @@ IMGDIRTMAZE_BASE_CONFIG = Dict{String,Any}(
         "hs_learnable" => true,
         "gamma"=>0.9)
 
-image_dir_tmaze_rew_check(results, value) = sum(results.save_results.total_rews) == value
-image_dir_tmaze_loss_check(results, value) = sum(results.save_results.losses) ≈ value
+image_dir_tmaze_rew_check(results, value) = sum(results.save_results[:total_rews]) == value
+image_dir_tmaze_loss_check(results, value) = sum(results.save_results[:losses]) ≈ value
 
 @testset "Consistency.ImageDirTMaze" begin
     

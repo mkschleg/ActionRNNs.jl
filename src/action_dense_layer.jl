@@ -49,7 +49,7 @@ function (a::ActionDense)(x::Tuple{A, X}) where {A, X}
 end
 
 function Base.show(io::IO, l::ActionDense)
-  print(io, "Dense(", size(l.weight, 2), ", ", size(l.weight, 1))
+  print(io, "ActionDense(", size(l.weight, 2), ", ", size(l.weight_a, 2), ", ", size(l.weight, 1))
   l.σ == identity || print(io, ", ", l.σ)
   l.bias == Flux.Zeros() && print(io, "; bias=false")
   print(io, ")")

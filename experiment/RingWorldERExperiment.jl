@@ -3,31 +3,27 @@ module RingWorldERExperiment
 using MinimalRLCore
 
 import ActionRNNs: ActionRNNs, ExpUtils, RingWorld, glorot_uniform
-
-import .ExpUtils: RingWorldUtils, FluxUtils, experiment_wrapper
-import .ExpUtils: Macros
+import ActionRNNs: @data
+import .ExpUtils: RingWorldUtils, FluxUtils, experiment_wrapper, Macros, construct_logger
 import .Macros: @info_str, @generate_config_funcs
 
 import Flux
 import JLD2
 import LinearAlgebra.Diagonal
 
-# using DataStructures: CircularBuffer
-
 using Statistics
 using Random
 using ProgressMeter
 using Reproduce
 using Random
-
-
-# using Plots
+using LoggingExtras
 
 const RWU = RingWorldUtils
 const FLU = FluxUtils
 
 function results_synopsis(res, ::Val{true})
-    rmse = sqrt.(mean(res["err"].^2; dims=2))
+    rmse = sqrt.(mean(res[:out_err].^2; dims=1))[1, :]
+    @show size(rmse)
     Dict([
         "desc"=>"All operations are on the RMSE",
         "all"=>mean(rmse),
@@ -38,50 +34,6 @@ function results_synopsis(res, ::Val{true})
 end
 results_synopsis(res, ::Val{false}) = res
 
-#=
-
-Time: 0:00:56
-Dict{String, Matrix{Float32}} with 2 entries:
-  "err"  => [0.0 0.0; 0.0 0.0; … ; 0.0128746 -0.000129551; 0.00117147 -0.00140008]
-  "pred" => [0.0 0.0; 0.0 0.0; … ; 0.0128746 -0.000129551; 1.00117 -0.00140008]
-
-=#
-function default_config()
-    Dict{String,Any}(
-
-        # "_SAVE" => "tmp/ringworld",
-        "seed" => 1,
-        "synopsis" => false,
-        
-        "steps" => 200000,
-        "size" => 6,
-
-        # Network
-        "cell" => "MARNN",
-        "numhidden" => 6,
-
-        # Problem
-        "outhorde" => "onestep",
-        "outgamma" => 0.9,
-
-        # Opt
-        "opt" => "RMSProp",
-        "eta" => 0.001,
-        "rho" => 0.9,
-
-        # BPTT
-        "truncation" => 3,
-
-        # Replay
-        "replay_size"=>1000,
-        "warm_up" => 1000,
-        "batch_size"=>4,
-        "update_freq"=>4,
-        "target_update_freq"=>1000,
-        "hs_learnable"=>true)
-
-end
-
 @generate_config_funcs begin
 
     info"""
@@ -90,10 +42,26 @@ end
     - `seed::Int`: seed of RNG
     - `steps::Int`: Number of steps taken in the experiment
     - `synopsis::Bool`: Report full results or a synopsis.
+
     """
     "seed" => 1,
     "synopsis" => false,
     "steps" => 200000,
+
+    info"""
+    ### Logging Extras
+    
+    By default the experiment will log and save (depending on the synopsis flag) the logging group `:EXP`. 
+    You can add extra logging groups and [group, name] pairs using the below arguments. Everything 
+    added to `save_extras` will be passed to the save operation, and will be logged automatically. The 
+    groups and names added to `log_extras` will be ommited from save_results but still passed back to the user
+    through the data dict.
+
+    - `<log_extras::Vector{Union{String, Vector{String}}>`: which group and <name> to log to the data dict. This **will not** be passed to save.
+    - `<save_extras::Vector{Union{String, Vector{String}}>`: which groups and <names> to log to the data dict. This **will** be passed to save.
+    """
+#    "save_extras" => [], # Optional
+#    "log_extras" => [],  # Optional
 
     info"""
     Environment details
@@ -160,6 +128,17 @@ end
     "update_freq"=>4,
     "target_update_freq"=>1000,
     "hs_learnable"=>true
+
+    info"""
+    Default Performance:
+    --------------------
+    ```
+    Time: 0:00:56
+    Dict{String, Matrix{Float32}} with 2 entries:
+      "err"  => [0.0 0.0; 0.0 0.0; … ; 0.0128746 -0.000129551; 0.00117147 -0.00140008]
+      "pred" => [0.0 0.0; 0.0 0.0; … ; 0.0128746 -0.000129551; 1.00117 -0.00140008]
+    ```
+    """
 end
 
 function build_ann(in, actions, out, config, rng)
@@ -236,6 +215,8 @@ end
 Macros.@generate_ann_size_helper
 Macros.@generate_working_function
 
+
+
 function main_experiment(config; progress=false, testing=false, overwrite=false)
 
     if "numhidden_factors" ∈ keys(config)
@@ -244,42 +225,52 @@ function main_experiment(config; progress=false, testing=false, overwrite=false)
     end
     
     experiment_wrapper(config, use_git_info=false, testing=testing, overwrite=overwrite) do (config)
-        
+
         num_steps = config["steps"]
         seed = config["seed"]
         rng = Random.MersenneTwister(seed)
-        
-        env = RingWorld(config["size"])
-        agent = construct_agent(config, rng)
 
-        out_pred_strg, out_err_strg =
-            experiment_loop(env, agent, config["outhorde"], num_steps, rng; prgs=progress)
+        extras = union(get(config, "log_extras", []), get(config, "save_extras", []))
+        extra_proc = [c isa AbstractArray ? (Symbol(c[1]), Symbol(c[2])) : Symbol(c) for c in extras]
+        data, logger = ExpUtils.construct_logger(steps=num_steps, extra_groups_and_names=extra_proc)
         
-        results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg])
+        with_logger(logger) do
+            env = construct_env(config)
+            agent = construct_agent(env, config, rng)
+            experiment_loop(env, agent, config["outhorde"], num_steps, rng; prgs=progress)
+
+            @data EXPExtra env
+            @data EXPExtra agent
+        end
+
+        # out_pred_strg = data[:EXP][:out_pred]
+        # out_err_strg = data[:EXP][:out_err]
+        # results = Dict(["pred"=>out_pred_strg, "err"=>out_err_strg])
+        results = ExpUtils.prep_save_results(data, get(config, "save_extras", []))
         save_results = results_synopsis(results, Val(config["synopsis"]))
-        (save_results=save_results)
+        (save_results=save_results, data=data)
     end
 end
 
 # Creating an environment for to run in jupyter.
 function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
 
-    out_pred_strg = zeros(Float32, num_steps, length(agent.horde))
-    out_err_strg = zeros(Float32, num_steps, length(agent.horde))
-    out_loss_strg = zeros(Float32, num_steps)
-
     prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
     
     cur_step = 1
     MinimalRLCore.run_episode!(env, agent, num_steps, rng) do (s, a, s′, r)
         
-        out_preds = a.preds
+        out_preds = a.preds[:, 1]
         
-        out_pred_strg[cur_step, :] .= out_preds[:,1]
-        out_err_strg[cur_step, :] = out_pred_strg[cur_step, :] .- RWU.oracle(env, outhorde_str);
-        if !(a.update_state isa Nothing)
-            out_loss_strg[cur_step] = a.update_state.loss
-        end
+        @data EXP out_pred=out_preds idx=cur_step
+
+        out_errs = out_preds .- Float32.(RWU.oracle(env, outhorde_str))
+        @data EXP out_err=out_errs idx=cur_step
+
+        
+        # if !(a.update_state isa Nothing)
+        #     @data EXP out_loss=a.update_state.loss idx=cur_step
+        # end
         
         if prgs
             ProgressMeter.next!(prg_bar)
@@ -288,7 +279,9 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
         cur_step += 1
     end
     
-    out_pred_strg, out_err_strg, out_loss_strg
+    # out_pred_strg, out_err_strg, out_loss_strg
+
+
     
 end
 

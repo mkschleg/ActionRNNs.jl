@@ -131,6 +131,8 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng=Random.GLOBAL_RNG; 
     agent.am1 = 1
     agent.beg = true
 
+
+    
     empty!(agent.state_list)
 
     replay = get_replay(agent)
@@ -140,13 +142,21 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng=Random.GLOBAL_RNG; 
 
     agent.s_t = build_new_feat(agent, s, agent.action)
     push!(agent.state_list, agent.s_t)
+
     
     Flux.reset!(agent.model)
     values = [agent.model(s_t) for s_t in agent.state_list][end] 
-    
+    cur_hidden_state = get_hidden_state(agent.model)
     agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
     
     agent.hidden_state_init = get_initial_hidden_state(agent.model)
+
+    @data Agent hidden_state_init=deepcopy(agent.hidden_state_init) #idx=:track
+    @data Agent hidden_state=cur_hidden_state #idx=:track
+    @data Agent action=agent.action #idx=:track
+    @data Agent action_tm1=agent.am1 #idx=:track
+    @data Agent preds=values #idx=:track
+    @data Agent start=true
     
     return agent.action
 
@@ -222,7 +232,13 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
     agent.action, agent.action_prob = get_action_and_prob(agent.π, values, rng)
 
     next!(agent.π)
-    
+
+    @data Agent hidden_state=cur_hidden_state #idx=:track
+    @data Agent action=agent.action #idx=:track
+    @data Agent action_tm1=agent.am1 #idx=:track
+    @data Agent preds=values #idx=:track
+    @data Agent start=false
+        
     return (preds=values, h=cur_hidden_state, action=agent.action, update_state=us)
 end
 

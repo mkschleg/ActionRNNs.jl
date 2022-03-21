@@ -1,10 +1,13 @@
 struct AGMoERNNCell{F, G,A,V,S} <: AbstractActionRNN
     σ::F
     gating_network::G
+    # rnncells
+    
     Wi::Vector{A}
     Wa::Vector{A}
     Wh::Vector{A}
     b::Vector{V}
+
     state0::S
 end
 
@@ -37,9 +40,11 @@ function (m::AGMoERNNCell)(h, x::Tuple{A, X}) where {A, X}
 
     # additive
     new_hs = additive_rnn_inner.((x,), (h,), σ, Wi, Wa, Wh, b)
-    θ = G(h, x)
+    ginput = hcat(h, o)
+    θ = G((a, ginput))
     # mix
-    new_h = sum(θ .* new_hs) ./ sum(θ)
+    # new_h = sum(θ .* new_hs) ./ sum(θ)
+    new_h = sum(θ .* new_hs)
 
     sz = size(o)
     return new_h, reshape(new_h, :, sz[2:end]...)

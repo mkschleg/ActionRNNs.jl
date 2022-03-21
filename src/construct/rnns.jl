@@ -76,6 +76,11 @@ for cell_func in [Flux.RNN, Flux.GRU, Flux.LSTM]
     end
 end
 
+struct BuildAGMoE end
+
+@create_rnn_build_trait AGMoERNNCell BuildAGMoE
+
+
 
 """
     build_rnn_layer(in, actions, out, parsed, rng)
@@ -258,4 +263,51 @@ function build_rnn_layer(::BuildFlux, rnn_type,
                          parsed, rng;
                          init_func=get_init_funcs(rng)[1], kwargs...)
     rnn_type(in, out; init=init_func)
+end
+
+"""
+    build_rnn_layer(::BuildAGMoE, args...; kwargs...)
+"""
+
+function build_rnn_layer(::BuildAGMoE, rnn_type, in, actions, out, parsed, rng;
+                         init_func=get_init_funcs(rng)[1],
+                         initb=get_init_funcs(rng)[2], kwargs...)
+
+    @assert "gating_network" ∈ keys(parsed)
+    @assert "num_experts" ∈ keys(parsed)
+
+    num_experts = parsed["num_experts"]
+    gating_network = build_gating_network(
+        Val(Symbol(parsed["gating_network"])),
+        in, actions, out,
+        num_experts, parsed,
+        init, initb)
+
+    rnn_type(in, actions, out, num_experts, gating_network; init=init_func, initb=initb, kwargs...)
+    
+end
+
+"""
+    build_gating_network
+
+    [[out, activation]]
+"""
+function build_gating_network(::Val{:default}, in, actions, numhidden, num_experts, parsed, init, initb)
+    @assert "gn_layers" ∈ keys(parsed)
+
+    gn_layers = copy(parsed["gn_layers"])
+    cur_in = in + numhidden
+    ls = Union{ActionDense, Dense}[]
+    push!(gn_layers, [num_experts, "linear"])
+    for (layer_idx, layer) in enumerate(gn_layers)
+        lout = layer[1]
+        lact = layer[2]
+        if layer_idx == 1
+            push!(ls, ActionDense(cur_in, actions, lout, ExpUtils.FluxUtils.get_activation(lact), init=init, bias=initb(lout)))
+        else
+            push!(ls, Dense(cur_in, lout, ExpUtils.FluxUtils.get_activation(lact), init=init, bias=initb(lout)))
+        end
+        cur_in = lout
+    end
+    Flux.Chain(ls..., softmax)
 end

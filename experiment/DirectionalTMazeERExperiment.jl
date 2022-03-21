@@ -16,12 +16,15 @@ module DirectionalTMazeERExperiment
 # import Flux
 import JLD2
 import ActionRNNs: ActionRNNs, DirectionalTMaze, ExpUtils, MinimalRLCore, Flux
+import ActionRNNs: @data
 
 import MinimalRLCore: run_episode!, get_actions
-import .ExpUtils: experiment_wrapper, TMazeUtils, FluxUtils
-import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad
-import .ExpUtils: Macros
+import .ExpUtils: Macros, TMazeUtils, FluxUtils
+import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad, construct_logger
+import .ExpUtils: experiment_wrapper
 import .Macros: @info_str, @generate_config_funcs
+
+import Logging: with_logger
 
 using Statistics
 using Random
@@ -45,6 +48,19 @@ const FLU = FluxUtils
     "seed" => 2
     "steps" => 150000
 
+    info"""
+    ### Logging Extras
+    
+    By default the experiment will log and save (depending on the synopsis flag) the logging group `:EXP`. 
+    You can add extra logging groups and [group, name] pairs using the below arguments. Everything 
+    added to `save_extras` will be passed to the save operation, and will be logged automatically. The 
+    groups and names added to `log_extras` will be ommited from save_results but still passed back to the user
+    through the data dict.
+
+    - `<log_extras::Vector{Union{String, Vector{String}}>`: which group and <name> to log to the data dict. This **will not** be passed to save.
+    - `<save_extras::Vector{Union{String, Vector{String}}>`: which groups and <names> to log to the data dict. This **will** be passed to save.
+    """
+    
     info"""
     Environment details
     -------------------
@@ -245,10 +261,8 @@ function construct_env(config)
     DirectionalTMaze(config["size"])
 end
 
-
 Macros.@generate_ann_size_helper
 Macros.@generate_working_function
-
 
 """
     main_experiment
@@ -275,66 +289,87 @@ function main_experiment(config;
 
         seed = config["seed"]
         rng = Random.MersenneTwister(seed)
-        
-        env = construct_env(config)
-        agent = construct_agent(env, config, rng)
 
-        logger = SimpleLogger(
-            (:total_rews, :losses, :successes, :total_steps, :l1),
-            (Float32, Float32, Bool, Int, Float32),
-            Dict(
-                :total_rews => (rew, steps, success, usa) -> rew,
-                :losses => (rew, steps, success, usa) -> usa[:loss]/steps,
-                :successes => (rew, steps, success, usa) -> success,
-                :total_steps => (rew, steps, success, usa) -> steps,
-                :l1 => (rew, steps, success, usa) -> usa[:l1]/steps
-            )
-        )
-
+        extras = union(get(config, "log_extras", []), get(config, "save_extras", []))
+        extra_proc = [c isa AbstractArray ? (Symbol(c[1]), Symbol(c[2])) : Symbol(c) for c in extras]
+        data, logger = ExpUtils.construct_logger(extra_groups_and_names=extra_proc)
         
-        prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
-        generate_showvalues(eps, logger, usa, a, n) = () -> begin
-            pr_suc = if length(logger.data.successes) <= 1000
-                mean(logger.data.successes)
-            else
-                mean(logger.data.successes[end-1000:end])
-            end
-            [(:episode, eps),
-             (:successes, pr_suc),
-             (:loss, usa[:avg_loss]),
-             (:l1, usa[:l1]/n),
-             (:action, a.action),
-             (:preds, a.preds)]
-        end
+        with_logger(logger) do
+            env = construct_env(config)
+            agent = construct_agent(env, config, rng)
             
-        eps = 1
-        while sum(logger.data.total_steps) <= num_steps
-            usa = UpdateStateAnalysis(
-                (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
-                Dict(
-                    :l1 => l1_grad,
-                    :loss => (s, us) -> s + us.loss,
-                    :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
-                ))
-            success = false
-            max_episode_steps = min(max((num_steps - sum(logger[:total_steps])), 2), 10000)
-            n = 0
-            total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
-                if progress
-                    next!(prg_bar, showvalues=generate_showvalues(eps, logger, usa, a, n))
-                end
-                success = success || (r == 4.0)
-                if !(a.update_state isa Nothing)
-                    usa(a.update_state)
-                end
-                n+=1
-            end
-            logger(total_rew, steps, success, usa)
-            eps += 1
+            experiment_loop(env, agent, num_steps, data, rng, progress=progress)
+            
+            @data EXPExtra env
+            @data EXPExtra agent
         end
-        save_results = logger.data
-        (;save_results = save_results)
+
+        save_results = ExpUtils.prep_save_results(data, get(config, "save_extras", []))
+        (;save_results = save_results, data=data)
     end
 end
+
+
+function experiment_loop(env, agent, num_steps, data, rng; progress=false)
+
+    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
+    generate_showvalues(eps, usa, a, n) = () -> begin
+        pr_suc = if (:EXP ∈ keys(data)) && (:successes ∈ keys(data[:EXP]))
+            if (length(data[:EXP][:successes]) <= 1000)
+                mean(data[:EXP][:successes])
+            else
+                mean(data[:EXP][:successes][end-1000:end])
+            end
+        end
+        [(:episode, eps),
+         (:successes, pr_suc),
+         (:loss, usa[:avg_loss]),
+         (:l1, usa[:l1]/n),
+         (:action, a.action),
+         (:preds, a.preds)]
+    end
+    
+    eps = 1
+    total_steps = 0
+    while total_steps <= num_steps
+        usa = UpdateStateAnalysis(
+            (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
+            Dict(
+                :l1 => l1_grad,
+                :loss => (s, us) -> s + us.loss,
+                :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
+            ))
+        success = false
+
+        max_episode_steps = min(max((num_steps - total_steps), 2), 10000)
+        n = 0
+        
+        total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
+            if progress
+                next!(prg_bar, showvalues=generate_showvalues(eps, usa, a, n))
+            end
+            success = success || (r == 4.0)
+            if !(a.update_state isa Nothing)
+                usa(a.update_state)
+            end
+            n+=1
+        end
+        
+        total_steps += steps
+
+        @data EXP total_rews=total_rew
+        @data EXP successes=success
+        @data EXP total_steps=steps
+        
+        @data EXPExtra losses=usa[:loss]/steps
+        @data EXPExtra l1=usa[:l1]/steps
+
+        eps += 1
+    end
+end
+
+
+
+
 
 end

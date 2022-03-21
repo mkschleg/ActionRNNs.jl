@@ -32,7 +32,7 @@ const DTMC = DirectionalTMazeConst
 """
     DirectionalTMaze
 
-Similar to [`ActionRNNs.TMaze`](@ref) but with a directional compoenet overlayed ontop. This also changes to 
+Similar to [`ActionRNNs.TMaze`](@ref) but with a directional componenet overlayed ontop. This also changes to 
 observation structure, where the agent must know what direction it is facing to get information
 about which goal is the good goal.
 """
@@ -50,6 +50,10 @@ Base.size(env::DirectionalTMaze) = env.size
 function MinimalRLCore.reset!(env::DirectionalTMaze, rng::AbstractRNG=Random.GLOBAL_RNG)
     env.goal_dir = rand(rng, [DTMC.NORTH, DTMC.SOUTH])
     env.state = (x=1, y=0, dir=rand(rng, 1:4))
+    
+    @data Env state=env.state
+    @data Env goal_dir=env.goal_dir
+    @data Env reset=true
 end
 
 MinimalRLCore.get_actions(env::DirectionalTMaze) = [DTMC.LEFT, DTMC.FORWARD, DTMC.RIGHT]
@@ -91,6 +95,8 @@ function MinimalRLCore.environment_step!(env::DirectionalTMaze, action::Int, rng
         env.state = (x=env.state.x, y=env.state.y, dir=new_dir)
     end
 
+    @data Env state=env.state
+    @data Env reset=false
 end
 
 MinimalRLCore.get_reward(env::DirectionalTMaze) = begin

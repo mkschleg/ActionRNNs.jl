@@ -43,6 +43,8 @@ Base.size(env::RingWorld) = env.ring_size
 
 function MinimalRLCore.reset!(env::RingWorld, rng::AbstractRNG; kwargs...)
     env.agent_state = rand(rng, 1:size(env))
+    @data Env state=env.agent_state
+    # @data Env reset proc=:count
 end
 
 MinimalRLCore.get_actions(env::RingWorld) = env.actions
@@ -65,6 +67,8 @@ function MinimalRLCore.environment_step!(env::RingWorld, action::Int64, rng; kwa
         throw("Action $(action) is not available!")
     end
 
+    @data Env state=env.agent_state
+    # @data Env reset 
 end
 
 function MinimalRLCore.get_reward(env::RingWorld) # -> get the reward of the environment
