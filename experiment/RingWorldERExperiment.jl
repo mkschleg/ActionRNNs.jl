@@ -23,11 +23,10 @@ const FLU = FluxUtils
 
 function results_synopsis(res, ::Val{true})
     rmse = sqrt.(mean(res[:out_err].^2; dims=1))[1, :]
-    @show size(rmse)
     Dict([
-        "desc"=>"All operations are on the RMSE",
-        "all"=>mean(rmse),
-        "end"=>mean(rmse[end-50000:end]),
+        # "description"=>"All operations are on the RMSE",
+        "avg_all"=>mean(rmse),
+        "avg_end"=>mean(rmse[end-1000:end]),
         "lc"=>mean(reshape(rmse, 1000, :); dims=1)[1,:],
         "var"=>var(reshape(rmse, 1000, :); dims=1)[1,:]
     ])
@@ -266,11 +265,6 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
 
         out_errs = out_preds .- Float32.(RWU.oracle(env, outhorde_str))
         @data EXP out_err=out_errs idx=cur_step
-
-        
-        # if !(a.update_state isa Nothing)
-        #     @data EXP out_loss=a.update_state.loss idx=cur_step
-        # end
         
         if prgs
             ProgressMeter.next!(prg_bar)

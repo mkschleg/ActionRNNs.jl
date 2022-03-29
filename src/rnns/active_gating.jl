@@ -1,3 +1,43 @@
+
+
+function _AGMoE_inner(cell, h, x)
+    inner_func = get_inner_rnn_func(cell)
+    if hasproperty(cell, :σ)
+        _AGMoE_inner(inner_func, h, x, cell.gating_network, cell.Wi, cell.Wa, cell.Wh, cell.b, cell.σ)
+    else
+        _AGMoE_inner(inner_func, h, x, cell.gating_network, cell.Wi, cell.Wa, cell.Wh, cell.b)
+    end
+end
+
+function _AGMoE_inner(rnn_inner_func, h, x, G, Wi, Wa, Wh, b, σ=nothing)
+
+    a = x[1]
+    o = x[2]
+    
+    new_hs = if isnothing(σ)
+        rnn_inner_func.((x,), (h,), Wi, Wa, Wh, b)
+    else
+        new_hs = rnn_inner_func.((x,), (h,), σ, Wi, Wa, Wh, b)
+    end
+
+    ginput = if size(h, 2) !== size(o, 2) && size(h, 2) == 1
+        vcat(h * ones(eltype(h), 1, size(o, 2)), o)
+    else
+        vcat(h, o)
+    end
+    
+    θ = G((a, ginput))
+
+    # assume softmax output from G
+    if θ isa AbstractMatrix
+        sum([h .* θ' for (h, θ) in zip(new_hs, eachslice(θ, dims=1))])
+    else θ isa AbstractVector
+        sum(θ .* new_hs)
+    end
+
+end
+
+
 struct AGMoERNNCell{F, G,A,V,S} <: AbstractActionRNN
     σ::F
     gating_network::G
@@ -29,27 +69,17 @@ AGMoERNNCell(in::Int,
                               [initb(out) for _ in 1:num_experts],
                               init_state(out, 1))
 
-
-
+get_inner_rnn_func(::AGMoERNNCell) = additive_rnn_inner
 
 function (m::AGMoERNNCell)(h, x::Tuple{A, X}) where {A, X}
-    σ, G, Wi, Wa, Wh, b = m.σ, m.gating_network, m.Wi, m.Wa, m.Wh, m.b
+
+    new_h = _AGMoE_inner(m, h, x)
 
     o = x[2]
-    a = x[1]
-
-    # additive
-    new_hs = additive_rnn_inner.((x,), (h,), σ, Wi, Wa, Wh, b)
-    ginput = hcat(h, o)
-    θ = G((a, ginput))
-    # mix
-    # new_h = sum(θ .* new_hs) ./ sum(θ)
-    new_h = sum(θ .* new_hs)
-
     sz = size(o)
+
     return new_h, reshape(new_h, :, sz[2:end]...)
 end
-
 
 Flux.@functor AGMoERNNCell
 
@@ -93,24 +123,18 @@ function AGMoEGRUCell(in,
         init_state(out,1))
 end
 
+get_inner_rnn_func(::AGMoEGRUCell) = additive_gru_inner
 
 
 
 function (m::AGMoEGRUCell)(h, x::Tuple{A, O}) where {A, O}
-    o = size(h, 1)
+    
+    new_h = _AGMoE_inner(m, h, x)
 
-    a = x[1]
-    obs = x[2]
+    o = x[2]
+    sz = size(o)
 
-    hps = additive_gru_inner.((x,), (h,), m.Wi, m.Wa, m.Wh, m.b)
-    θ = m.gating_network(h, x)
-    # adding together state
-    h′ = sum(θ .* hps) ./ sum(θ)
-    # h′ = (m.w[1]*h′1 + m.w[2]*h′2) ./ sum(m.w)
-
-    sz = size(obs)
-    return h′, reshape(h′, :, sz[2:end]...)
-
+    return new_h, reshape(new_h, :, sz[2:end]...)
 end
 
 Flux.@functor AGMoEGRUCell

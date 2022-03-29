@@ -78,7 +78,7 @@ end
 
 struct BuildAGMoE end
 
-@create_rnn_build_trait AGMoERNNCell BuildAGMoE
+@create_rnn_build_trait AGMoERNN BuildAGMoE
 
 
 
@@ -270,20 +270,21 @@ end
 """
 
 function build_rnn_layer(::BuildAGMoE, rnn_type, in, actions, out, parsed, rng;
-                         init_func=get_init_funcs(rng)[1],
+                         init=get_init_funcs(rng)[1],
                          initb=get_init_funcs(rng)[2], kwargs...)
 
     @assert "gating_network" ∈ keys(parsed)
+    @assert "name" ∈ keys(parsed["gating_network"])
     @assert "num_experts" ∈ keys(parsed)
 
     num_experts = parsed["num_experts"]
     gating_network = build_gating_network(
-        Val(Symbol(parsed["gating_network"])),
+        Val(Symbol(parsed["gating_network"]["name"])),
         in, actions, out,
         num_experts, parsed,
         init, initb)
 
-    rnn_type(in, actions, out, num_experts, gating_network; init=init_func, initb=initb, kwargs...)
+    rnn_type(in, actions, out, num_experts, gating_network; init=init, initb=initb, kwargs...)
     
 end
 
@@ -293,9 +294,11 @@ end
     [[out, activation]]
 """
 function build_gating_network(::Val{:default}, in, actions, numhidden, num_experts, parsed, init, initb)
-    @assert "gn_layers" ∈ keys(parsed)
-
-    gn_layers = copy(parsed["gn_layers"])
+    @assert "gating_network" ∈ keys(parsed)
+    
+    gn_args = parsed["gating_network"]
+    
+    gn_layers = copy(gn_args["layers"])
     cur_in = in + numhidden
     ls = Union{ActionDense, Dense}[]
     push!(gn_layers, [num_experts, "linear"])

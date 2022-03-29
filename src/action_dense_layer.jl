@@ -42,10 +42,11 @@ end
 
 Flux.@functor ActionDense
 
-function (a::ActionDense)(x::Tuple{A, X}) where {A, X}
-    W, Wa, b, σ = a.weight, a.weight_a, a.bias, a.σ
-    
-    return σ.(W*x .+ get_waa(Wa, a) .+ b)
+function (l::ActionDense)(x::Tuple{A, X}) where {A, X}
+    W, Wa, b, σ = l.weight, l.weight_a, l.bias, l.σ
+    o = x[2]
+    a = x[1]
+    return σ.(W*o .+ get_waa(Wa, a) .+ b)
 end
 
 function Base.show(io::IO, l::ActionDense)

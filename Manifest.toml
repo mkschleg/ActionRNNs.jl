@@ -359,9 +359,9 @@ version = "1.2.0"
 
 [[deps.DecFP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "9982cddeac476ed4ead831baff7b3f9d084579c1"
+git-tree-sha1 = "e9a8da19f847bbfed4076071f6fef8665a30d9e5"
 uuid = "47200ebd-12ce-5be5-abb7-8e082af23329"
-version = "2.0.3+0"
+version = "2.0.3+1"
 
 [[deps.DelimitedFiles]]
 deps = ["Mmap"]
@@ -1398,9 +1398,11 @@ version = "1.1.0"
 
 [[deps.Reproduce]]
 deps = ["ArgParse", "BSON", "CodeTracking", "DBInterface", "DataFrames", "Dates", "Distributed", "FileIO", "Git", "HDF5", "JLD2", "JSON", "Logging", "MySQL", "Parallelism", "Pkg", "ProgressMeter", "Random", "Reexport", "SharedArrays", "Sockets", "TOML", "Tables"]
-git-tree-sha1 = "56fb7ff8eaebf6d4373618378fb2b4c84c09ec2a"
+git-tree-sha1 = "4d368a321277b52fe34b5c01e1ce4755997b6c2e"
+repo-rev = "main"
+repo-url = "https://github.com/mkschleg/Reproduce.jl.git"
 uuid = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
-version = "0.11.4"
+version = "0.11.5-dev"
 
 [[deps.ReproducePlotUtils]]
 deps = ["DataFrames", "FileIO", "PlotUtils", "Plots", "RecipesBase", "Reproduce", "RollingFunctions", "Statistics", "StatsPlots"]
