@@ -6,7 +6,7 @@ exp_func_name = "main_experiment"
 arg_iter_type = "looper"
 run_param = "seed"
 run_list = "21:70"
-arg_file = "final_runs/dir_tmaze_10_t_12.jld2"
+arg_file = "final_runs/dir_tmaze_10.jld2"
 
 [static_args]
 "steps" = 500000

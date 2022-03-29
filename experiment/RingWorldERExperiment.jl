@@ -26,7 +26,7 @@ function results_synopsis(res, ::Val{true})
     Dict([
         # "description"=>"All operations are on the RMSE",
         "avg_all"=>mean(rmse),
-        "avg_end"=>mean(rmse[end-1000:end]),
+        "avg_end"=>mean(rmse[end-50000:end]),
         "lc"=>mean(reshape(rmse, 1000, :); dims=1)[1,:],
         "var"=>var(reshape(rmse, 1000, :); dims=1)[1,:]
     ])

@@ -6,8 +6,8 @@ making decisions about anscillary parameters.
 
 [config]
 save_backend="mysql" # mysql only database backend supported
-database="mkschleg_masked_gw_baseline" # Database name
-save_dir="masked_gw_baseline" # Directory name for exceptions, settings, and more!
+database="mkschleg_masked_gw_baseline_v2" # Database name
+save_dir="masked_gw_baseline_v2" # Directory name for exceptions, settings, and more!
 exp_file = "experiment/MaskedGridWorldERExperiment.jl"
 exp_module_name = "MaskedGridWorldERExperiment"
 exp_func_name = "main_experiment"
@@ -36,10 +36,10 @@ target_update_wait = 1000
 # Put args to sweep over here.
 seed = "1:10"
 cell = ["MARNN", "AARNN", "RNN"]
-numhidden = [5, 25, 50, 100]
+numhidden = [5, 25, 50]
 truncation = [1, 8, 16, 32]
-num_anchors = [10, 100]
-batch_size = [8, 16]
-replay_size = [50000, 250000]
-gamma = [0.9, 0.99]
-eta = "0.01*1.5.^(-10:2:0)"
+num_anchors = [10, 25, 100]
+batch_size = [16]
+replay_size = [50000]
+gamma = [0.99]
+eta = "0.01*1.5.^(-14:2:0)"
