@@ -10,6 +10,8 @@ combo_cat_rnn_types() = ["CcatRNN", "CcatGRU"]
 mixture_rnn_types() = ["MixRNN", "MixElRNN", "MixElGRU", "MixGRU"]
 
 
+const BUILD_RNN_TYPES = Dict()
+
 function get_init_funcs(rng=Random.GLOBAL_RNG)
     init_func = (dims...; kwargs...)->
         ActionRNNs.glorot_uniform(rng, dims...; kwargs...)
@@ -19,6 +21,8 @@ end
 
 macro create_rnn_build_trait(rnn_func, trait)
     fn = :rnn_build_trait
+    v = get!(BUILD_RNN_TYPES, trait, Any[rnn_func])
+    push!(v, rnn_func)
     quote
         function $(esc(fn))(::typeof($rnn_func))
             $trait()
@@ -79,6 +83,7 @@ end
 struct BuildAGMoE end
 
 @create_rnn_build_trait AGMoERNN BuildAGMoE
+@create_rnn_build_trait AGMoEGRU BuildAGMoE
 
 
 
