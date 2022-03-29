@@ -1,15 +1,15 @@
 [config]
-save_dir="final_dir_tmaze_er_rnn_rmsprop_10"
+save_dir="final_dir_tmaze_er_rnn_rmsprop_10_2"
 exp_file="experiment/dir_tmaze_er.jl"
 exp_module_name = "DirectionalTMazeERExperiment"
 exp_func_name = "main_experiment"
 arg_iter_type = "looper"
 run_param = "seed"
-run_list = "21:70"
+run_list = "21:270"
 arg_file = "final_runs/dir_tmaze_10.jld2"
 
 [static_args]
-"steps" = 500000
+"steps" = 300000
 "opt" = "RMSProp"
 "rho" = 0.99
 

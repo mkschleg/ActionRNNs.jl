@@ -26,6 +26,6 @@ update_freq = 4
 [sweep_args]
 cell = ["FacMAGRU"]
 eta = "0.1 .* 1.6 .^(-16:3:-2)"
-truncation = [1, 2, 4, 6, 10, 15]
+truncation = [1, 2, 4, 6, 8, 10, 12, 15]
 numhidden_factors = [[6, 10], [15, 23], [20, 31], [9, 14], [12, 19], [17, 26], [3, 5]]
 seed = "1:20"

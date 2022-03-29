@@ -26,6 +26,6 @@ update_freq = 4
 [sweep_args]
 cell = ["FacMARNN"]
 eta = "0.1 .* 1.6 .^(-16:3:-2)"
-truncation = [1, 2, 4, 6, 10, 15]
+truncation = [1, 2, 4, 6, 8, 10, 12, 15]
 numhidden_factors = [[3, 3], [6, 6], [9, 9], [12, 12], [15, 15], [17, 17], [20, 20]]
 seed = "1:20"

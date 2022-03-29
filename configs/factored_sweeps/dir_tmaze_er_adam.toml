@@ -1,5 +1,5 @@
 [config]
-save_dir="dir_tmaze_er_fac_rnn_rmsprop_10_p2"
+save_dir="dir_tmaze_er_fac_rnn_adam_10"
 exp_file="experiment/dir_tmaze_er.jl"
 exp_module_name = "DirectionalTMazeERExperiment"
 exp_func_name = "main_experiment"
@@ -7,8 +7,7 @@ arg_iter_type = "iter"
 
 [static_args]
 steps = 300000
-opt = "RMSProp"
-rho = 0.99
+opt = "ADAM"
 
 size = 10
 gamma = 0.99
@@ -19,9 +18,10 @@ update_wait = 4
 target_update_wait = 1000
 
 [sweep_args]
-cell_numhidden = [["FacMARNN", 25], ["FacMAGRU", 15]]
-eta = "0.01*(2.0.^(-11:2:-2))"
-replay_size = [10000, 20000]
+cell = ["FacMARNN", "FacMAGRU"]
+eta = "0.01*(2.0.^(-11:2:2))"
+replay_size = [10000, 20000, 30000, 40000, 50000]
 truncation = [12]
-factors = [5, 10, 15, 17, 20, 30, 40, 50, 100]
-seed = "1:20"
+numhidden = [10, 15, 20]
+factors = [5, 10, 25, 50, 75, 100]
+seed = "1:10"

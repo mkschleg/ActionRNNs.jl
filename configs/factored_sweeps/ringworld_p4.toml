@@ -1,4 +1,4 @@
-
+[config]
 save_dir="ringworld_fac_er_rmsprop_10_aagru"
 exp_file="experiment/ringworld_er.jl"
 exp_module_name = "RingWorldERExperiment"
@@ -26,6 +26,6 @@ update_freq = 4
 [sweep_args]
 cell = ["FacMAGRU"]
 eta = "0.1 .* 1.6 .^(-16:3:-2)"
-truncation = [1, 2, 4, 6, 10, 15]
+truncation = [1, 2, 4, 6, 8, 10, 12, 15]
 numhidden_factors = [[6, 6], [15, 12], [20, 16], [9, 8], [12, 10], [17, 14], [3, 3]]
 seed = "1:20"

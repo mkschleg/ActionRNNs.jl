@@ -19,8 +19,8 @@ arg_iter_type = "iter"
 "update_wait" = 4
 
 [sweep_args]
-"cell" = ["MARNN", "AARNN", "RNN", "MAGRU", "AAGRU", "GRU"]
-"eta" = "0.01*(2.0.^(-11:2:-2))"
+"cell" = ["MAGRU", "AAGRU", "GRU"]
+"eta" = "0.01*(2.0.^(-11:2:6))"
 "truncation" = [8, 10, 11, 12, 16]
-"numhidden" = [6, 10, 15, 20]
-"seed" = "1:10"
+"numhidden" = [6, 10, 15, 17, 20]
+"seed" = "1:20"
