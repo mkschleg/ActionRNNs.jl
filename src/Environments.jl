@@ -18,7 +18,7 @@ include("env/TMaze.jl")
 export VariableTMaze
 include("env/VariableTMaze.jl")
 
-export VariableTMaze
+export ImageTMaze
 include("env/ImageTMaze.jl")
 
 export DirectionalTMaze

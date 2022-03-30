@@ -2,8 +2,6 @@
 using Random
 import MinimalRLCore
 
-import Reproduce
-
 module TMazeConst
 # Actions
 

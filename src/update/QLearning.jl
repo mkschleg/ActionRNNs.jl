@@ -1,8 +1,4 @@
 
-import CUDA, CUDAKernels, KernelAbstractions
-import LoopVectorization
-import Tullio: Tullio, @tullio
-
 import Zygote: dropgrad
 
 """
@@ -57,9 +53,12 @@ function update!(chain,
     UpdateState(ℒ, grads, Flux.params(chain), opt)
 end
 
+import HelpfulKernelFuncs: max_over_preds
+
 function qtargets(preds, action_t, r, γ, terminal, actual_seq_len)
     preds_cpu = preds |> cpu
-    @tullio q_tp1[i] := maximum(preds_cpu[actual_seq_len[i] + 1][:, i])
+    # @tullio q_tp1[i] := maximum(preds_cpu[actual_seq_len[i] + 1][:, i])
+    q_tp1 = max_over_preds(preds_cpu, actual_seq_len)
     r .+ γ .* (one(γ) .- terminal) .* q_tp1
     # @tullio ret[i] := r[i] + γ * (one(γ) - terminal[i]) * maximum(preds[actual_seq_len[i] + 1][:, i])
 end
