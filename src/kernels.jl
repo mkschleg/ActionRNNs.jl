@@ -52,9 +52,9 @@ end
 
 
 # Precompile commands to reduce latency.
-precompile(contract_WA, (Matrix{Float32}, Vector{Int}, Matrix{Float32}))
-precompile(contract_WA, (Matrix{Float32}, Int, Vector{Float32}))
-precompile(contract_WA, (Matrix{Float32}, Int, Matrix{Float32}))
+precompile(contract_WA, (Array{Float32, 3}, Vector{Int}, Matrix{Float32}))
+precompile(contract_WA, (Array{Float32, 3}, Int, Vector{Float32}))
+precompile(contract_WA, (Array{Float32, 3}, Int, Matrix{Float32}))
 
 
 """

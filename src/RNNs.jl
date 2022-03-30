@@ -24,7 +24,13 @@ _needs_action_input(m) = false
 _needs_action_input(m::Flux.Recur{T}) where {T} = _needs_action_input(m.cell)
 _needs_action_input(m::AbstractActionRNN) = true
 
-include("kernels.jl")
+#=
+https://github.com/mkschleg/HelpfulKernelFuncs.jl
+
+to reduce precompilation we remove the kernels. HelpfulKernelFuncs are
+just what is in kernels.jl.
+=#
+import HelpfulKernelFuncs: contract_WA, get_waa, contract_Wga, contract_Wgax
 
 include("RNNUtil.jl")
 
@@ -38,4 +44,6 @@ include("rnns/GRUCombo.jl")
 include("rnns/mixture_rnns.jl")
 include("rnns/mixture_grus.jl")
 include("rnns/active_gating.jl")
+
+
 
