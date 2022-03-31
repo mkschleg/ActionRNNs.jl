@@ -37,7 +37,7 @@ layer3 = {type="Dense", out="actions", activation="identity"}
 
 
 [sweep_args]
-"agentnetwork.layer2.cell+numhidden" = [["MARNN", 9], ["AARNN", 15], ["RNN", 18]]
-"agent.optimizer.eta" = "0.01*(2.0.^(-11:2:-2))"
-"agent.truncation" = [8, 10, 11, 12, 16]
-"exp.seed" = "1:10"
+agent.network.layer2."cell+numhidden" = [["MARNN", 9], ["AARNN", 15], ["RNN", 18]]
+agent.optimizer.eta = "0.01*(2.0.^(-11:2:-2))"
+agent.truncation = [8, 10, 11, 12, 16]
+exp.seed = "1:10"

@@ -15,9 +15,31 @@ end
 
 # custom config parser...
 function get_static_args(::Val{:iterV2}, dict)
+    if "static_args" ∈ keys(dict)
+        return dict["static_args"]
+    end
+    
     filter(dict) do kv
         kv.first ∉ ["sweep_args", "config"]
     end
+end
+
+function prepare_sweep_args(sweep_args)
+    new_dict = Dict{String, Any}()
+    ks = keys(sweep_args)
+    for key ∈ ks
+        if sweep_args[key] isa String
+            new_dict[key] = eval(Meta.parse(sweep_args[key]))
+        elseif sweep_args[key] isa Dict
+            d = prepare_sweep_args(sweep_args[key])
+            for k in keys(d)
+                new_dict[key*"."*k] = d[k]
+            end
+        else
+            new_dict[key] = sweep_args[key]
+        end
+    end
+    new_dict
 end
 
 function Reproduce.get_arg_iter(::Val{:iterV2}, dict)
@@ -27,21 +49,14 @@ function Reproduce.get_arg_iter(::Val{:iterV2}, dict)
     
     arg_order = get(cdict, "arg_list_order", nothing)
 
-    @assert arg_order isa Nothing || all(sort(arg_order) .== sort(collect(keys(dict["sweep_args"]))))
+    sweep_args_dict = prepare_sweep_args(dict["sweep_args"])
     
-    sweep_args_dict = dict["sweep_args"]
-    
-    for key ∈ keys(sweep_args_dict)
-        if sweep_args_dict[key] isa String
-            sweep_args_dict[key] = eval(Meta.parse(sweep_args_dict[key]))
-        end
-    end
+    @assert arg_order isa Nothing || all(sort(arg_order) .== sort(collect(keys(sweep_args_dict))))
 
     ArgIteratorV2(sweep_args_dict,
                   static_args_dict,
                   arg_order=arg_order)
 end
-
 
 struct ArgIteratorV2 <: Reproduce.AbstractArgIter
     sweep_args::Dict
