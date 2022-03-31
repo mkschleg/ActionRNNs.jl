@@ -92,6 +92,16 @@ function proc_control_data(database; save=nothing, vector_tables=["stps"=>"resul
     params_and_results
 end
 
+function proc_pred_data(database; save=nothing)
+    conn = connect(database)
+    params = get_param_table(conn)
+    results = get_results_table
+    # SQLDataProc.proc_vec_data()
+    
+    DBInterface.close!(conn)
+    params, results
+end
+
 function end_agg(agg::Function, d, num_steps::Int)
     if length(d) < num_steps
         agg(d)
