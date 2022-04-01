@@ -74,35 +74,51 @@ end
 
 set_save_dir!(iter::ArgIteratorV2, path) = iter.static_args["save_dir"] = path
 
+int_parse_or_not(a::AbstractString) = isnothing(tryparse(Int, a)) ? a : parse(Int, a)
 
 function set_argument!(d, args::Vector, v)
     if length(args) == 1
         set_argument!(d, args[1], v)
     elseif occursin("+", args[1])
-        ks = split(args[1], "+")
+        ks = int_parse_or_not.(split(args[1], "+"))
         for (i, k) ∈ enumerate(ks)
             set_argument!(d[k], args[2:end], v[i])
+        end
+    elseif occursin("*", args[1])
+        ks = int_parse_or_not.(split(args[1], "*"))
+        for (i, k) ∈ enumerate(ks)
+            set_argument!(d[k], args[2:end], v)
         end
     else
         set_argument!(d[args[1]], args[2:end], v)
     end
 end
 
+function set_argument!(d, arg::Integer, v)
+    d[arg] = v
+end
+
 function set_argument!(d, arg::AbstractString, v)
     if startswith(arg, "[") && endswith(arg, "]") && occursin(r"\[.*\]", arg) && !occursin(".", arg)
         str_idxs = findall(r"\[[0-9_a-z_A-Z_\__+]*\]")
-        idxs = [isnothing(tryparse(Int, idx)) ? idx : parse(Int, idx)  for idx in str_idxs]
+        idxs = [int_parse_or_not(arg[idx[1]+1:idx[2]-1])  for idx in str_idxs]
         set_argument!(d, idxs, v)
     elseif occursin(r"\[.*\]", arg)
         idx = findfirst("[", arg)[1]
         set_argument!(d[arg[1:idx-1]], arg[idx:end], v)
     elseif occursin(".", arg)
         sarg = split(arg, ".")
-        set_argument!(d, sarg, v)
+        arg_vec = int_parse_or_not.(sarg)
+        set_argument!(d, arg_vec, v)
     elseif occursin("+", arg)
         ks = split(arg, "+")
         for (i, k) ∈ enumerate(ks)
             d[k] = v[i]
+        end
+    elseif occursin("*", arg)
+        ks = int_parse_or_not.(split(args[1], "*"))
+        for (i, k) ∈ enumerate(ks)
+            set_argument!(d[k], args[2:end], v)
         end
     else
         d[arg] = v
