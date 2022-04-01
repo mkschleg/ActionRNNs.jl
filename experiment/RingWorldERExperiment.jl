@@ -18,6 +18,8 @@ using Reproduce
 using Random
 using LoggingExtras
 
+import ChoosyDataLoggers
+
 const RWU = RingWorldUtils
 const FLU = FluxUtils
 
@@ -32,6 +34,11 @@ function results_synopsis(res, ::Val{true})
     ])
 end
 results_synopsis(res, ::Val{false}) = res
+
+ChoosyDataLoggers.@init
+function __init__()
+    ChoosyDataLoggers.@register
+end
 
 @generate_config_funcs begin
 
