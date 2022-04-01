@@ -215,7 +215,6 @@ Macros.@generate_ann_size_helper
 Macros.@generate_working_function
 
 
-
 function main_experiment(config; progress=false, testing=false, overwrite=false)
 
     if "numhidden_factors" ∈ keys(config)
