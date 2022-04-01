@@ -8,7 +8,6 @@ Detached from the actual structs so they can be used independently.
 
 
 # Dealing with construction on a massive scale...
-
 include("construct/rnns.jl")
 include("construct/learning_update.jl")
 
