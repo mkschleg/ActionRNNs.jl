@@ -15,13 +15,20 @@ end
 
 # custom config parser...
 function get_static_args(::Val{:iterV2}, dict)
-    if "static_args" ∈ keys(dict)
-        return dict["static_args"]
+
+    static_args_dict = if "static_args" ∈ keys(dict)
+        dict["static_args"]
+    else
+        filter(dict) do kv
+            kv.first ∉ ["sweep_args", "config"]
+        end
     end
     
-    filter(dict) do kv
-        kv.first ∉ ["sweep_args", "config"]
-    end
+    save_type = Reproduce.get_save_backend(dict["config"])
+    static_args_dict[Reproduce.SAVE_NAME_KEY] = save_type
+    static_args_dict["save_dir"] = joinpath(dict["config"]["save_dir"], "data")
+
+    static_args_dict
 end
 
 function prepare_sweep_args(sweep_args)

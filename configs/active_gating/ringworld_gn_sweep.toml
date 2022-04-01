@@ -1,11 +1,12 @@
 info="""
-This experiment is to test the gating network code and see if we can learn in ring world.
+This experiment is to test the gating network code and see if we can learn in ring world. This
+experiment is primarily focused on the gating network.
 """
 
 [config]
 save_backend="mysql" # mysql only database backend supported
-database="mkschleg_ringworld_active_gating_moe" # Database name
-save_dir="ringworld_active_gating_moe"
+database="mkschleg_ringworld_moe_gating_network" # Database name
+save_dir="ringworld_moe_gating_network"
 exp_file="experiment/RingWorldERExperiment.jl"
 exp_module_name = "RingWorldERExperiment"
 exp_func_name = "main_experiment"
