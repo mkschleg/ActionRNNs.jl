@@ -66,8 +66,6 @@ end
     - `<log_extras::Vector{Union{String, Vector{String}}>`: which group and <name> to log to the data dict. This **will not** be passed to save.
     - `<save_extras::Vector{Union{String, Vector{String}}>`: which groups and <names> to log to the data dict. This **will** be passed to save.
     """
-#    "save_extras" => [], # Optional
-#    "log_extras" => [],  # Optional
 
     info"""
     Environment details

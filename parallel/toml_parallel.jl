@@ -1,7 +1,7 @@
 using Pkg
 Pkg.activate(".")
 
-using Reproduce
+using Reproduce, ActionRNNs
 using ArgParse
 
 function main()
