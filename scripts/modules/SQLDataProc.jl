@@ -8,10 +8,27 @@ using MySQL, DBInterface
 using MacroTools
 using FileIO
 
-function connect(database)
+function connect(database=nothing)
     conn = DBInterface.connect(MySQL.Connection, "", "", option_file=joinpath(homedir(), ".my.cnf"))
-    DBInterface.execute(conn, "use $(database);");
+    if !isnothing(database)
+        DBInterface.execute(conn, "use $(database);");
+    end
     conn
+end
+
+function use_database(conn, database)
+    cur_db = DataFrame(DBInterface.execute(conn, "select DATABASE();"))[1, 1]
+    if ismissing(cur_db) || cur_db != database
+        DBInterface.execute(conn, "use $(database);")
+    end
+end
+
+function list_databases(conn)
+    DataFrame(DBInterface.execute(conn, "show databases;"))
+end
+
+function list_tables(conn)
+    DataFrame(DBInterface.execute(conn, "show tables;"))
 end
 
 function get_param_table(conn)
@@ -41,8 +58,13 @@ function proc_vec_data(conn, table, hashes=UInt[]; _pre_name="", kwargs...)
     stmt = DBInterface.prepare(conn, sql_stmt)
     ret = DataFrame(DBInterface.execute(stmt, [hashes[1]]))[!, :data]
     ret_proc = [(k, f(ret)) for (k, f) in kwargs]
+    get_initial = (x)->if x isa Number
+        zeros(typeof(x), length(hashes))
+    elseif x isa AbstractArray
+        Vector{typeof(x)}(undef, length(hashes))
+    end
     ret_strg = Dict(
-        r[1]=>zeros(typeof(r[2]), length(hashes)) for r in ret_proc
+        r[1]=>get_initial(r[2]) for r in ret_proc
     )
 
     @progress for (i, hsh) in enumerate(hashes)
@@ -55,6 +77,41 @@ function proc_vec_data(conn, table, hashes=UInt[]; _pre_name="", kwargs...)
     end
     DBInterface.close!(stmt)
     DataFrame(;_HASH=hashes, (Symbol(_pre_name*string(k))=>v for (k, v) in ret_strg)...)
+end
+
+function get_res_data(conn, hashes=UInt[]; _pre_name="", kwargs...)
+    
+    if length(hashes) == 0
+        hashes = DataFrame(DBInterface.execute(conn, "select _HASH from params;"))[!, :_HASH]
+    end
+    μ = zeros(Float32, length(hashes))
+    sql_stmt = """select *
+                  from results
+                  WHERE _HASH=?;
+               """
+    stmt = DBInterface.prepare(conn, sql_stmt)
+    ret = DataFrame(DBInterface.execute(stmt, [hashes[1]]))[!, :data]
+    ret_proc = [(k, f(ret)) for (k, f) in kwargs]
+    get_initial = (x)->if x isa Number
+        zeros(typeof(x), length(hashes))
+    elseif x isa AbstractArray
+        Vector{typeof(x)}(undef, length(hashes))
+    end
+    ret_strg = Dict(
+        r[1]=>get_initial(r[2]) for r in ret_proc
+    )
+
+    @progress for (i, hsh) in enumerate(hashes)
+        curs = DBInterface.execute(stmt, [hsh])
+	data = DataFrame(curs)[!, :data]
+        curs = nothing
+        for (k, f) in kwargs
+            ret_strg[k][i] = f(data)
+        end
+    end
+    DBInterface.close!(stmt)
+    DataFrame(;_HASH=hashes, (Symbol(_pre_name*string(k))=>v for (k, v) in ret_strg)...)
+
 end
 
 function proc_control_data(database; save=nothing, vector_tables=["stps"=>"results_total_steps", "rews"=>"results_total_rews"])
@@ -144,7 +201,7 @@ end
 
 function get_diff_dict(params)
     dfs = Dict{String, Any}()
-    for clm in filter((clm)-> (clm != "_GIT_INFO") && (clm != "_HASH"), clms[!, :COLUMN_NAME])
+    for clm in filter((clm)-> (clm != "_GIT_INFO") && (clm != "_HASH"), params[!, :COLUMN_NAME])
 	df = DataFrame(
 	    DBInterface.execute(
 		conn,
