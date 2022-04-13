@@ -18,6 +18,8 @@ using Reproduce
 using Random
 using LoggingExtras
 
+import ChoosyDataLoggers
+
 const RWU = RingWorldUtils
 const FLU = FluxUtils
 
@@ -32,6 +34,11 @@ function results_synopsis(res, ::Val{true})
     ])
 end
 results_synopsis(res, ::Val{false}) = res
+
+ChoosyDataLoggers.@init
+function __init__()
+    ChoosyDataLoggers.@register
+end
 
 @generate_config_funcs begin
 
@@ -59,8 +66,6 @@ results_synopsis(res, ::Val{false}) = res
     - `<log_extras::Vector{Union{String, Vector{String}}>`: which group and <name> to log to the data dict. This **will not** be passed to save.
     - `<save_extras::Vector{Union{String, Vector{String}}>`: which groups and <names> to log to the data dict. This **will** be passed to save.
     """
-#    "save_extras" => [], # Optional
-#    "log_extras" => [],  # Optional
 
     info"""
     Environment details
@@ -213,7 +218,6 @@ end
 
 Macros.@generate_ann_size_helper
 Macros.@generate_working_function
-
 
 
 function main_experiment(config; progress=false, testing=false, overwrite=false)

@@ -4,6 +4,13 @@ using GVFHordes
 import Reexport: @reexport
 @reexport using MinimalRLCore
 
+import ChoosyDataLoggers: ChoosyDataLoggers, @init, @register, @data
+
+@init
+function __init__()
+    @register
+end
+
 export glorot_uniform, glorot_normal, ExperienceReplay
 include("Utils.jl")
 
@@ -24,5 +31,7 @@ include("Agent.jl")
 
 include("exp_util.jl")
 include("construct.jl")
+
+
 
 end # module

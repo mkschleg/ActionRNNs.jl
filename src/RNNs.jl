@@ -24,6 +24,15 @@ _needs_action_input(m) = false
 _needs_action_input(m::Flux.Recur{T}) where {T} = _needs_action_input(m.cell)
 _needs_action_input(m::AbstractActionRNN) = true
 
+# Compat for output size....
+function (m::Flux.Recur{<:AbstractActionRNN})(x::Vector{Flux.NilNumber.Nil})
+    fill(Flux.NilNumber.nil, size(m.state, 1))
+end
+
+function (m::Flux.Recur{<:AbstractActionRNN})(x::Matrix{Flux.NilNumber.Nil})
+    fill(Flux.NilNumber.nil, size(m.state, 1), size(x, 2))
+end
+
 #=
 https://github.com/mkschleg/HelpfulKernelFuncs.jl
 

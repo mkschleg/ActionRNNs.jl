@@ -32,6 +32,13 @@ using ProgressMeter
 using Reproduce
 using Random
 
+import ChoosyDataLoggers
+
+ChoosyDataLoggers.@init
+function __init__()
+    ChoosyDataLoggers.@register
+end
+
 const TMU = TMazeUtils
 const FLU = FluxUtils
 #=
