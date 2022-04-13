@@ -76,20 +76,20 @@ function plot_learning_curves_rw(results)
 			sum(abs.(results[:out_err]), dims=1)[1, :], 
 			100)[1:100:end], 
 		title="AvgRMSE_Win100")
-	plt3 = let
-		truth = results[:out_pred] - results[:out_err]
-		c = (t, p) -> if t == 1.0 
-			p >= 0.6 ? 0.0 : 1.0
-		else
-			p >= 0.6 ? 1.0 : 0.0
-		end
-		plot(rollmean(
-				sum(c.(truth, results[:out_pred]), dims=1)[1, :], 
-				100)[1:100:end], 
-			title="successes")
-	end
+	# plt3 = let
+	# 	truth = results[:out_pred] - results[:out_err]
+	# 	c = (t, p) -> if t == 1.0 
+	# 		p >= 0.6 ? 0.0 : 1.0
+	# 	else
+	# 		p >= 0.6 ? 1.0 : 0.0
+	# 	end
+	# 	plot(rollmean(
+	# 			sum(c.(truth, results[:out_pred]), dims=1)[1, :], 
+	# 			100)[1:100:end], 
+	# 		title="successes")
+	# end
 	# plot(plt1, plt2, plt3, legend=:none)
-	plt1, plt2, plt3
+	plt1, plt2#, plt3
 end
 
 # ╔═╡ 2a0fcdf9-0f32-4e27-af25-e668820035ba
@@ -127,25 +127,30 @@ function get_hs_over_time(
 	results, data
 end
 
-# ╔═╡ face2685-2609-44e1-9427-b82273f2d19b
-test_ret = get_hs_over_time(false) do
-	ret = RingWorldERExperiment.working_experiment(
-		false,
-		cell="AARNN", 
-		numhidden=10,
-		log_extras=[["EXPExtra", "agent"], ["EXPExtra", "env"]])
-	(ret.data, 
-	 ret.data[:EXPExtra][:agent][1], 
-	 ret.data[:EXPExtra][:env][1])
-end
+# ╔═╡ cb40f1f8-207f-4902-8795-740a9df79219
+base_kwargs = (steps = 300000,
+	opt = "RMSProp",
+	rho = 0.9,
+	size = 10,
+	batch_size = 4,
+	replay_size = 1000,
+	warm_up = 1000,
+	target_update_freq = 1000,
+	update_freq = 4,
+	outgamma = 0.9,
+	outhorde = "gammas_term",)
 
 # ╔═╡ 8d385e74-bdd9-4183-98f6-ddf37e154c05
 res_m, hs, s, obs, a_tm1 = let
 	test_ret = get_hs_over_time(false) do
 		ret = RingWorldERExperiment.working_experiment(
-			false,
-			cell="MARNN", 
-			numhidden=6,
+			false;
+			cell="MARNN",
+			numhidden=12,
+			truncation=10,
+			eta=0.0037252902984619128,
+			seed=21,
+			base_kwargs...,
 			log_extras=[["EXPExtra", "agent"], ["EXPExtra", "env"]])
 		(ret.data, 
 		 ret.data[:EXPExtra][:agent][1], 
@@ -160,15 +165,15 @@ res_m, hs, s, obs, a_tm1 = let
 end
 
 # ╔═╡ ce312280-1ca5-492e-b774-e372940b7d3a
-let
-	rnge = 1:1000
-	data = reduce(hcat, vcat.(hs[rnge], s[rnge]))
-	plts = []
-	for i in 1:size(data, 1)
-		push!(plts, plot(data[i, :]))
-	end
-	plot(plts..., layout=(size(data, 1), 1))
-end
+# let
+# 	rnge = 1:1000
+# 	data = reduce(hcat, vcat.(hs[rnge], s[rnge]))
+# 	plts = []
+# 	for i in 1:size(data, 1)
+# 		push!(plts, plot(data[i, :]))
+# 	end
+# 	plot(plts..., layout=(size(data, 1), 1))
+# end
 
 # ╔═╡ 8fe2f33c-0367-4ffe-9104-91f50bf160f2
 plt_ma = let
@@ -185,9 +190,13 @@ end
 res_a, hs_a, s_a, obs_a, a_tm1_a = let
 	test_ret = get_hs_over_time(false) do
 		ret = RingWorldERExperiment.working_experiment(
-			false,
-			cell="AARNN", 
-			numhidden=10,
+			false;
+			cell="AARNN",
+			numhidden=15,
+			truncation=10,
+			eta=0.0037252902984619128,
+			seed=21,
+			base_kwargs...,
 			log_extras=[["EXPExtra", "agent"], ["EXPExtra", "env"]])
 		(ret.save_results, 
 		 ret.data[:EXPExtra][:agent][1], 
@@ -293,7 +302,7 @@ let
 	Random.seed!(3)
 	base_colors = distinguishable_colors(12, colorant"blue")
 	colors = fill(base_colors[1], length(hs))
-	for i in 1:6, j in 1:2
+	for i in 1:10, j in 1:2
 		colors[(s .== i) .&& (a_tm1 .== j)] .= base_colors[i]
  	end
 	data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, progress=false)
@@ -306,8 +315,8 @@ end
 let
 	Random.seed!(3)
 	base_colors = distinguishable_colors(12, colorant"blue")
-	colors = fill(base_colors[1], length(hs))
-	for i in 1:6, j in 1:2
+	colors = fill(base_colors[1], length(hs_a))
+	for i in 1:12, j in 1:2
 		colors[(s_a .== i) .&& (a_tm1_a .== j)] .= base_colors[i]
 	end
 	data = tsne(collect(reduce(hcat, hs_a)'), 2, 0, 1000, progress=false)
@@ -320,7 +329,7 @@ end
 let
 	Random.seed!(3)
 	base_colors = distinguishable_colors(12, colorant"blue")
-	colors = fill(base_colors[1], length(hs))
+	colors = fill(base_colors[1], length(hs_a))
 	for i in 1:6, j in 1:2
 		colors[(s_da .== i) .&& (a_tm1_da .== j)] .= base_colors[i]
 	end
@@ -346,7 +355,7 @@ end
 # ╠═2b510aa6-7c7c-489a-b5b5-8321276d70a4
 # ╠═2a0fcdf9-0f32-4e27-af25-e668820035ba
 # ╠═a75cf9f7-f7d0-42a9-bd16-657b87d3e8fe
-# ╠═face2685-2609-44e1-9427-b82273f2d19b
+# ╠═cb40f1f8-207f-4902-8795-740a9df79219
 # ╠═8d385e74-bdd9-4183-98f6-ddf37e154c05
 # ╠═ce312280-1ca5-492e-b774-e372940b7d3a
 # ╠═8fe2f33c-0367-4ffe-9104-91f50bf160f2

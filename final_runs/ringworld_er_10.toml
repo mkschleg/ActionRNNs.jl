@@ -1,6 +1,6 @@
 [config]
 save_dir="final_ringworld_er_rmsprop_10"
-exp_file="experiment/ringworld_er.jl"
+exp_file="experiment/RingWorldERExperiment.jl"
 exp_module_name = "RingWorldERExperiment"
 exp_func_name = "main_experiment"
 arg_iter_type = "looper"

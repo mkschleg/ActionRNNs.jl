@@ -176,7 +176,7 @@ function build_ann(in, actions, out, config, rng)
     end
 
     Flux.Chain(rnn...,
-               Flux.Dense(nh, actions; initW=init_func))
+               Flux.Dense(nh, out; initW=init_func))
     
 end
 
@@ -266,7 +266,6 @@ function experiment_loop(env, agent, outhorde_str, num_steps, rng; prgs=false)
         out_preds = a.preds[:, 1]
         
         @data EXP out_pred=out_preds idx=cur_step
-
         out_errs = out_preds .- Float32.(RWU.oracle(env, outhorde_str))
         @data EXP out_err=out_errs idx=cur_step
         

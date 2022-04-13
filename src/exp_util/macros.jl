@@ -153,12 +153,12 @@ macro generate_working_function()
         Creates a wrapper experiment where the main experiment is called with progress=true, testing=true 
         and the config is the default_config with the addition of the keyword arguments.
         """
-        function $(esc(:working_experiment))(;kwargs...)
+        function $(esc(:working_experiment))(progress=true;kwargs...)
             config = $__module__.default_config()
             for (n, v) in kwargs
                 config[string(n)] = v
             end
-            $__module__.main_experiment(config; progress=true, testing=true)
+            $__module__.main_experiment(config; progress=progress, testing=true)
         end
     end
 end
