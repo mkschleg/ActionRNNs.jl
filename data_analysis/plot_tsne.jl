@@ -50,7 +50,7 @@ function get_hs_over_time(
     results, data
 end
 
-function plot_ringworld_tsne(args; progress=false)
+function ringworld_tsne(args; progress=false)
     args["log_extras"] = [["EXPExtra", "agent"], ["EXPExtra", "env"]]
     test_ret = get_hs_over_time(false) do
 	ret = RingWorldERExperiment.main_experiment(args, testing=true, progress=progress)
@@ -64,16 +64,16 @@ function plot_ringworld_tsne(args; progress=false)
     obs = nothing
     a_tm1 = data[:Agent][:action][1:end-1]
 
-    	
     Random.seed!(3)
+    data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, progress=false)
+
     base_colors = distinguishable_colors(12, colorant"blue")
     colors = fill(base_colors[1], length(hs))
     for i in 1:10, j in 1:2
 	colors[(s .== i) .&& (a_tm1 .== j)] .= base_colors[i]
     end
-    data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, progress=false)
-    plt = scatter(data[:, 1], data[:, 2], color=colors, legend=nothing, title="Multiplicative")
-    plt
+
+    data, colors
 end
 
 
@@ -86,24 +86,32 @@ function plot_ringworld_tsnes(save_loc)
         lk = ReentrantLock()
         n = length(args)
         j = 0
-        Threads.@threads for i in 1:n
-            sarg = args[i]
+
+        my_task = (sarg, seed) -> begin
             parg = deepcopy(pargs)
             for kv in sarg
                 parg[kv.first] = kv.second
             end
-            parg["seed"] = 21
-            plt = plot_ringworld_tsne(parg)
+            parg["seed"] = seed
 
-            save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*".pdf"
-            savefig(plt, joinpath(save_loc, save_str))
-            
+            save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*"seed=$(seed).pdf"
+            data, colors = ringworld_tsne(parg)
+
             lock(lk)
             try
+                plt = scatter(data[:, 1], data[:, 2], color=colors, legend=nothing)
+                savefig(plt, joinpath(save_loc, save_str))
                 j += 1
                 @logprogress j/n
             finally
                 unlock(lk)
+            end
+        end
+        
+        Threads.@threads for i in 1:n
+            for s in [21, 25, 33]
+                sargs = args[i]
+                my_task(sargs, s)
             end
         end
     end
