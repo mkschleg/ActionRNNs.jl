@@ -89,13 +89,13 @@ function plot_ringworld_tsnes(save_loc)
         Threads.@threads for i in 1:n
             sarg = args[i]
             parg = deepcopy(pargs)
-            for kv in sargs
+            for kv in sarg
                 parg[kv.first] = kv.second
             end
             parg["seed"] = 21
             plt = plot_ringworld_tsne(parg)
 
-            save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sargs)], ",")*".pdf"
+            save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*".pdf"
             savefig(plt, joinpath(save_loc, save_str))
             
             lock(lk)
