@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.2
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
@@ -7,10 +7,17 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+end
+
+# ╔═╡ 5b4fbaab-3ddb-4f47-ae17-0dded8e9def0
+let
+	import Pkg
+	Pkg.activate("..")
 end
 
 # ╔═╡ f7f500a8-a1e9-11eb-009b-d7afdcade891
@@ -74,6 +81,9 @@ Base.show(io::IO, ic::ItemCollection) = print(io, "ItemCollection(Size: ", lengt
 # ╔═╡ 240dc563-fd04-4c07-85ac-4e54ad016374
 PU = ingredients("plot_utils.jl")
 
+# ╔═╡ 216f7ed6-f713-41a0-a8c1-1a4b79b4be0b
+at(d) = joinpath("../local_data/ringworld/", d)
+
 # ╔═╡ 265db42d-1b27-463d-b0a1-cfc62748022a
 macro load_data(loc)
     return quote
@@ -127,34 +137,34 @@ function plot_line_from_data_with_params!(
  end
 
 # ╔═╡ 24f92c1e-3b6c-4d0e-bfd1-6f45bc1a72c0
-ic_dir_rpu_er, dd_dir_rpu_er = RPU.load_data("../local_data/final_ringworld_er_rmsprop_10/")
+ic_dir_rpu_er, dd_dir_rpu_er = RPU.load_data(at("final_ringworld_er_rmsprop_10/"))
 
 # ╔═╡ 47a4712f-8833-4916-b240-96f17ee6b504
-ic_dir_rpu_online_all, dd_dir_rpu_online_all = RPU.load_data("../local_data/ringworld_online_rmsprop_size10/")
+ic_dir_rpu_online_all, dd_dir_rpu_online_all = RPU.load_data(at("ringworld_online_rmsprop_size10/"))
 
 # ╔═╡ 4fd60991-9844-4b1b-a756-51312dbbe33b
-ic_dir_rpu_online, dd_dir_rpu_online = RPU.load_data("../local_data/RW_final/final_ringworld_online_rmsprop_10/")
+ic_dir_rpu_online, dd_dir_rpu_online = RPU.load_data(at("/final_ringworld_online_rmsprop_10/"))
 
 # ╔═╡ 98ed8227-78e6-410e-8937-3c2c18b305ef
-ic_dir_rpu_online_t12, dd_dir_rpu_online_t12 = RPU.load_data("../local_data/RW_final/final_ringworld_online_rmsprop_10_t12/")
+ic_dir_rpu_online_t12, dd_dir_rpu_online_t12 = RPU.load_data(at("final_ringworld_online_rmsprop_10_t12/"))
 
 # ╔═╡ 98858fea-5e35-4e16-bf8f-df95e95ca6db
-ic_dir_rpu_online_t12_grus, dd_dir_rpu_online_t12_grus = RPU.load_data("../local_data/RW_final/final_ringworld_online_rmsprop_10_t12_grus/")
+ic_dir_rpu_online_t12_grus, dd_dir_rpu_online_t12_grus = RPU.load_data(at("final_ringworld_online_rmsprop_10_t12_grus/"))
 
 # ╔═╡ c5c76526-8e14-469d-ae96-bf0835864f55
-ic_dir_rpu_online_1M, dd_dir_rpu_online_1M = RPU.load_data("../local_data/final_ringworld_online_rmsprop_10_1M/")
+ic_dir_rpu_online_1M, dd_dir_rpu_online_1M = RPU.load_data(at("final_ringworld_online_rmsprop_10_1M/"))
 
 # ╔═╡ 8ae03ea3-fecd-413b-b612-9201e4cab552
-ic_dir_rpu_online_1M_slr, dd_dir_rpu_online_1M_slr = RPU.load_data("../local_data/final_ringworld_online_rmsprop_10_1M_slr/")
+ic_dir_rpu_online_1M_slr, dd_dir_rpu_online_1M_slr = RPU.load_data(at("final_ringworld_online_rmsprop_10_1M_slr/"))
 
 # ╔═╡ 59838b82-2402-4c76-811f-2d8896f10e2f
-ic_dir_rpu_online_1M_mlr, dd_dir_rpu_online_1M_mlr = RPU.load_data("../local_data/final_ringworld_online_rmsprop_10_1M_mlr/")
+ic_dir_rpu_online_1M_mlr, dd_dir_rpu_online_1M_mlr = RPU.load_data(at("final_ringworld_online_rmsprop_10_1M_mlr/"))
 
 # ╔═╡ 8d9a77ff-974f-4cb1-a01a-e03b8951fb70
-ic_dir_rpu_online_facmarnn, dd_dir_rpu_online_facmarnn = RPU.load_data("../local_data/ringworld_online_rmsprop_10_facmarnn/")
+ic_dir_rpu_online_facmarnn, dd_dir_rpu_online_facmarnn = RPU.load_data(at("ringworld_online_rmsprop_10_facmarnn/"))
 
 # ╔═╡ 3a5ae1d2-394b-410b-b3bf-0b2d90198db3
-ic_dir_rpu_online_facmagru, dd_dir_rpu_online_facmagru = RPU.load_data("../local_data/ringworld_online_rmsprop_10_facmagru/")
+ic_dir_rpu_online_facmagru, dd_dir_rpu_online_facmagru = RPU.load_data(at("ringworld_online_rmsprop_10_facmagru/"))
 
 # ╔═╡ d6098ab5-4090-4568-92e7-83e659ee17eb
 data_rpu_er = RPU.get_line_data_for(
@@ -1278,6 +1288,7 @@ let
 end
 
 # ╔═╡ Cell order:
+# ╠═5b4fbaab-3ddb-4f47-ae17-0dded8e9def0
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
 # ╠═e0d51e67-63dc-45ea-9092-9965f97660b3
 # ╠═fbdbb061-f620-4704-ba0f-9e4d00ddcc8f
@@ -1288,6 +1299,7 @@ end
 # ╟─92c2600e-58b4-4ea3-8272-3fe38c0422d1
 # ╟─24ccf89f-ab20-447e-9d6f-633380ee8c20
 # ╠═240dc563-fd04-4c07-85ac-4e54ad016374
+# ╠═216f7ed6-f713-41a0-a8c1-1a4b79b4be0b
 # ╟─265db42d-1b27-463d-b0a1-cfc62748022a
 # ╟─62d657ae-bdd9-454e-8d4f-39e7d044d6dd
 # ╟─dde0ed32-3b8a-40ac-ae06-16dbb7c62856

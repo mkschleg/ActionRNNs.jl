@@ -1,8 +1,24 @@
 ### A Pluto.jl notebook ###
-# v0.14.2
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
+
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
+# ╔═╡ f3cc35f4-1788-420e-bb20-4658eaec2eda
+let
+	import Pkg
+	Pkg.activate("..")
+end
 
 # ╔═╡ cf756452-bb40-11eb-1b8f-a1c2376756ed
 using Revise
@@ -55,12 +71,18 @@ cell_colors = Dict(
 	"MAGRU" => color_scheme[6],
 	"FacMAGRU" => color_scheme[end-2])
 
+# ╔═╡ ad0b6a6c-a062-4952-8632-616b2086bb5f
+at(dir) = joinpath("../../local_data/ringworld/", dir)
+
+# ╔═╡ 2148c874-e915-47af-9f67-6a565c23e9ff
+ic_test, dd_test = RPU.load_data(at("ringworld_fac_er_rmsprop_10_marnn/"))
+
 # ╔═╡ 4561c8c6-81a1-4966-915e-7b524135ae92
 ic, dd = let
-	ic1, dd = RPU.load_data("../local_data/ringworld_fac_er_rmsprop_10/")
-	ic2, dd = RPU.load_data("../local_data/ringworld_fac_er_rmsprop_10_marnn/")
-	ic3, dd = RPU.load_data("../local_data/ringworld_fac_er_rmsprop_10_aagru/")
-	ic4, dd = RPU.load_data("../local_data/ringworld_fac_er_rmsprop_10_magru/")
+	ic1, dd = RPU.load_data(at("ringworld_fac_er_rmsprop_10/"))
+	ic2, dd = RPU.load_data(at("ringworld_fac_er_rmsprop_10_marnn/"))
+	ic3, dd = RPU.load_data(at("ringworld_fac_er_rmsprop_10_aagru/"))
+	ic4, dd = RPU.load_data(at("ringworld_fac_er_rmsprop_10_magru/"))
 	ic = ItemCollection([ic1.items; ic2.items; ic3.items; ic4.items])
 	ic, diff(ic)
 end
@@ -173,7 +195,15 @@ end
 
 
 # ╔═╡ 1f57edbe-10b9-4857-a7ab-6f867090f159
-ic_ring, dd_ring = RPU.load_data("../local_data/final_ringworld_er_rmsprop_10/")
+ic_ring, dd_ring = RPU.load_data(at("final_ringworld_er_rmsprop_10/"))
+
+# ╔═╡ 78581ee5-b4e9-4e4b-baae-2aa778854a02
+save_at(plt_file) = joinpath("../../plots/ringworld/", plt_file)
+
+# ╔═╡ 6760c7fd-244f-4265-9fae-987fa9bae1f3
+md"""
+Save Figures: $(@bind save_figs PlutoUI.CheckBox())
+"""
 
 # ╔═╡ 3fea2f09-2333-4bfd-8273-90368fa824ae
 data_ring = RPU.get_line_data_for(
@@ -263,7 +293,9 @@ let
 	colors = [cell_colors["MARNN"] cell_colors["RNN"] cell_colors["AARNN"]]
 	params = Dict("cell"=>"MARNN", "numhidden"=>nh)
 	plot!(data_ring, args; label_idx="truncation", sort_idx="truncation", lw=3, palette=color_scheme, color=colors, marker=:auto, markersize=5)
-	savefig("../plots/ringworld_rnn_trunc.pdf")
+	if save_figs
+		savefig(save_at("ringworld_rnn_trunc.pdf"))
+	end
 	plt
 end
 
@@ -304,8 +336,10 @@ let
 	
 	params = Dict("cell"=>"MAGRU", "numhidden"=>nh)
 	plot!(data_ring, params; label_idx="truncation", sort_idx="truncation", lw=3, palette=color_scheme, label="MAGRU, $(nh)", labeltitle="Hidden", color=cell_colors["MAGRU"], marker=:auto, markersize=5)
-	
-	savefig("../plots/ringworld_gru_trunc.pdf")
+
+	if save_figs
+		savefig(save_at("ringworld_gru_trunc.pdf"))
+	end
 	plt
 end
 
@@ -329,7 +363,9 @@ let
 		push!(plts, plt)
 	end
 	plt = plot(plts..., size=(1200,800))
-	savefig("../plots/ringworld_sens.pdf")
+	if save_figs
+		savefig(save_at("ringworld_sens.pdf"))
+	end
 	plt
 end
 
@@ -369,7 +405,7 @@ let
 		push!(plts, plt)
 	end
 	plt = plot(plts..., size=(800,800))
-	savefig("../plots/factored_sens_rw.pdf")
+	# savefig("../plots/factored_sens_rw.pdf")
 	plt
 end
 
@@ -407,17 +443,22 @@ let
 	plot!(data_ring_lc, Dict("cell"=>"RNN", "numhidden"=>15, "truncation"=>6), lw = 2, color=cell_colors["RNN"], z=1.97)
 	plot!(data_ring_lc, Dict("cell"=>"MARNN", "numhidden"=>12, "truncation"=>6), lw=2, color=cell_colors["MARNN"], z=1.97)
 	plot!(data_ring_lc, Dict("cell"=>"AARNN", "numhidden"=>15, "truncation"=>6), lw=2, color=cell_colors["AARNN"], z=1.97)
-	savefig("../plots/ringworld_example.pdf")
+	if save_figs
+		savefig(save_at("ringworld_example.pdf"))
+	end
 	plt
 end
 
 # ╔═╡ Cell order:
+# ╠═f3cc35f4-1788-420e-bb20-4658eaec2eda
 # ╠═cf756452-bb40-11eb-1b8f-a1c2376756ed
 # ╠═a14f2ee3-b61f-4d5f-8819-9a71f977c375
 # ╠═3052ee11-68ec-42ff-9177-5f70bce043b6
 # ╠═e1817bb9-5918-4ed4-a73d-8c650e5399bc
 # ╠═4c5a2db1-1ed2-4b86-8917-79b55727d45d
 # ╠═5062d5b8-3141-4c05-82d3-1bfba1951e68
+# ╠═ad0b6a6c-a062-4952-8632-616b2086bb5f
+# ╠═2148c874-e915-47af-9f67-6a565c23e9ff
 # ╠═4561c8c6-81a1-4966-915e-7b524135ae92
 # ╠═34658923-9629-44c4-adc3-4694adebac1d
 # ╠═2f13e071-94ad-4023-8ea3-b0a14f4b885b
@@ -429,6 +470,8 @@ end
 # ╠═355816e8-5031-4d06-a73b-2331617a0eb6
 # ╠═1cdb0d15-f25c-4147-8055-458f3f5f06b2
 # ╠═1f57edbe-10b9-4857-a7ab-6f867090f159
+# ╠═78581ee5-b4e9-4e4b-baae-2aa778854a02
+# ╠═6760c7fd-244f-4265-9fae-987fa9bae1f3
 # ╠═3fea2f09-2333-4bfd-8273-90368fa824ae
 # ╠═75478ea0-136f-48b9-854d-ebb73efd303a
 # ╠═810aed19-9833-4b05-82c7-5b00e8c4d7be
