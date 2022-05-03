@@ -1,8 +1,14 @@
 ### A Pluto.jl notebook ###
-# v0.14.2
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
+
+# ╔═╡ 5c23cb06-a9c3-4972-ab4d-87983ad2feb4
+let
+	import Pkg
+	Pkg.activate("..")
+end
 
 # ╔═╡ 9c5f9424-b819-11eb-34d0-e38ee863d534
 using Revise
@@ -39,7 +45,7 @@ cell_colors = Dict(
 	"FacMAGRU" => color_scheme[end-2])
 
 # ╔═╡ d8d42860-423a-4191-b519-9f6a7bd773db
-ic, diff_dict = RPU.load_data("../local_data/final_ringworld_er_rmsprop_10/")
+ic, diff_dict = RPU.load_data("../../local_data/ringworld/final_ringworld_er_rmsprop_10/")
 
 # ╔═╡ 8c5d7890-5a7a-4a07-b599-def065f4e939
 data = RPU.get_line_data_for(
@@ -79,6 +85,7 @@ let
 end
 
 # ╔═╡ Cell order:
+# ╠═5c23cb06-a9c3-4972-ab4d-87983ad2feb4
 # ╠═9c5f9424-b819-11eb-34d0-e38ee863d534
 # ╠═02dad445-5a03-4665-937f-edc76fcd52bb
 # ╠═c21423c4-8692-4e58-810e-8b2fbccf37c3

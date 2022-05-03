@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.8
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
@@ -7,10 +7,17 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+end
+
+# ╔═╡ 18ca04ca-a249-4c06-a992-7031e0da8353
+let
+	import Pkg
+	Pkg.activate("..")
 end
 
 # ╔═╡ 00c1df58-d947-11eb-36c4-653906e7fe45
@@ -54,10 +61,10 @@ cell_colors = Dict(
 push!(RPU.stats_plot_types, :dotplot)
 
 # ╔═╡ dfc801ef-c384-4505-88bc-09914c138e0b
-ic, dd = RPU.load_data("../local_data/ringworld_er_rmsprop_10_fac/")
+ic, dd = RPU.load_data("../../local_data/ringworld/ringworld_er_rmsprop_10_fac/")
 
 # ╔═╡ 48fcb600-3c42-4bd6-aa7a-33663c2e5d25
-ic_on, dd_on = RPU.load_data("../local_data/ringworld_online_rmsprop_10_fac/")
+ic_on, dd_on = RPU.load_data("../..//local_data/ringworld/ringworld_online_rmsprop_10_fac/")
 
 # ╔═╡ eb61ceb3-f6ac-4224-90d0-d2fcdf83b483
 data = RPU.get_line_data_for(
@@ -293,6 +300,7 @@ end
 
 
 # ╔═╡ Cell order:
+# ╠═18ca04ca-a249-4c06-a992-7031e0da8353
 # ╠═00c1df58-d947-11eb-36c4-653906e7fe45
 # ╠═de72e089-68f2-4b16-9524-bfe6bf1dbe75
 # ╠═83912db4-fa1e-4a7b-9767-390a91ba320f

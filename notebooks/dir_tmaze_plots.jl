@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.17.7
+# v0.19.0
 
 using Markdown
 using InteractiveUtils
@@ -17,7 +17,7 @@ end
 # ╔═╡ ac8f3d1b-82af-4917-bf1c-d7afc16fc43a
 let
 	import Pkg
-	Pkg.activate("..")
+	Pkg.activate(".")
 end
 
 # ╔═╡ f7f500a8-a1e9-11eb-009b-d7afdcade891
@@ -335,7 +335,7 @@ let
 end
 
 # ╔═╡ 305f8ac8-8f5f-4ec4-84a6-867f69a8887c
-ic_fac, dd_fac = RPU.load_data("../local_data/dir_tmaze_er_fac_rnn_rmsprop_10/")
+ic_fac, dd_fac = RPU.load_data(at("dir_tmaze_er_fac_rnn_rmsprop_10/"))
 
 # ╔═╡ 533cba3d-7fc5-4d66-b545-b15ffc8ab6d8
 data_fac_sens_eta = RPU.get_line_data_for(
@@ -410,7 +410,7 @@ let
 end
 
 # ╔═╡ 7f630af5-a608-47d3-be13-589b9731798e
-ic_fac_init, dd_fac_init = RPU.load_data("../local_data/dir_tmaze_er_fac_rnn_init_rmsprop_10/")
+ic_fac_init, dd_fac_init = RPU.load_data(at("dir_tmaze_er_fac_rnn_init_rmsprop_10/"))
 
 # ╔═╡ c60ee6c5-85e4-407c-8272-801085296084
 
@@ -495,7 +495,7 @@ let
 end
 
 # ╔═╡ 7333fe0d-02fe-4d74-9427-95826c485334
-ic_20, dd_20 = RPU.load_data("../local_data/dir_tmaze_er_rnn_rmsprop_10_20k/")
+ic_20, dd_20 = RPU.load_data(at("dir_tmaze_er_rnn_rmsprop_10_20k/"))
 
 # ╔═╡ 72a17826-a498-4cd5-9523-d20a1bab5c30
 data_10_dist_20 = RPU.get_line_data_for(
@@ -547,7 +547,7 @@ let
 	violin!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"]], linecolor = [cell_colors["FacMARNN"]])
 	boxplot!(data_fac_sens, args_list; label_idx="cell", color = [cell_colors["FacMARNN"] cell_colors["FacMAGRU"]], linecolor=:black, lw=2)
 	
-	savefig("../plots/dir_tmaze_20k_buffer.pdf")
+	# savefig("../plots/dir_tmaze_20k_buffer.pdf")
 	plt
 	# dotplot!(data_10_dist, args_list_l; 
 	# 	label_idx="cell", 

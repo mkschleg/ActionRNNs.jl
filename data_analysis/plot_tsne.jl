@@ -6,7 +6,7 @@ import ActionRNNs: @data
 using ActionRNNs, Random
 using RollingFunctions
 
-import RingWorldERExperiment
+import RingWorldERExperiment, DirTMazeERExperiment
 
 using Plots
 import Plots: @colorant_str
@@ -67,13 +67,69 @@ function ringworld_tsne(args; progress=false)
     Random.seed!(3)
     data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, progress=false)
 
-    base_colors = distinguishable_colors(12, colorant"blue")
+    # base_colors = distinguishable_colors(12, colorant"blue")
+    base_colors = [
+        colorant"#44AA99",
+        colorant"#332288",
+        colorant"#DDCC77",
+        colorant"#999933",
+        colorant"#CC6677",
+        colorant"#AA4499",
+        colorant"#DDDDDD",
+        colorant"#117733",
+        colorant"#882255",
+        colorant"#1E90FF",
+    ]
     colors = fill(base_colors[1], length(hs))
-    for i in 1:10, j in 1:2
-	colors[(s .== i) .&& (a_tm1 .== j)] .= base_colors[i]
+    for i in 1:10
+	colors[(s .== i)] .= base_colors[i]
     end
 
-    data, colors
+    mkstroke = fill(colorant"black", length(hs))
+    mkstroke[a_tm1 .== 2] .= RGB{Colors.N0f8}(1.0,1.0,0.455)
+
+    data, colors, mkstroke
+end
+
+function dirtmaze_tsne(args; progress=false)
+    args["log_extras"] = [["EXPExtra", "agent"], ["EXPExtra", "env"]]
+    test_ret = get_hs_over_time(false) do
+	ret = DirTMazeERExperiment.main_experiment(args, testing=true, progress=progress)
+	(ret.data, 
+	 ret.data[:EXPExtra][:agent][1], 
+	 ret.data[:EXPExtra][:env][1])
+    end
+    data = test_ret[2]
+    hs = data[:Agent][:hidden_state]
+    s = data[:Env][:state]
+    obs = nothing
+    a_tm1 = data[:Agent][:action][1:end-1]
+
+    Random.seed!(3)
+    data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, progress=false)
+
+    # base_colors = distinguishable_colors(12, colorant"blue")
+    base_colors = [
+        colorant"#44AA99",
+        colorant"#332288",
+        colorant"#DDCC77",
+        colorant"#999933",
+        colorant"#CC6677",
+        colorant"#AA4499",
+        colorant"#DDDDDD",
+        colorant"#117733",
+        colorant"#882255",
+        colorant"#1E90FF",
+    ]
+    colors = fill(base_colors[1], length(hs))
+    for i in 1:10
+	colors[(s .== i)] .= base_colors[i]
+    end
+
+    mkstroke = fill(colorant"black", length(hs))
+    mkstroke[a_tm1 .== 2] .= RGB{Colors.N0f8}(1.0,1.0,0.455)
+
+    data, colors, mkstroke
 end
 
 
@@ -82,31 +138,92 @@ function plot_ringworld_tsnes(save_loc)
     config = TOML.parsefile("final_runs/ringworld_er_10.toml")
 
     pargs = config["static_args"]
+
+    lk = ReentrantLock()
+
+    my_task = (sarg, seed) -> begin
+        parg = deepcopy(pargs)
+        for kv in sarg
+            parg[kv.first] = kv.second
+        end
+        parg["seed"] = seed
+
+        save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",seed=$(seed).pdf"
+        data, colors, mkstroke = ringworld_tsne(parg)
+
+        lock(lk)
+        try
+            plt = scatter(data[:, 1], data[:, 2], color=colors, markerstrokecolor=mkstroke, markerstrokewidth=2, grid=false, xtick=false, ytick=false, axis=false, legend=false)
+            savefig(plt, joinpath(save_loc, save_str))
+        finally
+            unlock(lk)
+        end
+    end
+
+    plk  = ReentrantLock()
+    n = length(args)
+    j = 0
+    
     @withprogress name="Args" begin
-        lk = SpinLock()
-        n = length(args)
-        j = 0
         Threads.@threads for i in 1:n
-            sarg = args[i]
-            parg = deepcopy(pargs)
-            for kv in sargs
-                parg[kv.first] = kv.second
+            for s in [21, 25, 33]
+                sargs = args[i]
+                my_task(sargs, s)
             end
-            parg["seed"] = 21
-            #parg["steps"]
-
-
-            save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sargs)], ",")*".pdf"
-            data, colors = ringworld_tsne(parg)
-            @info "Try to lock"
-            lock(lk)
+            lock(plk)
             try
-                plt = scatter(data[:, 1], data[:, 2], color=colors, legend=nothing)
-                savefig(plt, joinpath(save_loc, save_str))
                 j += 1
                 @logprogress j/n
             finally
-                unlock(lk)
+                unlock(plk)
+            end
+        end
+    end
+end
+
+function plot_dirtmaze_tsnes(save_loc)
+    args = FileIO.load("final_runs/dir_tmaze_10.jld2")["args"]
+    config = TOML.parsefile("final_runs/dir_tmaze_10.toml")
+
+    pargs = config["static_args"]
+
+    lk = ReentrantLock()
+
+    my_task = (sarg, seed) -> begin
+        parg = deepcopy(pargs)
+        for kv in sarg
+            parg[kv.first] = kv.second
+        end
+        parg["seed"] = seed
+
+        save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",seed=$(seed).pdf"
+        data, colors, mkstroke = dirtmaze_tsne(parg)
+
+        lock(lk)
+        try
+            plt = scatter(data[:, 1], data[:, 2], color=colors, markerstrokecolor=mkstroke, markerstrokewidth=2, grid=false, xtick=false, ytick=false, axis=false, legend=false)
+            savefig(plt, joinpath(save_loc, save_str))
+        finally
+            unlock(lk)
+        end
+    end
+
+    plk  = ReentrantLock()
+    n = length(args)
+    j = 0
+    
+    @withprogress name="Args" begin
+        Threads.@threads for i in 1:n
+            for s in [21, 25, 33]
+                sargs = args[i]
+                my_task(sargs, s)
+            end
+            lock(plk)
+            try
+                j += 1
+                @logprogress j/n
+            finally
+                unlock(plk)
             end
         end
     end
