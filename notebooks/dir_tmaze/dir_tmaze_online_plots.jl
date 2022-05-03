@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.14.2
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
@@ -7,10 +7,17 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
+end
+
+# ╔═╡ 08118162-6995-45a0-91ed-f94eec767cd0
+let
+	using Pkg
+	Pkg.activate("..")
 end
 
 # ╔═╡ f7f500a8-a1e9-11eb-009b-d7afdcade891
@@ -42,6 +49,9 @@ color_scheme = [
 # ╔═╡ 1886bf05-f4be-4160-b61c-edf186a7f3cb
 push!(RPU.stats_plot_types, :dotplot)
 
+# ╔═╡ 6243517d-0b59-4329-903c-0c122d14a962
+at(dir) = joinpath("../../local_data/dir_tmaze_online/", dir)
+
 # ╔═╡ 834b1cf3-5b22-4e0a-abe9-61e427e6cfda
 # function plot_line_from_data_with_params!(
 # 		plt, data_col::Vector{PU.LineData}, params; pkwargs...)
@@ -59,28 +69,28 @@ push!(RPU.stats_plot_types, :dotplot)
 # end
 
 # ╔═╡ eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
-ic_dir_reg, dd_dir_reg = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_size10_1M/")
+ic_dir_reg, dd_dir_reg = RPU.load_data(at("dir_tmaze_online_rmsprop_size10_1M/"))
 
 # ╔═╡ 4c523f7e-f4a2-4364-a47b-45548878ff51
-ic_dir_reg_500k, dd_dir_reg_500k = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_size10_500k_nh15/")
+ic_dir_reg_500k, dd_dir_reg_500k = RPU.load_data(at("dir_tmaze_online_rmsprop_size10_500k_nh15/"))
 
 # ╔═╡ ed00f8a0-f8f5-4340-8c6e-61ecb67e5d18
-ic_dir_facmagru, dd_dir_facmagru = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_10_facmagru/")
+ic_dir_facmagru, dd_dir_facmagru = RPU.load_data(at("dir_tmaze_online_rmsprop_10_facmagru/"))
 
 # ╔═╡ f32ab9fa-1949-4eae-96ac-0a333f83daaa
-ic_dir_facmagru_t16, dd_dir_facmagru_t16 = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_10_facmagru_t16/")
+ic_dir_facmagru_t16, dd_dir_facmagru_t16 = RPU.load_data(at("dir_tmaze_online_rmsprop_10_facmagru_t16/"))
 
 # ╔═╡ fedb725a-d13d-425f-bde9-531d453d8791
-ic_dir_facmarnn, dd_dir_facmarnn = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_10_facmarnn/")
+ic_dir_facmarnn, dd_dir_facmarnn = RPU.load_data(at("dir_tmaze_online_rmsprop_10_facmarnn/"))
 
 # ╔═╡ 7d7eee9b-ea92-46d6-87b3-652805dd6468
-ic_dir_facmarnn_t16, dd_dir_facmarnn_t16 = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_10_facmarnn_t16/")
+ic_dir_facmarnn_t16, dd_dir_facmarnn_t16 = RPU.load_data(at("dir_tmaze_online_rmsprop_10_facmarnn_t16/"))
 
 # ╔═╡ da38497d-30db-4125-91f7-3bd94ae9e3da
-ic_dir_final, dd_dir_final = RPU.load_data("../local_data/final_dir_tmaze_online_rmsprop_10/")
+ic_dir_final, dd_dir_final = RPU.load_data(at("final_dir_tmaze_online_rmsprop_10/"))
 
 # ╔═╡ dd993256-e953-4fcb-bac2-e24dbc76086f
-ic_dir_og, dd_dir_og = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_size10/")
+ic_dir_og, dd_dir_og = RPU.load_data(at("dir_tmaze_online_rmsprop_size10/"))
 
 # ╔═╡ 61fc2ec1-94db-4cca-a805-cf3da445e65d
 data_og = RPU.get_line_data_for(
@@ -380,7 +390,7 @@ end
 
 # ╔═╡ 5456a07a-8d3d-4d4c-8001-b72aac54286e
 ic, dd = let
-	ic = ItemCollection("../local_data/final_dir_tmaze_online_rmsprop_10_t16/")
+	ic = ItemCollection(at("final_dir_tmaze_online_rmsprop_10_t16/"))
 	subic = search(ic) do ld
 		ld.parsed_args["cell"][1:3] !== "Fac"
 	end
@@ -389,14 +399,14 @@ end
 
 # ╔═╡ a8c60669-4401-4d56-8f23-39efee7030e4
 ic_fac_magru, dd_fac_magru = let
-	ic = ItemCollection("../local_data/final_dir_tmaze_online_rmsprop_10_t16/")
+	ic = ItemCollection(at("final_dir_tmaze_online_rmsprop_10_t16/"))
 	subic = search(ic, Dict("cell"=>"FacMAGRU"))
 	subic, diff(subic)
 end
 
 # ╔═╡ 31a0ef43-deb1-41e1-ba7b-d1c25ef07bc8
 ic_fac_marnn, dd_fac_marnn = let
-	ic = ItemCollection("../local_data/final_dir_tmaze_online_rmsprop_10_t16/")
+	ic = ItemCollection(at("final_dir_tmaze_online_rmsprop_10_t16/"))
 	subic = search(ic, Dict("cell"=>"FacMARNN"))
 	subic, diff(subic)
 end
@@ -521,17 +531,17 @@ begin
 		Dict("numhidden"=>26, "factors"=>21, "truncation"=>16, "cell"=>"FacMAGRU", "eta"=>0.0009095)
 		]
 	
-	FileIO.save("../final_runs/dir_tmaze_online_10_t16.jld2", "args", args_list_hc)
+	# FileIO.save("../final_runs/dir_tmaze_online_10_t16.jld2", "args", args_list_hc)
 end
 
 # ╔═╡ f5f0c142-8ef1-4abc-a0c9-40c927436942
-f=jldopen("/Users/Vtkachuk/Desktop/Work/Research/Martha White/Matt Schlegel/ActionRNNs.jl/local_data/final_dir_tmaze_online_rmsprop_10_t16/settings/settings_0x4faa9134464b4a4e.jld2", "r")
+f=jldopen(at("final_dir_tmaze_online_rmsprop_10_t16/settings/settings_0x4faa9134464b4a4e.jld2"), "r")
 
 # ╔═╡ 8520162d-6c0f-41af-84eb-63b1edcefb20
-f_=jldopen("/Users/Vtkachuk/Desktop/Work/Research/Martha White/Matt Schlegel/ActionRNNs.jl/local_data/final_dir_tmaze_online_rmsprop_10/settings/settings_0xc0fd784eb4140e93.jld2", "r")
+f_=jldopen(at("final_dir_tmaze_online_rmsprop_10/settings/settings_0xc0fd784eb4140e93.jld2"), "r")
 
 # ╔═╡ 6170c64c-9bfa-46dd-869c-6a989faf57c5
-f1=jldopen("/Users/Vtkachuk/Desktop/Work/Research/Martha White/Matt Schlegel/ActionRNNs.jl/local_data/final_dir_tmaze_online_rmsprop_10/data/RP_0_0x1a95034fa9423e2f/settings.jld2", "r")
+f1=jldopen(at("final_dir_tmaze_online_rmsprop_10/data/RP_0_0x1a95034fa9423e2f/settings.jld2"), "r")
 
 # ╔═╡ f8388454-8c55-4404-a05f-a5e51ea225ca
 data1 = read(f1, keys(f1)[1])
@@ -579,7 +589,7 @@ data_10_dist_mean_facmarnn = RPU.get_line_data_for(
 	get_data=(x)->RPU.get_MEAN(x, :successes))
 
 # ╔═╡ 6ef161be-ec61-461d-9c38-60510c08328b
-ic_dir_10_s, dd_dir_10_s = RPU.load_data("../local_data/dir_tmaze_online_rmsprop_size10/")
+ic_dir_10_s, dd_dir_10_s = RPU.load_data(at("dir_tmaze_online_rmsprop_size10/"))
 
 # ╔═╡ 4f2e1222-9daa-439c-9d57-957f23e44657
 data_10_dist_s = RPU.get_line_data_for(
@@ -600,7 +610,7 @@ data_10_dist_s_mue = RPU.get_line_data_for(
 	get_data=(x)->RPU.get_MUE(x, :successes))
 
 # ╔═╡ 305f8ac8-8f5f-4ec4-84a6-867f69a8887c
-ic_fac, dd_fac = RPU.load_data("../local_data/dir_tmaze_er_fac_rnn_rmsprop_10/")
+ic_fac, dd_fac = RPU.load_data(at("dir_tmaze_er_fac_rnn_rmsprop_10/"))
 
 # ╔═╡ 533cba3d-7fc5-4d66-b545-b15ffc8ab6d8
 data_fac_sens_eta = RPU.get_line_data_for(
@@ -1615,12 +1625,14 @@ let
 end
 
 # ╔═╡ Cell order:
+# ╠═08118162-6995-45a0-91ed-f94eec767cd0
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
 # ╠═e0d51e67-63dc-45ea-9092-9965f97660b3
 # ╠═e53d7b29-788c-469c-9d44-573f996fa5e7
 # ╟─0c746c1e-ea39-4415-a1b1-d7124b886f98
 # ╠═1886bf05-f4be-4160-b61c-edf186a7f3cb
 # ╠═fe50ffef-b691-47b5-acf8-8378fbf860a1
+# ╠═6243517d-0b59-4329-903c-0c122d14a962
 # ╟─834b1cf3-5b22-4e0a-abe9-61e427e6cfda
 # ╠═eefd2ccc-ce9b-4cf8-991f-a58f2f932e99
 # ╠═4c523f7e-f4a2-4364-a47b-45548878ff51

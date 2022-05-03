@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.0
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
@@ -17,7 +17,7 @@ end
 # ╔═╡ ac8f3d1b-82af-4917-bf1c-d7afc16fc43a
 let
 	import Pkg
-	Pkg.activate(".")
+	Pkg.activate("..")
 end
 
 # ╔═╡ f7f500a8-a1e9-11eb-009b-d7afdcade891
@@ -58,7 +58,7 @@ cell_colors = Dict(
 	"FacMAGRU" => color_scheme[end-2])
 
 # ╔═╡ 842b3fbc-34aa-452d-81fb-2ade57dedecb
-at(dir) = joinpath("../local_data/dir_tmaze_er/", dir)
+at(dir) = joinpath("../../local_data/dir_tmaze_er/", dir)
 
 # ╔═╡ cc4a219d-9118-4c34-93ce-317afc837f6c
 function get_final_argument_list(
