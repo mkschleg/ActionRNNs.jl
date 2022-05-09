@@ -1,5 +1,6 @@
 [deps]
 ActionRNNs = "8317d1c6-c5c3-11e9-1282-0f8c4be94ea0"
+Bootstrap = "e28b5b4c-05e8-5b66-bc03-6f0c0a0a06e0"
 ChoosyDataLoggers = "edd8e46e-3ca5-477d-bc67-b483295d3b14"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 Flux = "587475ba-b771-5e3f-ad9e-33799f191a9c"
@@ -19,5 +20,6 @@ Reproduce = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
 ReproducePlotUtils = "c4339a9b-a0bc-4ed5-8923-5e6db10394ac"
 RollingFunctions = "b0e4dd01-7b14-53d8-9b45-175a3e362653"
 SimpleWeightedGraphs = "47aef6b3-ad0c-573a-a1e2-d07658019622"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 TSne = "24678dba-d5e9-5843-a4c6-250288b04835"
