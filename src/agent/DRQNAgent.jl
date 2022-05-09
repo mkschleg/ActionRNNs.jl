@@ -60,6 +60,7 @@ get_hs_replay_strategy(agent::DRQNAgent) = agent.hs_strategy
 training_mode(agent::DRQNAgent) = agent.training_mode
 set_training_mode(agent::DRQNAgent, mode) = agent.training_mode = mode
 
+
 #=
 Constructors
 =#
