@@ -182,7 +182,7 @@ function build_ann(config, in, actions::Int, rng)
         =#
         
         (ActionRNNs.DualStreams(action_stream, obs_stream),
-         ActionRNNs.build_rnn_layer(internal_o, internal_a, out, parsed, rng))
+         ActionRNNs.build_rnn_layer(config, in, internal_a, nh, rng))
     else
         (ActionRNNs.build_rnn_layer(config, in, actions, nh, rng),)
     end # if deep_action
@@ -264,7 +264,7 @@ end
 Construct direction tmaze using:
 - `size::Int` size of hallway.
 """
-function construct_env(config)
+function construct_env(config, args...)
     DirectionalTMaze(config["size"])
 end
 

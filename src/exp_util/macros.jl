@@ -179,7 +179,7 @@ macro generate_ann_size_helper(construct_env=:construct_env, construct_agent=:co
             end
             env = $(esc(const_env_sym))(config, $__module__.Random.GLOBAL_RNG)
             agent = $(esc(construct_agent))(env, config, $__module__.Random.GLOBAL_RNG)
-            sum(length, $__module__.Flux.params(get_model(agent)))
+            sum(length, $__module__.Flux.params($__module__.ActionRNNs.get_model(agent)))
         end
     end
 end
