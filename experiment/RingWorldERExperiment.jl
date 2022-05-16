@@ -212,7 +212,7 @@ function construct_agent(env, config, rng)
 
 end
 
-function construct_env(config)
+function construct_env(config, rng=Random.default_rng())
     RingWorld(config["size"])
 end
 
