@@ -81,5 +81,16 @@
 
 # Image DirTMaze
 
+| Description                                            | Computer  | Path                                           | Database | Analyzing File       |
+|:-------------------------------------------------------|:----------|:-----------------------------------------------|:---------|----------------------|
+| SWEEP: Standard cells for image dirtmaze with size = 6 | gpuserver | `image_tmaze/image_dir_tmaze_adam_6`           | NA       | `image_dir_tmaze.jl` |
+| SWEEP: Factored cells and initializations for ""       | gpuserver | `image_tmaze/image_dir_tmaze_adam_6_init`      | NA       | `image_dir_tmaze.jl` |
+| FINAL: Standard cells                                  | gpuserver | `image_tmaze/final_image_dir_tmaze_adam_6`     | NA       | `image_dir_tmaze.jl` |
+| FINAL: Factored cells                                  | gpuserver | `image_tmaze/final_image_fac_dir_tmaze_adam_6` | NA       | `image_dir_tmaze.jl` |
+
+
+
+
+
 # Lunar Lander
 

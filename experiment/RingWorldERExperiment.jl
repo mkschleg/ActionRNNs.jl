@@ -169,7 +169,7 @@ function build_ann(in, actions, out, config, rng)
         obs_stream = identity
         
         (ActionRNNs.DualStreams(action_stream, obs_stream),
-         ActionRNNs.build_rnn_layer(in, internal_a, out, config, rng))
+         ActionRNNs.build_rnn_layer(in, internal_a, nh, config, rng))
 
     else
         (ActionRNNs.build_rnn_layer(in, actions, nh, config, rng),)
