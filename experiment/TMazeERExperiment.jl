@@ -5,9 +5,13 @@ import JLD2
 
 import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
 import ActionRNNs: ActionRNNs, TMaze, ExpUtils, DRQNAgent
+import ActionRNNs: @data
 
-import .ExpUtils: experiment_wrapper, TMazeUtils, FluxUtils
+import .ExpUtils: experiment_wrapper, TMazeUtils, FluxUtils, Macros
 import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad
+import .Macros: @info_str, @generate_config_funcs
+
+import Logging: with_logger
 
 using Statistics
 using Random
@@ -114,8 +118,7 @@ function build_ann(config, in, actions::Int, rng)
     nh = config["numhidden"]
     init_func, initb = ActionRNNs.get_init_funcs(rng)
 
-
-    deep_action = "deep" ∈ keys ? config["deep"] : get(config, "deepaction", false)
+    deep_action = "deep" ∈ keys(config) ? config["deep"] : get(config, "deepaction", false)
 
     rnn = if deep_action
         
@@ -144,7 +147,7 @@ function build_ann(config, in, actions::Int, rng)
         =#
         
         (ActionRNNs.DualStreams(action_stream, obs_stream),
-         ActionRNNs.build_rnn_layer(internal_o, internal_a, out, parsed, rng))
+         ActionRNNs.build_rnn_layer(config, in, internal_a, nh, rng))
     else
         (ActionRNNs.build_rnn_layer(config, in, actions, nh, rng),)
     end # if deep_action
@@ -156,7 +159,7 @@ end
 
 function construct_agent(env, config, rng)
 
-        #=
+    #=
     Standard feature creator is identity but changes features to Float32. Does not encorporate actions into state.
     =#
     
@@ -228,86 +231,112 @@ end
 Construct direction tmaze using:
 - `size::Int` size of hallway.
 """
-function construct_env(config)
+function construct_env(config, rng=Random.default_rng())
     ActionRNNs.TMaze(config["size"])
 end
 
 Macros.@generate_ann_size_helper
 Macros.@generate_working_function
 
-function main_experiment(parsed = default_config(); working=false, progress=false, verbose=false)
+function main_experiment(config;
+                         progress=false,
+                         testing=false,
+                         overwrite=false)
 
-
-    if "numhidden_factors" ∈ keys(parsed)
+    if "numhidden_factors" ∈ keys(config)
         @warn "\"numhidden_factors\" no longer supported. Use Reproduce utilities."
-        parsed["numhidden"] = parsed["numhidden_factors"][1]
-        parsed["factors"] = parsed["numhidden_factors"][2]
+        config["numhidden"] = config["numhidden_factors"][1]
+        config["factors"] = config["numhidden_factors"][2]
     end
 
-    experiment_wrapper(parsed, working) do parsed
+    experiment_wrapper(config; use_git_info=false, testing=testing, overwrite=overwrite) do config
+        
 
-        num_steps = parsed["steps"]
+        num_steps = config["steps"]
 
-        seed = parsed["seed"]
+        seed = config["seed"]
         rng = Random.MersenneTwister(seed)
         
-        env = construct_env(parsed)
-        agent = construct_agent(env, parsed, rng)
+        # env = construct_env(config)
+        # agent = construct_agent(env, config, rng)
 
+        extras = union(get(config, "log_extras", []), get(config, "save_extras", []))
+        extra_proc = [c isa AbstractArray ? (Symbol(c[1]), Symbol(c[2])) : Symbol(c) for c in extras]
+        data, logger = ExpUtils.construct_logger(extra_groups_and_names=extra_proc)
 
-        logger = SimpleLogger(
-            (:total_rews, :losses, :successes, :total_steps, :l1),
-            (Float32, Float32, Bool, Int, Float32),
-            Dict(
-                :total_rews => (rew, steps, success, usa) -> rew,
-                :losses => (rew, steps, success, usa) -> usa[:loss]/steps,
-                :successes => (rew, steps, success, usa) -> success,
-                :total_steps => (rew, steps, success, usa) -> steps,
-                :l1 => (rew, steps, success, usa) -> usa[:l1]/steps
-            )
-        )
-
-        mean_loss = 1.0f0
-        
-        prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
-        eps = 1
-        while sum(logger.data.total_steps) <= num_steps
-            usa = UpdateStateAnalysis(
-                (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
-                Dict(
-                    :l1 => l1_grad,
-                    :loss => (s, us) -> s + us.loss,
-                    :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
-                ))
-            success = false
-            max_episode_steps = min(max((num_steps - sum(logger[:total_steps])), 2), 10000)
-            n = 0
-            total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
-                if progress
-                    pr_suc = if length(logger.data.successes) <= 1000
-                        mean(logger.data.successes)
-                    else
-                        mean(logger.data.successes[end-1000:end])
-                    end
-                    next!(prg_bar, showvalues=[(:episode, eps),
-                                               (:successes, pr_suc),
-                                               (:loss, usa[:avg_loss]),
-                                               (:l1, usa[:l1]/n),
-                                               (:action, a.action),
-                                               (:preds, a.preds)])
-                                            #    (:grad, a.update_state isa Nothing ? 0.0f0 : sum(a.update_state.grads[agent.model[1].cell.Wh]))])
-                end
-                success = success || (r == 4.0)
-                if !(a.update_state isa Nothing)
-                    usa(a.update_state)
-                end
-                n+=1
-            end
-            logger(total_rew, steps, success, usa)
-            eps += 1
+        with_logger(logger) do
+            env = construct_env(config)
+            agent = construct_agent(env, config, rng)
+            
+            experiment_loop(env, agent, num_steps, data, rng, progress=progress)
+            
+            @data EXPExtra env
+            @data EXPExtra agent
         end
-        save_results = logger.data
-        (;save_results = save_results)
+
+        
+        save_results = ExpUtils.prep_save_results(data, get(config, "save_extras", []))
+        (;save_results = save_results, data=data)
+        # save_results = logger.data
+        # (;save_results = save_results)
+    end
+end
+
+function experiment_loop(env, agent, num_steps, data, rng; progress=false)
+
+    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
+    generate_showvalues(eps, usa, a, n) = () -> begin
+        pr_suc = if (:EXP ∈ keys(data)) && (:successes ∈ keys(data[:EXP]))
+            if (length(data[:EXP][:successes]) <= 1000)
+                mean(data[:EXP][:successes])
+            else
+                mean(data[:EXP][:successes][end-1000:end])
+            end
+        end
+        [(:episode, eps),
+         (:successes, pr_suc),
+         (:loss, usa[:avg_loss]),
+         (:l1, usa[:l1]/n),
+         (:action, a.action),
+         (:preds, a.preds)]
+    end
+    
+    eps = 1
+    total_steps = 0
+    while total_steps <= num_steps
+        usa = UpdateStateAnalysis(
+            (l1 = 0.0f0, loss = 0.0f0, avg_loss = 1.0f0),
+            Dict(
+                :l1 => l1_grad,
+                :loss => (s, us) -> s + us.loss,
+                :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
+            ))
+        success = false
+
+        max_episode_steps = min(max((num_steps - total_steps), 2), 10000)
+        n = 0
+        
+        total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
+            if progress
+                next!(prg_bar, showvalues=generate_showvalues(eps, usa, a, n))
+            end
+            success = success || (r == 4.0)
+            if !(a.update_state isa Nothing)
+                usa(a.update_state)
+            end
+            n+=1
+        end
+        
+        total_steps += steps
+
+        @data EXP total_rews=total_rew
+        @data EXP successes=success
+        @data EXP total_steps=steps
+        
+        @data EXPExtra losses=usa[:loss]/steps
+        @data EXPExtra l1=usa[:l1]/steps
+
+        eps += 1
     end
 end
 
