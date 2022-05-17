@@ -19,16 +19,28 @@ import JLD2
 
 import MinimalRLCore: MinimalRLCore, run_episode!, get_actions
 import ActionRNNs: ActionRNNs, DirectionalTMaze, ExpUtils
+import ActionRNNs: @data
 
 import .ExpUtils: experiment_wrapper, TMazeUtils, FluxUtils, Macros
 import .ExpUtils: SimpleLogger, UpdateStateAnalysis, l1_grad
 import .Macros: @generate_config_funcs
+import .Macros: @info_str, @generate_config_funcs
+
+
+import Logging: with_logger
 
 using Statistics
 using Random
 using ProgressMeter
 using Reproduce
 using Random
+
+import ChoosyDataLoggers
+
+ChoosyDataLoggers.@init
+function __init__()
+    ChoosyDataLoggers.@register
+end
 
 
 const FLU = FluxUtils
@@ -112,6 +124,21 @@ const FLU = FluxUtils
     "target_update_wait"=>1000
 
     "hs_strategy" => "minimize"
+
+    """
+    ```julia
+    julia> MaskedGridWorldERExperiment.working_experiment()
+    ┌ Warning: No arg at "_SAVE". Assume testing in repl.
+    └ @ Reproduce /Users/Matt/.julia/packages/Reproduce/SGO8J/src/exp_util.jl:60
+    Step: 100%|███████████████████████████████████████████| Time: 0:01:45
+      episode:  3032
+      loss:     1.2959449
+      action:   1
+      preds:    Float32[0.36110675, 0.17198458, 0.121491514, 0.23019025]
+    Episode: 100%|████████████████████████████████████████| Time: 0:00:00
+    (save_results = Dict{Symbol, AbstractArray}(:total_rews => Float32[0.5000012, -17.600046, 0.8000009, -22.200064, -10.100018, -8.400011, -5.5, -0.9999976, -6.800005, -10.900021  …  -1.8999968, -24.700073, 2.6999998, -18.100048, -13.800032, 2.3999996, -12.700027, 3.4, -7.799995, -0.1], :total_steps => [36, 217, 33, 263, 142, 125, 96, 51, 109, 150  …  60, 288, 14, 222, 179, 17, 168, 7, 78, 1], :test_total_steps => [20, 69, 26, 51, 2, 3, 316, 71, 68, 41  …  185, 86, 31, 28, 1, 4, 39, 34, 109, 186], :test_total_rews => Float32[2.0999997, -2.799996, 1.5000002, -0.9999976, 3.9, 3.8, -27.500084, -2.9999957, -2.699996, 1.66893f-6  …  -14.400034, -4.499996, 1.0000007, 1.3000004, 4.0, 3.7, 0.20000148, 0.700001, -6.800005, -14.500034]), data = Dict{Symbol, Dict{Symbol, AbstractArray}}(:EXP => Dict(:total_rews => Float32[0.5000012, -17.600046, 0.8000009, -22.200064, -10.100018, -8.400011, -5.5, -0.9999976, -6.800005, -10.900021  …  -1.8999968, -24.700073, 2.6999998, -18.100048, -13.800032, 2.3999996, -12.700027, 3.4, -7.799995, -0.1], :total_steps => [36, 217, 33, 263, 142, 125, 96, 51, 109, 150  …  60, 288, 14, 222, 179, 17, 168, 7, 78, 1], :test_total_steps => [20, 69, 26, 51, 2, 3, 316, 71, 68, 41  …  185, 86, 31, 28, 1, 4, 39, 34, 109, 186], :test_total_rews => Float32[2.0999997, -2.799996, 1.5000002, -0.9999976, 3.9, 3.8, -27.500084, -2.9999957, -2.699996, 1.66893f-6  …  -14.400034, -4.499996, 1.0000007, 1.3000004, 4.0, 3.7, 0.20000148, 0.700001, -6.800005, -14.500034])))
+    ```
+    """
 end
 
 function build_ann(in, actions::Int, config, rng=Random.GLOBAL_RNG)
@@ -119,9 +146,9 @@ function build_ann(in, actions::Int, config, rng=Random.GLOBAL_RNG)
     nh = config["numhidden"]
     init_func, initb = ActionRNNs.get_init_funcs(rng)
 
-    deep_action = get(config, "deepaction", false)
+    deepaction = get(config, "deepaction", false)
     
-    rnn = if deep_action
+    rnn = if deepaction
 
         #=
         If we are using [zhu et al 2018]() style action embeddings
@@ -132,9 +159,11 @@ function build_ann(in, actions::Int, config, rng=Random.GLOBAL_RNG)
         
         internal_a = config["internal_a"]
 
+        layers = get(config, "internal_a_layers", 1)
         action_stream = Flux.Chain(
             (a)->Flux.onehotbatch(a, 1:actions),
             Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
+            (layers > 1 ? (Flux.Dense(internal_a, internal_a, Flux.relu, initW=init_func) for l in 2:layers) : ())...
         )
 
         #=
@@ -148,7 +177,7 @@ function build_ann(in, actions::Int, config, rng=Random.GLOBAL_RNG)
         =#
 
         (ActionRNNs.DualStreams(action_stream, obs_stream),
-         ActionRNNs.build_rnn_layer(internal_o, internal_a, nh, config, rng))
+         ActionRNNs.build_rnn_layer(in, internal_a, nh, config, rng))
     else
         (ActionRNNs.build_rnn_layer(in, actions, nh, config, rng),)
     end # if deep_action
@@ -246,19 +275,33 @@ for info about the default configuration.
 """
 function main_experiment(config = default_config(); progress=false, testing=false, overwrite=false)
 
-    experiment_wrapper(config; use_git_info=false, testing=testing, overwrite=overwrite, hash_exclude_save_dir=true) do config
+    experiment_wrapper(config;
+                       use_git_info=false,
+                       testing=testing,
+                       overwrite=overwrite,
+                       hash_exclude_save_dir=true) do config
+                        
 
-        num_steps = config["steps"]
-
-        # Initialize the RNG seed. use global rngs.
+        # Initialize the default RNG seed. use global rngs.
         seed = config["seed"]
         Random.seed!(seed)
 
-        #=
-        Construct environment and agent
-        =#
-        env = construct_env(config, Random.GLOBAL_RNG)
-        agent = construct_agent(env, config, Random.GLOBAL_RNG)
+        extras = union(get(config, "log_extras", []), get(config, "save_extras", []))
+        extra_proc = [c isa AbstractArray ? (Symbol(c[1]), Symbol(c[2])) : Symbol(c) for c in extras]
+        data, logger = ExpUtils.construct_logger(extra_groups_and_names=extra_proc)
+
+
+        with_logger(logger) do
+
+            #=
+            Construct environment and agent
+            =#
+            env = construct_env(config, Random.default_rng())
+            agent = construct_agent(env, config, Random.default_rng())
+
+            train_loop!(env, agent, config, progress)
+            test_loop!(env, agent, config, progress)
+        end
 
         #=
         Log:
@@ -266,106 +309,115 @@ function main_experiment(config = default_config(); progress=false, testing=fals
         - losses: The average loss for an episode
         - total_step: the number of steps per episode
         =#
-        logger = SimpleLogger(
-            (:total_rews, :total_steps),
-            (Float32, Int),
-            Dict(
-                :total_rews => (rew, steps, usa) -> rew,
-                :total_steps => (rew, steps, usa) -> steps,
-            )
-        )
+        
 
-        prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
-        get_showvalues(eps, logger, usa, a, n) = () -> begin
-            [(:episode, eps),
-             (:loss, usa[:avg_loss]),
-             (:action, a.action),
-             (:preds, a.preds)]
-        end
-
-        #=
-        Start of _actual_ experiment. 
-        =#
-        eps = 1
-        while sum(logger.data.total_steps) <= num_steps
-            usa = UpdateStateAnalysis(
-                (loss = 0.0f0, avg_loss = 1.0f0),
-                Dict(
-                    :loss => (s, us) -> s + us.loss,
-                    :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
-                ))
-
-            max_episode_steps = min(
-                max(num_steps - sum(logger[:total_steps]),
-                    1),
-                10000)
-            n = 0
-            total_rew, steps = run_episode!(env, agent, max_episode_steps) do (s, a, s′, r)
-                if progress
-                    next!(prg_bar, showvalues=get_showvalues(eps, logger, usa, a, n))
-                end
-                if !(a.update_state isa Nothing)
-                    usa(a.update_state)
-                end
-                n+=1
-            end
-
-            #=
-            Log data
-            =#
-            logger(total_rew, steps, usa)
-            eps += 1
-        end
 
         # Test agent:
         # num_test_episodes = get(config, "num_test_episodes", 0)
 
-        ActionRNNs.turn_off_training(agent)
-        
-        test_states = [(x, y) for x in 1:config["width"], y in 1:config["height"]]
-        num_test_episodes = length(test_states)
-        prg_bar = ProgressMeter.Progress(num_test_episodes, "Episode: ")
-        trv = zeros(Float32, num_test_episodes)
-        tsv = zeros(Int, num_test_episodes)
-        
-        for eps in 1:num_test_episodes
-            ts = 0
-            tr = 0.0f0
-            s = MinimalRLCore.start!(env, test_states[eps])
-            agent_ret = MinimalRLCore.start!(agent, s)
-            
-            t = false
-            while (ts < 10000) && !t
 
-                s′, r, t = if agent_ret isa NamedTuple
-                    MinimalRLCore.step!(env, agent_ret.action)
-                else
-                    MinimalRLCore.step!(env, agent_ret)
-                end
 
-                if t
-                    agent_ret = MinimalRLCore.step!(agent, s′, r, t)
-                else
-                    agent_ret = MinimalRLCore.end!(agent, s′, r)
-                end                
-                tr += r
-                ts += 1
-            end
-            trv[eps] = tr
-            tsv[eps] = ts
-            if progress
-                next!(prg_bar)
-            end
-        end
-        
-        save_results = (;logger.data..., test_total_rews=trv, test_total_steps=tsv)
+        save_results = ExpUtils.prep_save_results(data, get(config, "save_extras", []))
+        (;save_results = save_results, data=data)
+        # save_results = (;logger.data..., test_total_rews=trv, test_total_steps=tsv)
 
-        (;save_results = save_results)
+        # (;save_results = save_results)
     end
 end
 
 
+function train_loop!(env, agent, config, progress)
 
+    num_steps = config["steps"]
+    
+    prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
+    get_showvalues(eps, usa, a) = () -> begin
+        [(:episode, eps),
+         (:loss, usa[:avg_loss]),
+         (:action, a.action),
+         (:preds, a.preds)]
+    end
+
+    #=
+    Start of _actual_ experiment. 
+    =#
+    cur_total_steps = 0
+    eps = 1
+    while cur_total_steps <= num_steps
+        usa = UpdateStateAnalysis(
+            (loss = 0.0f0, avg_loss = 1.0f0),
+            Dict(
+                :loss => (s, us) -> s + us.loss,
+                :avg_loss => (s, us) -> 0.99 * s + 0.01 * us.loss
+            ))
+
+        max_episode_steps = min(
+            max(num_steps - cur_total_steps, 1),
+            10000)
+
+        total_rews, total_steps = run_episode!(env, agent, max_episode_steps) do (s, a, s′, r)
+            if progress
+                next!(prg_bar, showvalues=get_showvalues(eps, usa, a))
+            end
+            if !(a.update_state isa Nothing)
+                usa(a.update_state)
+            end
+
+        end
+
+        #=
+        Log data
+        =#
+        @data EXP total_rews
+        @data EXP total_steps
+        @data EXPExtra loss=usa[:loss]
+        @data EXPExtra avg_loss=usa[:avg_loss]
+
+        eps += 1
+        cur_total_steps += total_steps
+    end
+end
+
+function test_loop!(env, agent, config, progress)
+    
+    ActionRNNs.turn_off_training!(agent)
+    
+    test_states = [(x, y) for x in 1:config["width"], y in 1:config["height"]]
+    num_test_episodes = length(test_states)
+    prg_bar = ProgressMeter.Progress(num_test_episodes, "Episode: ")
+    
+    for eps in 1:num_test_episodes
+        ts = 0
+        tr = 0.0f0
+        s = MinimalRLCore.start!(env, test_states[eps])
+        agent_ret = MinimalRLCore.start!(agent, s)
+        
+        t = false
+        while (ts < 10000) && !t
+
+            s′, r, t = if agent_ret isa NamedTuple
+                MinimalRLCore.step!(env, agent_ret.action)
+            else
+                MinimalRLCore.step!(env, agent_ret)
+            end
+
+            if t
+                agent_ret = MinimalRLCore.step!(agent, s′, r, t)
+            else
+                agent_ret = MinimalRLCore.end!(agent, s′, r)
+            end                
+            tr += r
+            ts += 1
+        end
+
+        if progress
+            next!(prg_bar)
+        end
+
+        @data EXP test_total_rews=tr
+        @data EXP test_total_steps=ts
+    end
+end
 
 
 end

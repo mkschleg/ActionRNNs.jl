@@ -131,10 +131,13 @@ function build_ann(config, in, actions::Int, rng)
         
         internal_a = config["internal_a"]
 
+        layers = get(config, "internal_a_layers", 1)
         action_stream = Flux.Chain(
             (a)->Flux.onehotbatch(a, 1:actions),
             Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
+            (layers > 1 ? (Flux.Dense(internal_a, internal_a, Flux.relu, initW=init_func) for l in 2:layers) : ())...
         )
+
 
         #=
         The obs stream will always be the identity function to make comparisons with non-action embeddings fair.

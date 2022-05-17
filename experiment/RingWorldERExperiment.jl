@@ -160,10 +160,12 @@ function build_ann(in, actions, out, config, rng)
         internal_a = config["internal_a"]
     
         init_func, initb = ActionRNNs.get_init_funcs(rng)
-        
+
+        layers = get(config, "internal_a_layers", 1)
         action_stream = Flux.Chain(
             (a)->Flux.onehotbatch(a, 1:actions),
             Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
+            (layers > 1 ? (Flux.Dense(internal_a, internal_a, Flux.relu, initW=init_func) for l in 2:layers) : ())...
         )
 
         obs_stream = identity
