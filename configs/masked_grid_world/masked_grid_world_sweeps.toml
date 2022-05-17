@@ -1,0 +1,45 @@
+info="""
+This experiment is designed to be a baseline for the masked gridworld experiment. This
+will get baseline performance for the RNN architectures, and give us the ability to start
+making decisions about anscillary parameters.
+"""
+
+[config]
+save_backend="mysql" # mysql only database backend supported
+database="mkschleg_masked_gw_sweeps" # Database name
+save_dir="masked_gw_sweeps" # Directory name for exceptions, settings, and more!
+exp_file = "experiment/MaskedGridWorldERExperiment.jl"
+exp_module_name = "MaskedGridWorldERExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iter"
+
+[static_args]
+steps = 500000
+
+width = 25 # default to 25
+height = 25 # default to 25
+num_goals = 1
+goal_rew = 4.0
+
+deepaction = false
+
+opt = "RMSProp"
+rho = 0.99
+
+warm_up = 1000
+lupdate_agg = "SUM"
+update_wait = 4
+hs_strategy = "minimize"
+target_update_wait = 1000
+
+batch_size=16
+replay_size=50000
+gamma=0.99
+
+[sweep_args]
+# Put args to sweep over here.
+seed = "1:10"
+"cell+numhidden" = [["MARNN", 5], ["AARNN", 10], ["RNN", 12], ["MAGRU", 5], ["AAGRU", 10], ["GRU", 12]]
+truncation = [1, 8, 16, 32]
+"width+height+num_anchors" = [[25, 25, 10], [25, 25, 25], [50, 50, 25]]
+eta = "0.01*(2.0.^(-11:2:2))"
