@@ -2,7 +2,7 @@
 save_backend="mysql" # mysql only database backend supported
 database="mkschleg_ringworld_er_deep_a_v2"
 save_dir="ringworld_er_deep_a_v2"
-exp_file="experiment/RingworldERExperiment.jl"
+exp_file="experiment/RingWorldERExperiment.jl"
 exp_module_name = "RingWorldERExperiment"
 exp_func_name = "main_experiment"
 arg_iter_type = "iterV2"
