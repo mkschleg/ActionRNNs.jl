@@ -26,7 +26,7 @@ hs_learnable = true
 deepaction = true
 
 [sweep_args]
-"cell+numhidden" = [["MAGRU", 6], ["AAGRU", 6], ["GRU", 6], ["MARNN", 20], ["AARNN", 20], ["RNN", 20]]
+"cell+numhidden" = [["AAGRU", 6], ["AARNN", 20]]
 eta = "0.01*(2.0.^(-11:2:6))"
 truncation = [10]
 internal_a=[2, 4, 8]

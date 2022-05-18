@@ -1,13 +1,13 @@
 info = """
 This experiment is to sweep over the gating network to teset how well the naive active gating
-network performs in a control task.
+network performs in a control task. with 3 layers.
 """
 
 [config]
 save_backend="mysql" # mysql only database backend supported
-database="mkschleg_dirtmaze_moe_gating_network" # Database name
-save_dir="dir_tmaze_er_gating_network_sweep_sql"
-exp_file="experiment/dir_tmaze_er.jl"
+database="mkschleg_dir_tmaze_gating_network_3layer" # Database name
+save_dir="dir_tmaze_er_gating_network_3layer"
+exp_file="experiment/DirectionalTMazeERExperiment.jl"
 exp_module_name = "DirectionalTMazeERExperiment"
 exp_func_name = "main_experiment"
 arg_iter_type = "iterV2"
@@ -25,13 +25,13 @@ hs_learnable = true
 update_wait = 4
 target_update_wait = 1000
 
-gating_network = {name="default", layers=[[10, "relu"], [10, "relu"]]}
+gating_network = {name="default", layers=[[10, "relu"], [10, "relu"], [10, "relu"]]}
 
 [sweep_args]
-"cell+numhidden" = [["AGMoERNN", 18], ["AGMoEGRU", 10]]
+"cell+numhidden" = [["AGMoERNN", 30], ["AGMoERNN", 18]]
 eta = "0.01*(2.0.^(-11:2:2))"
 truncation = [12, 15]
-num_experts = [3, 6, 12, 24]
-replay_size = [10000, 20000]
-gating_network.layers."1*2".1 = [8, 16, 32, 64, 128]
+num_experts = [3, 6]
+replay_size = [10000, 20000, 50000]
+gating_network.layers."1*2*3".1 = [8, 16, 32, 64, 128, 256]
 seed = "1:10"
