@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.17.7
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
@@ -365,9 +365,9 @@ version = "1.2.0"
 
 [[DecFP_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
-git-tree-sha1 = "9982cddeac476ed4ead831baff7b3f9d084579c1"
+git-tree-sha1 = "e9a8da19f847bbfed4076071f6fef8665a30d9e5"
 uuid = "47200ebd-12ce-5be5-abb7-8e082af23329"
-version = "2.0.3+0"
+version = "2.0.3+1"
 
 [[DelimitedFiles]]
 deps = ["Mmap"]

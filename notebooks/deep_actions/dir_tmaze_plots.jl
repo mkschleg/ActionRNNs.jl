@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.1
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
@@ -7,8 +7,9 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
 end
@@ -16,7 +17,7 @@ end
 # ╔═╡ ac8f3d1b-82af-4917-bf1c-d7afc16fc43a
 let
 	import Pkg
-	Pkg.activate("../..")
+	Pkg.activate("..")
 end
 
 # ╔═╡ f7f500a8-a1e9-11eb-009b-d7afdcade891
@@ -96,6 +97,9 @@ md"""
 
 # ╔═╡ 0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
 ic_dir, dd_dir = RPU.load_data(at("dir_tmaze_er_deep_a/"))
+
+# ╔═╡ d4ffd766-2052-4d08-924b-ffc8631e246a
+ic_dir[1].parsed_args
 
 # ╔═╡ cefbb7a2-2a1c-43a2-ba9a-77369f80177d
 ic_dir_deep_final, dd_dir_deep_final = RPU.load_data(at("dir_tmaze_er_deep_a_final/"))
@@ -559,6 +563,7 @@ end
 # ╠═cc4a219d-9118-4c34-93ce-317afc837f6c
 # ╟─1756d1cc-1a88-4442-b55a-fdbb44f56313
 # ╠═0fc6fd35-5a24-4aaf-9ebb-6c4af1ba259b
+# ╠═d4ffd766-2052-4d08-924b-ffc8631e246a
 # ╠═cefbb7a2-2a1c-43a2-ba9a-77369f80177d
 # ╠═c7f9c051-5024-4ff8-a19a-8cad57c05123
 # ╟─6211a38a-7b53-4054-970e-c29ad17de646

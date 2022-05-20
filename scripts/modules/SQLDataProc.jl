@@ -23,8 +23,17 @@ function use_database(conn, database)
     end
 end
 
-function list_databases(conn)
-    DataFrame(DBInterface.execute(conn, "show databases;"))
+function list_databases(conn = nothing)
+    close = false
+    if isnothing(conn)
+        conn = connect()
+        close = true
+    end
+    df = DataFrame(DBInterface.execute(conn, "show databases;"))
+    if close
+        DBInterface.close!(conn)
+    end
+    df
 end
 
 function list_tables(conn)
@@ -33,6 +42,10 @@ end
 
 function get_param_table(conn)
     DataFrame(DBInterface.execute(conn, "select * from params;"))
+end
+
+function get_results_table(conn)
+    DataFrame(DBInterface.execute(conn, "select * from results;"))
 end
 
 function get_tables(conn)
@@ -57,6 +70,42 @@ function proc_vec_data(conn, table, hashes=UInt[]; _pre_name="", kwargs...)
                """
     stmt = DBInterface.prepare(conn, sql_stmt)
     ret = DataFrame(DBInterface.execute(stmt, [hashes[1]]))[!, :data]
+    ret_proc = [(k, f(ret)) for (k, f) in kwargs]
+    get_initial = (x)->if x isa Number
+        zeros(typeof(x), length(hashes))
+    elseif x isa AbstractArray
+        Vector{typeof(x)}(undef, length(hashes))
+    end
+    ret_strg = Dict(
+        r[1]=>get_initial(r[2]) for r in ret_proc
+    )
+
+    @progress for (i, hsh) in enumerate(hashes)
+        curs = DBInterface.execute(stmt, [hsh])
+	data = DataFrame(curs)[!, :data]
+        curs = nothing
+        for (k, f) in kwargs
+            ret_strg[k][i] = f(data)
+        end
+    end
+    DBInterface.close!(stmt)
+    DataFrame(;_HASH=hashes, (Symbol(_pre_name*string(k))=>v for (k, v) in ret_strg)...)
+end
+
+function get_vec_data(proc::Function, conn, table, hashes=UInt[]; _pre_name="", kwargs...)
+
+    if length(hashes) == 0
+        hashes = DataFrame(DBInterface.execute(conn, "select _HASH from params;"))[!, :_HASH]
+    end
+    μ = zeros(Float32, length(hashes))
+    sql_stmt = """select data
+                  from $(table)
+                  WHERE _HASH=?
+                  ORDER BY step;
+               """
+    stmt = DBInterface.prepare(conn, sql_stmt)
+    ret = DataFrame(DBInterface.execute(stmt, [hashes[1]]))[!, :data]
+    
     ret_proc = [(k, f(ret)) for (k, f) in kwargs]
     get_initial = (x)->if x isa Number
         zeros(typeof(x), length(hashes))
@@ -130,14 +179,6 @@ function proc_control_data(database; save=nothing, vector_tables=["stps"=>"resul
             var_end=(d)->end_var(d, 100),
             cnt_end=(d)->end_count(d, 100)) for (vt_n, vt) in vector_tables]
 
-    # results_rews = SQLDataProc.proc_vec_data(
-    #     conn,
-    #     "results_total_rews";
-    #     _pre_name="rews_",
-    #     avg=(d)->mean(d),
-    #     var=(d)->var(d),
-    #     avg_end=(d)->end_mean(d, 100),
-    #     var_end=(d)->end_var(d, 100))
 
     DBInterface.close!(conn)
     params_and_results = DataFrames.innerjoin(params, results..., on=:_HASH)
@@ -149,10 +190,26 @@ function proc_control_data(database; save=nothing, vector_tables=["stps"=>"resul
     params_and_results
 end
 
-function proc_pred_data(database; save=nothing)
+function proc_data(database, vec_tables, non_vec_tables, save=nothing)
     conn = connect(database)
     params = get_param_table(conn)
-    results = get_results_table
+    results = get_results_table(conn)
+
+    # vector_tables = ["lc"=>"results_lc"] #, "var"=>"results_var"]
+    
+    # # proc_vec_data
+    # results = [
+    #     SQLDataProc.proc_vec_data(
+    #         db_conn,
+    #         vt;
+    #         _pre_name=vt_n * "_",
+    #         identity=(d)->Float32.(d)) for (vt_n, vt) in vector_tables]
+    # res_numbers = DataFrame(DBInterface.execute(db_conn, "SELECT _HASH, avg_all, avg_end from results order by _HASH"))
+
+    # mid = DataFrames.innerjoin(params, res_numbers, results..., on=:_HASH)
+    # params_and_results = SQLDataProc.simplify_dataframe((d)->[collect(d)], mid)
+    
+    
     # SQLDataProc.proc_vec_data()
     
     DBInterface.close!(conn)

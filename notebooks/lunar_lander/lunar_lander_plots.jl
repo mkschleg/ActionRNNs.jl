@@ -1,14 +1,23 @@
 ### A Pluto.jl notebook ###
-# v0.14.2
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
+
+# ╔═╡ ca083fbd-7625-4cf6-9064-f98a486433ad
+let
+	import Pkg
+	Pkg.activate("..")
+end
 
 # ╔═╡ f7f500a8-a1e9-11eb-009b-d7afdcade891
 using Revise
 
 # ╔═╡ e0d51e67-63dc-45ea-9092-9965f97660b3
 using Reproduce, ReproducePlotUtils, StatsPlots, RollingFunctions, Statistics, FileIO, PlutoUI, Pluto
+
+# ╔═╡ 62c28887-331d-4e53-865d-8e71685c9e91
+at(dir) = joinpath("../../local_data/lunar_lander/", dir) # was ../local_data/LL_relu/
 
 # ╔═╡ 6a65de2a-2af7-4da5-9f14-d18623b3235b
 const RPU = ReproducePlotUtils
@@ -59,12 +68,12 @@ cell_colors = Dict(
 
 # ╔═╡ 50734263-f616-4793-a580-7aa0f7a29223
 begin
-	ic_dir_os6_sc2_gru_4M_relu, dd_dir_os6_sc2_gru_4M_relu = RPU.load_data("../local_data/LL_relu/lunar_lander_er_relu_rmsprop_os6_sc2_gru_4M/")
-	ic_dir_os6_sc2_aagru_4M_relu, dd_dir_os6_sc2_aagru_4M_relu = RPU.load_data("../local_data/LL_relu/lunar_lander_er_relu_rmsprop_os6_sc2_aagru_4M/")
-	ic_dir_os6_sc2_magru_4M_relu, dd_dir_os6_sc2_magru_4M_relu = RPU.load_data("../local_data/LL_relu/lunar_lander_er_relu_rmsprop_os6_sc2_magru_4M/")
-	ic_dir_os6_sc2_facmagru152_4M_relu, dd_dir_os6_sc2_facmagru152_4M_relu = RPU.load_data("../local_data/LL_relu/lunar_lander_er_relu_rmsprop_os6_sc2_facmagru152_4M/")
-	ic_dir_os6_sc2_facmagru100_4M_relu, dd_dir_os6_sc2_facmagru100_4M_relu = RPU.load_data("../local_data/LL_relu/lunar_lander_er_relu_rmsprop_os6_sc2_facmagru100_4M/")
-	ic_dir_os6_sc2_facmagru64_4M_relu, dd_dir_os6_sc2_facmagru64_4M_relu = RPU.load_data("../local_data/LL_relu/lunar_lander_er_relu_rmsprop_os6_sc2_facmagru64_4M/")
+	ic_dir_os6_sc2_gru_4M_relu, dd_dir_os6_sc2_gru_4M_relu = RPU.load_data(at("lunar_lander_er_relu_rmsprop_os6_sc2_gru_4M/"))
+	ic_dir_os6_sc2_aagru_4M_relu, dd_dir_os6_sc2_aagru_4M_relu = RPU.load_data(at("lunar_lander_er_relu_rmsprop_os6_sc2_aagru_4M/"))
+	ic_dir_os6_sc2_magru_4M_relu, dd_dir_os6_sc2_magru_4M_relu = RPU.load_data(at("lunar_lander_er_relu_rmsprop_os6_sc2_magru_4M/"))
+	ic_dir_os6_sc2_facmagru152_4M_relu, dd_dir_os6_sc2_facmagru152_4M_relu = RPU.load_data(at("lunar_lander_er_relu_rmsprop_os6_sc2_facmagru152_4M/"))
+	ic_dir_os6_sc2_facmagru100_4M_relu, dd_dir_os6_sc2_facmagru100_4M_relu = RPU.load_data(at("lunar_lander_er_relu_rmsprop_os6_sc2_facmagru100_4M/"))
+	ic_dir_os6_sc2_facmagru64_4M_relu, dd_dir_os6_sc2_facmagru64_4M_relu = RPU.load_data(at("lunar_lander_er_relu_rmsprop_os6_sc2_facmagru64_4M/"))
 end
 
 # ╔═╡ a3370aae-bd38-42d6-8653-ba4299903c71
@@ -75,12 +84,17 @@ end
 
 # ╔═╡ b5a22572-cc8f-4159-8f8f-246bd28d4053
 begin
-	ic_dir_os6_sc2_gru_4M_relu_final, dd_dir_os6_sc2_gru_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_gru_4M/")
-	ic_dir_os6_sc2_aagru_4M_relu_final, dd_dir_os6_sc2_aagru_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_aagru_4M/")
-	ic_dir_os6_sc2_magru_4M_relu_final, dd_dir_os6_sc2_magru_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_magru_4M/")
-	ic_dir_os6_sc2_facmagru152_4M_relu_final, dd_dir_os6_sc2_facmagru152_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru152_4M/")
-	ic_dir_os6_sc2_facmagru100_4M_relu_final, dd_dir_os6_sc2_facmagru100_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru100_4M/")
-	ic_dir_os6_sc2_facmagru64_4M_relu_final, dd_dir_os6_sc2_facmagru64_4M_relu_final = RPU.load_data("../local_data/LL_final/final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru64_4M/")
+	ic_dir_os6_sc2_gru_4M_relu_final, dd_dir_os6_sc2_gru_4M_relu_final = RPU.load_data(at("final_lunar_lander_er_relu_rmsprop_os6_sc2_gru_4M/"))
+	
+	ic_dir_os6_sc2_aagru_4M_relu_final, dd_dir_os6_sc2_aagru_4M_relu_final = RPU.load_data(at("final_lunar_lander_er_relu_rmsprop_os6_sc2_aagru_4M/"))
+	
+	ic_dir_os6_sc2_magru_4M_relu_final, dd_dir_os6_sc2_magru_4M_relu_final = RPU.load_data(at("final_lunar_lander_er_relu_rmsprop_os6_sc2_magru_4M/"))
+	
+	ic_dir_os6_sc2_facmagru152_4M_relu_final, dd_dir_os6_sc2_facmagru152_4M_relu_final = RPU.load_data(at("final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru152_4M/"))
+	
+	ic_dir_os6_sc2_facmagru100_4M_relu_final, dd_dir_os6_sc2_facmagru100_4M_relu_final = RPU.load_data(at("final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru100_4M/"))
+	
+	ic_dir_os6_sc2_facmagru64_4M_relu_final, dd_dir_os6_sc2_facmagru64_4M_relu_final = RPU.load_data(at("final_lunar_lander_er_relu_rmsprop_os6_sc2_facmagru64_4M/"))
 end
 
 # ╔═╡ 4acf4ecb-9959-4602-b23e-0bd4ef0f4e87
@@ -933,8 +947,10 @@ let
 end
 
 # ╔═╡ Cell order:
+# ╠═ca083fbd-7625-4cf6-9064-f98a486433ad
 # ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
 # ╠═e0d51e67-63dc-45ea-9092-9965f97660b3
+# ╠═62c28887-331d-4e53-865d-8e71685c9e91
 # ╠═6a65de2a-2af7-4da5-9f14-d18623b3235b
 # ╠═0c746c1e-ea39-4415-a1b1-d7124b886f98
 # ╠═1886bf05-f4be-4160-b61c-edf186a7f3cb

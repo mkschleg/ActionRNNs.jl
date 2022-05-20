@@ -1,8 +1,14 @@
 ### A Pluto.jl notebook ###
-# v0.14.8
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
+
+# ╔═╡ 7525a21d-d7b4-4799-baaa-87fe30a1307d
+let
+	import Pkg
+	Pkg.activate(".")
+end
 
 # ╔═╡ 936c3912-bca1-11eb-3195-47018b99d2ce
 using Revise
@@ -279,10 +285,16 @@ end
 # ╔═╡ e94b8cf0-30ab-46ba-bdab-34d8ac36ae1f
 begin
 	ic_final, dd_final = 
-		RPU.load_data("../local_data/final_image_dir_tmaze_adam_6/")
+		RPU.load_data(at("final_image_dir_tmaze_adam_6/"))
 	ic_fac_final, dd_fac_final = 
-		RPU.load_data("../local_data/final_image_fac_dir_tmaze_adam_6/")
+		RPU.load_data(at("final_image_fac_dir_tmaze_adam_6/"))
 end
+
+# ╔═╡ 9441e2ee-8d19-4128-bf39-098e81cf792b
+final_run_args = FileIO.load("../final_runs/viz_dir_tmaze.jld2")
+
+# ╔═╡ 43f20292-f128-471e-88ec-5ebcb429edb6
+length(ic_final)
 
 # ╔═╡ e98a6bce-649f-4eb0-9986-0fd47c53c08f
 ic_final[1].parsed_args
@@ -398,6 +410,7 @@ let
 end
 
 # ╔═╡ Cell order:
+# ╠═7525a21d-d7b4-4799-baaa-87fe30a1307d
 # ╠═936c3912-bca1-11eb-3195-47018b99d2ce
 # ╠═cef11852-f81b-47db-ba65-7bc097493c70
 # ╠═98ec85a9-1f76-46d3-8c86-6fed39cffc57
@@ -422,6 +435,8 @@ end
 # ╠═8cbbc5fe-0daa-4168-85fa-2a4beab15240
 # ╠═84d7b94a-18da-4176-87ba-4962ea3a06da
 # ╠═e94b8cf0-30ab-46ba-bdab-34d8ac36ae1f
+# ╠═9441e2ee-8d19-4128-bf39-098e81cf792b
+# ╠═43f20292-f128-471e-88ec-5ebcb429edb6
 # ╠═e98a6bce-649f-4eb0-9986-0fd47c53c08f
 # ╠═54d147f2-0574-4f45-a230-073264c87093
 # ╠═0c988e39-6731-4849-9df7-bf3479e7a2c0
