@@ -7,6 +7,10 @@ function additive_rnn_inner(X::Tuple, h, σ, Wi, Wa, Wh, b)
     σ.(Wi*o .+ get_waa(Wa, a) .+ Wh*h .+ b)
 end
 
+additive_rnn_inner(X::Tuple, h, Wi, Wa, Wh, b) =
+    additive_rnn_inner(X::Tuple, h, identity, Wi, Wa, Wh, b)
+
+
 
 struct MixRNNCell{F,A,V,S} <: AbstractActionRNN
     σ::F

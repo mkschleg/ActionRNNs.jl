@@ -160,16 +160,18 @@ function build_ann(in, actions, out, config, rng)
         internal_a = config["internal_a"]
     
         init_func, initb = ActionRNNs.get_init_funcs(rng)
-        
+
+        layers = get(config, "internal_a_layers", 1)
         action_stream = Flux.Chain(
             (a)->Flux.onehotbatch(a, 1:actions),
             Flux.Dense(actions, internal_a, Flux.relu, initW=init_func),
+            (layers > 1 ? (Flux.Dense(internal_a, internal_a, Flux.relu, initW=init_func) for l in 2:layers) : ())...
         )
 
         obs_stream = identity
         
         (ActionRNNs.DualStreams(action_stream, obs_stream),
-         ActionRNNs.build_rnn_layer(in, internal_a, out, config, rng))
+         ActionRNNs.build_rnn_layer(in, internal_a, nh, config, rng))
 
     else
         (ActionRNNs.build_rnn_layer(in, actions, nh, config, rng),)
@@ -212,7 +214,7 @@ function construct_agent(env, config, rng)
 
 end
 
-function construct_env(config)
+function construct_env(config, rng=Random.default_rng())
     RingWorld(config["size"])
 end
 

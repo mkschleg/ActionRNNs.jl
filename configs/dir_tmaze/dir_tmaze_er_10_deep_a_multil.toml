@@ -1,7 +1,7 @@
 [config]
 save_backend="mysql" # mysql only database backend supported
-database="mkschleg_dir_tmaze_er_10_deep_action" # Database name
-save_dir="dir_tmaze_er_10_deep_action"
+database="mkschleg_dir_tmaze_er_10_deep_action_multil" # Database name
+save_dir="dir_tmaze_er_10_deep_action_multil"
 exp_file="experiment/DirectionalTMazeERExperiment.jl"
 exp_module_name = "DirectionalTMazeERExperiment"
 exp_func_name = "main_experiment"
@@ -25,6 +25,7 @@ deepaction = true
 
 [sweep_args]
 "cell+numhidden+internal_a" = [["AARNN", 18, 36], ["AARNN", 25, 15], ["AARNN", 30, 3], ["AAGRU", 10, 25], ["AAGRU", 15, 8], ["AAGRU", 17, 3]]
+interanl_a_layers = [1, 2, 4]
 replay_size = [10000, 20000]
 eta = "0.01*(2.0.^(-11:2:2))"
 truncation = [12]

@@ -24,8 +24,9 @@ target_update_wait = 1000
 deepaction = true
 
 [sweep_args]
-"cell+numhidden+internal_a" = [["AARNN", 18, 36], ["AARNN", 25, 15], ["AARNN", 30, 3], ["AAGRU", 10, 25], ["AAGRU", 15, 8], ["AAGRU", 17, 3]]
+"cell+numhidden+internal_a" = [["AARNN", 18], ["AARNN", 30], ["AAGRU", 10], ["AAGRU", 17]]
+internal_a=[3]
 replay_size = [10000, 20000]
-eta = "0.01*(2.0.^(-11:2:2))"
+eta = "0.01*(2.0.^(-11:2:0))"
 truncation = [12]
 seed = "1:20"

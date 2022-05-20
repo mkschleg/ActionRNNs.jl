@@ -90,10 +90,10 @@ training_mode(agent::AbstractERAgent) = true
 
 sets training mode to boolean value
 """
-set_training_mode(agent::AbstractERAgent, mode) = @error "$(typeof(agent)) doesn't have `set_training_mode` implemented."
+set_training_mode!(agent::AbstractERAgent, mode) = @error "$(typeof(agent)) doesn't have `set_training_mode` implemented."
 
-turn_on_training(agent::AbstractERAgent) = set_training_mode(agent, true)
-turn_off_training(agent::AbstractERAgent) = set_training_mode(agent, false)
+turn_on_training!(agent::AbstractERAgent) = set_training_mode!(agent, true)
+turn_off_training!(agent::AbstractERAgent) = set_training_mode!(agent, false)
 
 
 """

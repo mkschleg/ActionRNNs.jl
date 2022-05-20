@@ -1,6 +1,6 @@
 info = """
 This experiment is to sweep over the gating network to teset how well the naive active gating
-network performs in a control task.
+network performs in a control task. Part 2
 """
 
 [config]
@@ -32,6 +32,6 @@ gating_network = {name="default", layers=[[10, "relu"], [10, "relu"]]}
 eta = "0.01*(2.0.^(-11:2:2))"
 truncation = [12, 15]
 num_experts = [3, 6, 12, 24]
-replay_size = [10000, 20000]
+replay_size = [50000]
 gating_network.layers."1*2".1 = [8, 16, 32, 64, 128]
 seed = "1:10"
