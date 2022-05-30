@@ -29,7 +29,8 @@ gating_network = {name="default", layers=[[10, "relu"], [10, "relu"]]}
 [sweep_args]
 cell = ["AGMoERNN"]
 numhidden = [6, 10]
+num_experts = [3, 6, 12, 24]
 gating_network.layers."1*2".1 = [8, 16, 32, 64]
-eta = "0.01*(2.0.^(-13:-2))"
-truncation = [8, 10, 16]
+eta = "0.01*(2.0.^(-13:2:0))"
+truncation = [8, 10, 12]
 seed = "1:20"
