@@ -16,8 +16,8 @@ arg_iter_type = "iter"
 [static_args]
 steps = 500000
 
-width = 25 # default to 25
-height = 25 # default to 25
+# width = 25 # default to 25
+# height = 25 # default to 25
 num_goals = 1
 goal_rew = 4.0
 
@@ -33,13 +33,14 @@ hs_strategy = "minimize"
 target_update_wait = 1000
 
 batch_size=16
-replay_size=50000
+# replay_size=50000
 gamma=0.99
 
 [sweep_args]
 # Put args to sweep over here.
-seed = "1:10"
+seed = "1:20"
+replay_size=[20000, 50000]
 "cell+numhidden" = [["MARNN", 5], ["AARNN", 10], ["RNN", 12], ["MAGRU", 5], ["AAGRU", 10], ["GRU", 12]]
 truncation = [1, 8, 16, 32]
 "width+height+num_anchors" = [[25, 25, 10], [25, 25, 25], [50, 50, 25]]
-eta = "0.01*(2.0.^(-11:2:2))"
+eta = "0.01*(2.0.^(-13:-6))"
