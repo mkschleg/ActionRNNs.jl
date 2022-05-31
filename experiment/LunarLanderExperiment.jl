@@ -178,9 +178,9 @@ function main_experiment(parsed = default_config(); progress=false, testing=fals
         while sum(logger.data.total_steps) <= num_steps
             if sum(logger.data.total_steps) > checkpoint * 500000
                 # ExpUtils.save_results("$(data_dir)/results.jld2", logger.data)
-                d = copy(logger.data)
-                d["steps"] = checkpoint*500000
-                Reproduce.save_results(parsed["_SAVE"], save_setup_ret, d)
+                # d = copy(logger.data)
+                # d["steps"] = checkpoint*500000
+                Reproduce.save_results(parsed["_SAVE"], save_setup_ret, logger.data)
 
                 GC.gc()
                 checkpoint += 1
