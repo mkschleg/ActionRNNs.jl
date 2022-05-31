@@ -19,6 +19,8 @@ using Random
 using ProgressMeter
 using Reproduce
 using Random
+
+import LinearAlgebra: BLAS
 #=
 Time: 0:01:08
   episode:     100
@@ -120,7 +122,7 @@ function construct_agent(env, parsed, rng)
     ActionRNNs.DRQNAgent(chain,
                          opt,
                          τ,
-                         γ,
+                         ActionRNNs.QLearningSUM(γ),
                          fc,
                          fs,
                          3,
@@ -133,11 +135,19 @@ function construct_agent(env, parsed, rng)
                          parsed["hs_learnable"])
 end
 
-function main_experiment(parsed = default_config(); working=false, progress=false, verbose=false)
+function main_experiment(parsed = default_config(); progress=false, testing=false, overwrite=false)
 
     GC.gc()
 
-    ll_experiment_wrapper(parsed, working) do parsed, data_dir
+    if "SLURM_CPUS_PER_TASK" ∈ keys(ENV)
+        avail_cores = parse(Int, ENV["SLURM_CPUS_PER_TASK"])
+        BLAS.set_num_threads(avail_cores)
+    elseif "ARNN_CPUS_PER_TASK" ∈ keys(ENV)
+        avail_cores = parse(Int, ENV["ARNN_CPUS_PER_TASK"])
+        BLAS.set_num_threads(avail_cores)
+    end
+
+    ll_experiment_wrapper(parsed; use_git_info=false, testing=testing, overwrite=overwrite) do parsed, save_setup_ret
 
         num_steps = parsed["steps"]
 
@@ -167,7 +177,10 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
         checkpoint = 1
         while sum(logger.data.total_steps) <= num_steps
             if sum(logger.data.total_steps) > checkpoint * 500000
-                ExpUtils.save_results("$(data_dir)/results.jld2", logger.data)
+                # ExpUtils.save_results("$(data_dir)/results.jld2", logger.data)
+                d = copy(logger.data)
+                d["steps"] = checkpoint*500000
+                Reproduce.save_results(parsed["_SAVE"], save_setup_ret, d)
 
                 GC.gc()
                 checkpoint += 1
@@ -218,23 +231,73 @@ function main_experiment(parsed = default_config(); working=false, progress=fals
     end
 end
 
-function ll_experiment_wrapper(exp_func::Function, parsed, working; overwrite=false)
-    savefile = ExpUtils.save_setup(parsed)
-    if isfile(savefile) && ActionRNNs.check_save_file_loadable(savefile) && !overwrite
-        return
+# function ll_experiment_wrapper(exp_func::Function, parsed, working; overwrite=false)
+#     savefile = ExpUtils.save_setup(parsed)
+#     if isfile(savefile) && ActionRNNs.check_save_file_loadable(savefile) && !overwrite
+#         return
+#     end
+
+#     data_dir = rsplit(savefile, "/"; limit=2)
+#     ret = exp_func(parsed, data_dir[1])
+
+#     if working
+#         ret
+#     elseif ret isa NamedTuple
+#         ExpUtils.save_results(savefile, ret.save_results)
+#     else
+#         ExpUtils.save_results(savefile, ret)
+#     end
+# end
+
+function ll_experiment_wrapper(exp_func::Function, parsed;
+                               filter_keys=String[],
+                               use_git_info=true,
+                               hash_exclude_save_dir=true,
+                               testing=false,
+                               overwrite=false)
+
+    SAVE_KEY = Reproduce.SAVE_KEY
+    save_setup_ret = if SAVE_KEY ∉ keys(parsed)
+        if isinteractive() 
+            @warn "No arg at \"$(SAVE_KEY)\". Assume testing in repl." maxlog=1
+            parsed[SAVE_KEY] = nothing
+        elseif testing
+            @warn "No arg at \"$(SAVE_KEY)\". Testing Flag Set." maxlog=1
+            parsed[SAVE_KEY] = nothing
+        else
+            @error "No arg found at $(SAVE_KEY). Please use savetypes here."
+        end
+        nothing
+    else
+        save_setup_ret = Reproduce.save_setup(parsed;
+                                    filter_keys=filter_keys,
+                                    use_git_info=use_git_info,
+                                    hash_exclude_save_dir=hash_exclude_save_dir)
+        
+        if Reproduce.check_experiment_done(parsed, save_setup_ret) && !overwrite
+            Reproduce.post_save_setup(parsed[SAVE_KEY])
+            return
+        end
+        save_setup_ret
     end
 
-    data_dir = rsplit(savefile, "/"; limit=2)
-    ret = exp_func(parsed, data_dir[1])
+    Reproduce.post_save_setup(parsed[SAVE_KEY])
 
-    if working
-        ret
-    elseif ret isa NamedTuple
-        ExpUtils.save_results(savefile, ret.save_results)
+    ret = exp_func(parsed, save_setup_ret)
+
+    if ret isa NamedTuple
+        Reproduce.save_results(parsed[SAVE_KEY], save_setup_ret, ret.save_results)
     else
-        ExpUtils.save_results(savefile, ret)
+        Reproduce.save_results(parsed[SAVE_KEY], save_setup_ret, ret)
+    end
+    
+    Reproduce.post_save_results(parsed[SAVE_KEY])
+    
+    if isinteractive() || testing
+        ret
     end
 end
+
 
 
 end
