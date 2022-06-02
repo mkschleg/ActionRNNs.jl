@@ -177,11 +177,8 @@ function main_experiment(parsed = default_config(); progress=false, testing=fals
         checkpoint = 1
         while sum(logger.data.total_steps) <= num_steps
             if sum(logger.data.total_steps) > checkpoint * 500000
-                # ExpUtils.save_results("$(data_dir)/results.jld2", logger.data)
-                # d = copy(logger.data)
-                # d["steps"] = checkpoint*500000
-                Reproduce.save_results(parsed["_SAVE"], save_setup_ret, logger.data)
-
+                data_dir = dirname(save_setup_ret)
+                Reproduce.save_results(parsed["_SAVE"], joinpath(data_dir, "results_temp.jld2"), logger.data)
                 GC.gc()
                 checkpoint += 1
             end
@@ -231,23 +228,6 @@ function main_experiment(parsed = default_config(); progress=false, testing=fals
     end
 end
 
-# function ll_experiment_wrapper(exp_func::Function, parsed, working; overwrite=false)
-#     savefile = ExpUtils.save_setup(parsed)
-#     if isfile(savefile) && ActionRNNs.check_save_file_loadable(savefile) && !overwrite
-#         return
-#     end
-
-#     data_dir = rsplit(savefile, "/"; limit=2)
-#     ret = exp_func(parsed, data_dir[1])
-
-#     if working
-#         ret
-#     elseif ret isa NamedTuple
-#         ExpUtils.save_results(savefile, ret.save_results)
-#     else
-#         ExpUtils.save_results(savefile, ret)
-#     end
-# end
 
 function ll_experiment_wrapper(exp_func::Function, parsed;
                                filter_keys=String[],
