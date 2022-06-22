@@ -24,6 +24,33 @@ end
 # ╔═╡ c5d81212-8033-4a30-b9c8-610c82e54308
 using StatsPlots
 
+# ╔═╡ f729b5ac-39a6-455c-8a47-4a132fd21782
+color_scheme = [
+    colorant"#44AA99",
+    colorant"#332288",
+    colorant"#DDCC77",
+    colorant"#999933",
+    colorant"#CC6677",
+    colorant"#AA4499",
+    colorant"#DDDDDD",
+	colorant"#117733",
+	colorant"#882255",
+	colorant"#1E90FF",
+]
+
+# ╔═╡ 5c6940a9-b587-47de-927e-db9808114442
+cell_colors = Dict(
+	"RNN" => color_scheme[3],
+	"AARNN" => color_scheme[end],
+	"MARNN" => color_scheme[5],
+	"FacMARNN" => color_scheme[1],
+	"DAARNN" => color_scheme[7],
+	"GRU" => color_scheme[4],
+	"AAGRU" => color_scheme[2],
+	"MAGRU" => color_scheme[6],
+	"FacMAGRU" => color_scheme[end-2], 
+	"DAAGRU" => color_scheme[9],)
+
 # ╔═╡ 1c946d75-e7bd-4b40-8068-d287b5043d71
 function local_ingredients(path::String)
 	# this is from the Julia source code (evalfile in base/loading.jl)
@@ -66,11 +93,11 @@ at(dir) = joinpath("../../local_data/masked_gw/", dir)
 readdir(at(s_dir))
 
 # ╔═╡ 8a7989fb-063b-46dc-af95-b0ef5d293496
-df = FileIO.load(at("masked_gw_sweeps/2022_05_19_proc_data.jld2"))["params_and_results"]
+df = FileIO.load(at("masked_gw_sweeps/2022_05_26_proc_data.jld2"))["params_and_results"]
 
 # ╔═╡ 04c76c31-0b37-4ed1-a6f5-9ea3ca261b9a
 best_over_eta = DataFrameUtils.best_from_sweep_param(
-	order(:stps_avg_end, by=mean, rev=false), 
+	order(:stps_avg, by=mean, rev=false), 
 	df, 
 	["eta"])
 
@@ -83,10 +110,171 @@ diff_dict_best_over_eta = DataFrameUtils.get_diff_dict(best_over_eta)
 # ╔═╡ 10f497c5-9544-4832-980f-adcc0d38e3cc
 let
 	# τ = 15
+	# plotly()
+	gr()
+	
+	replay_size = 20000
+	plot_data_sym = :stps_avg
+	num_anchors = 25
+	
+	# plts = []
+	diff_dict = DataFrameUtils.get_diff_dict(best_over_eta)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in best_over_eta begin
+			@where i.cell == cell &&
+				   i.replay_size == replay_size &&
+				   i.num_anchors == num_anchors && i.width == 25
+				   # i.width == 5
+			@orderby ascending(i.truncation)
+			@select {
+				x = i.truncation,
+				μ = mean(getindex(i, plot_data_sym)), 
+				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))}
+			@collect DataFrame
+		end
+	end
+	
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+	x_cells = [get_cell_data(cell) for cell ∈ diff_dict["cell"]]
+	# plt = plot(
+		# title="Experts=$(ne)", 
+		# xlabel="Truncation", 
+		# ylabel="Average Successes")
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out)
+	for cell ∈ filter((c)->contains(c, "GRU"), diff_dict["cell"])
+		cd = get_cell_data(cell)
+		plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label=cell, color=cell_colors[cell])
+	end
+	plt
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ c390c439-4131-4299-bb9b-2789fda05046
+DataFrameUtils.get_diff_dict(df)
+
+# ╔═╡ 0bc5206b-39a8-4309-8c12-c32f23cee105
+let
+	# τ = 15
 	plotly()
+	replay_size = 50000
+	plot_data_sym = :rews_avg
+	num_anchors = 10
+	width = 25
+	
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell, τ) -> begin
+		@from i in df begin
+			@where i.cell == cell &&
+				   i.replay_size == replay_size &&
+				   i.num_anchors == num_anchors && i.width == width &&
+				   i.truncation == τ
+			@orderby ascending(i.eta)
+			@select {
+				x = i.eta, 
+				μ = mean(getindex(i, plot_data_sym)), 
+				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))}
+			@collect DataFrame
+		end
+	end
+
+	
+	plts = []
+	for τ ∈ diff_dict["truncation"]
+		plt = plot(
+			title="Truncation: $(τ)",
+			xlabel="eta", 
+			ylabel="Average Successes",
+			xaxis=:log)
+		for cell ∈ diff_dict["cell"]
+			cd = get_cell_data(cell, τ)
+			plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label=cell)
+		end
+		push!(plts, plt)
+	end
+		# push!(plts, plt)
+	# end
+	plot(plts...)
+end
+
+# ╔═╡ 1b77e9b9-e49f-4ce2-b7f2-988188143212
+0.01*(2.0.^(-13:-6))
+
+# ╔═╡ 03ae8bee-f319-459e-b79e-41487fd99e78
+let
 	replay_size = 50000
 	plot_data_sym = :test_stps_avg_end
 	num_anchors = 10
+	width = 25
+	
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell, τ) -> begin
+		@from i in df begin
+			@where i.cell == cell &&
+				   i.replay_size == replay_size &&
+				   i.num_anchors == num_anchors && i.width == width &&
+				   i.truncation == τ
+			@orderby ascending(i.eta)
+			@select {
+				x = i.eta, 
+				μ = mean(getindex(i, plot_data_sym)), 
+				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))}
+			@collect DataFrame
+		end
+	end
+	get_cell_data("MAGRU", 16)
+end
+
+# ╔═╡ 445d8ba1-816e-4352-ba1d-6ef11917cb53
+@show df[end-1, :_HASH]
+
+# ╔═╡ 774e0702-9ca1-4a77-ad96-a4ee843a533e
+diff_dict_best_over_eta
+
+# ╔═╡ 693417d1-681c-40b4-87f5-e3f6c62be749
+let
+	arg_df = @from i in best_over_eta begin
+		@where true
+		@select {i.eta, i.cell, i.numhidden, i.truncation, i.replay_size, i.height, i.width, i.num_anchors}
+		@collect DataFrame
+	end
+	args = [Dict(names(row) .=> values(row)) for row in eachrow(arg_df)]
+	FileIO.save("../../final_runs/masked_gw.jld2", "args", args)
+end
+
+# ╔═╡ 410961d6-2fa0-49b0-8f98-ef3dee78cec8
+md""" # Extended Sweeps """
+
+# ╔═╡ 33434010-adf8-4cdc-9769-3d3460e6a703
+df_bigger = FileIO.load(at("masked_gw_sweeps_bigger/2022-06-16-dataproc.jld2"))["params_and_results"]
+
+# ╔═╡ aea01274-ed44-4d46-b6ba-1d537ed4979c
+DataFrameUtils.get_diff_dict(df_bigger)
+
+# ╔═╡ 1e104366-7f17-4c61-ae54-3edb769688d4
+function plot_masked_gw_extended(replay_size, plot_data_sym, num_anchors, cell_type)
+	# τ = 15
+	gr()
+	# replay_size = 20000
+	# plot_data_sym = :stps_avg
+	# num_anchors = 25
+
+	best_over_eta = DataFrameUtils.best_from_sweep_param(
+		order(:stps_avg, by=mean, rev=false),
+		df_bigger, 
+		["eta"])
 	
 	plts = []
 	diff_dict = DataFrameUtils.get_diff_dict(best_over_eta)
@@ -96,7 +284,99 @@ let
 		@from i in best_over_eta begin
 			@where i.cell == cell &&
 				   i.replay_size == replay_size &&
-				   i.num_anchors == num_anchors
+				   i.num_anchors == num_anchors && i.width == 25
+				   # i.width == 5
+			@orderby ascending(i.truncation)
+			@select {
+				x = i.truncation, 
+				μ = mean(getindex(i, plot_data_sym)), 
+				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))}
+			@collect DataFrame
+		end
+	end
+	
+	x_cells = [get_cell_data(cell) for cell ∈ diff_dict["cell"]]
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		# tickfontsize=11,
+		tickfontsize=13, 
+		tickdir=:out,
+		
+		lw=3)
+	for cell ∈ filter((c)->contains(c, cell_type), diff_dict["cell"])
+		cd = get_cell_data(cell)
+		plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label=cell, color=cell_colors[cell], lw=3)
+	end
+	plt
+end
+
+# ╔═╡ 2a148297-7d7b-4417-be66-8bffd98d295c
+let
+	plt = plot(plot_masked_gw_extended(20000, :stps_avg, 25, "RNN"),
+		 plot_masked_gw_extended(20000, :test_stps_avg, 25, "RNN"),
+	 	 plot_masked_gw_extended(20000, :stps_avg, 25, "GRU"),
+		 plot_masked_gw_extended(20000, :test_stps_avg, 25, "GRU"))
+	savefig(plt, "../../plots/masked_gw_25.pdf")
+	plt
+end
+
+
+# ╔═╡ a0996dd1-f845-4de9-830d-d6ca26e1266c
+let
+	plt = plot(plot_masked_gw_extended(20000, :stps_avg, 10, "RNN"),
+		 plot_masked_gw_extended(20000, :test_stps_avg, 10, "RNN"),
+	 	 plot_masked_gw_extended(20000, :stps_avg, 10, "GRU"),
+		 plot_masked_gw_extended(20000, :test_stps_avg, 10, "GRU"))
+	savefig(plt, "../../plots/masked_gw_10.pdf")
+	plt
+end
+
+# ╔═╡ 49b9379e-fbc9-47f3-b244-c612d11517ef
+let
+	plt = plot(plot_masked_gw_extended(50000, :stps_avg, 25, "RNN"),
+		 plot_masked_gw_extended(50000, :test_stps_avg, 25, "RNN"),
+	 	 plot_masked_gw_extended(50000, :stps_avg, 25, "GRU"),
+		 plot_masked_gw_extended(50000, :test_stps_avg, 25, "GRU"))
+	savefig(plt, "../../plots/masked_gw_50k_25.pdf")
+	plt
+end
+
+# ╔═╡ fce1a9d0-eefe-4c99-8479-e8deddfa8cfd
+let
+	plt = plot(plot_masked_gw_extended(50000, :stps_avg, 10, "RNN"),
+		 plot_masked_gw_extended(50000, :test_stps_avg, 10, "RNN"),
+	 	 plot_masked_gw_extended(50000, :stps_avg, 10, "GRU"),
+		 plot_masked_gw_extended(50000, :test_stps_avg, 10, "GRU"))
+	savefig(plt, "../../plots/masked_gw_50k_10.pdf")
+	plt
+end
+
+# ╔═╡ bb8fca61-e66a-4240-8046-bd5696ae0bf4
+df_long = FileIO.load(at("masked_gw_sweeps_long/2022-06-16-dataproc.jld2"))["params_and_results"]
+
+# ╔═╡ 20c8c338-fea5-4141-9d98-eca1618dbe5a
+let
+	# τ = 15
+	plotly()
+	replay_size = 50000
+	plot_data_sym = :stps_avg
+	num_anchors = 25
+
+	best_over_eta = DataFrameUtils.best_from_sweep_param(
+		order(:stps_avg, by=mean, rev=false), 
+		df_long, 
+		["eta"])
+	
+	plts = []
+	diff_dict = DataFrameUtils.get_diff_dict(best_over_eta)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in best_over_eta begin
+			@where i.cell == cell &&
+				   i.replay_size == replay_size &&
+				   i.num_anchors == num_anchors && i.width == 25
 				   # i.width == 5
 			@orderby ascending(i.truncation)
 			@select {
@@ -123,53 +403,6 @@ let
 	# end
 	# plot(plts...)
 end
-
-# ╔═╡ 0bc5206b-39a8-4309-8c12-c32f23cee105
-let
-	# τ = 15
-	plotly()
-	replay_size = 50000
-	plot_data_sym = :test_stps_avg_end
-	num_anchors = 10
-	
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell, τ) -> begin
-		@from i in df begin
-			@where i.cell == cell &&
-				   i.replay_size == replay_size &&
-				   i.num_anchors == num_anchors &&
-				   i.truncation == τ
-			@orderby ascending(i.eta)
-			@select {
-				x = i.eta, 
-				μ = mean(getindex(i, plot_data_sym)), 
-				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))}
-			@collect DataFrame
-		end
-	end
-	
-	
-	plts = []
-	for τ ∈ diff_dict["truncation"]
-		plt = plot(
-			titla="Truncation: $(τ)",
-			xlabel="eta", 
-			ylabel="Average Successes")
-		for cell ∈ diff_dict["cell"]
-			cd = get_cell_data(cell, τ)
-			plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label=cell)
-		end
-		push!(plts, plt)
-	end
-		# push!(plts, plt)
-	# end
-	plot(plts...)
-end
-
-# ╔═╡ 1b77e9b9-e49f-4ce2-b7f2-988188143212
-0.01*(2.0.^(-13:-6))
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1421,6 +1654,8 @@ version = "0.9.1+5"
 # ╔═╡ Cell order:
 # ╠═4d899862-cbba-11ec-119c-6de710107190
 # ╠═c5d81212-8033-4a30-b9c8-610c82e54308
+# ╠═f729b5ac-39a6-455c-8a47-4a132fd21782
+# ╠═5c6940a9-b587-47de-927e-db9808114442
 # ╠═1c946d75-e7bd-4b40-8068-d287b5043d71
 # ╠═fca08a4c-9f69-424a-9ba8-bc29846d2b24
 # ╠═3947f507-8b89-47e3-8d02-ed3c069b4a91
@@ -1432,7 +1667,22 @@ version = "0.9.1+5"
 # ╠═91359d83-97ec-4724-9260-a6887a0079d4
 # ╠═49ddb3c5-fff1-4406-b4c7-8edce46a3800
 # ╠═10f497c5-9544-4832-980f-adcc0d38e3cc
+# ╠═c390c439-4131-4299-bb9b-2789fda05046
 # ╠═0bc5206b-39a8-4309-8c12-c32f23cee105
 # ╠═1b77e9b9-e49f-4ce2-b7f2-988188143212
+# ╠═03ae8bee-f319-459e-b79e-41487fd99e78
+# ╠═445d8ba1-816e-4352-ba1d-6ef11917cb53
+# ╠═774e0702-9ca1-4a77-ad96-a4ee843a533e
+# ╠═693417d1-681c-40b4-87f5-e3f6c62be749
+# ╠═410961d6-2fa0-49b0-8f98-ef3dee78cec8
+# ╠═33434010-adf8-4cdc-9769-3d3460e6a703
+# ╠═aea01274-ed44-4d46-b6ba-1d537ed4979c
+# ╠═1e104366-7f17-4c61-ae54-3edb769688d4
+# ╠═2a148297-7d7b-4417-be66-8bffd98d295c
+# ╠═a0996dd1-f845-4de9-830d-d6ca26e1266c
+# ╠═49b9379e-fbc9-47f3-b244-c612d11517ef
+# ╠═fce1a9d0-eefe-4c99-8479-e8deddfa8cfd
+# ╠═bb8fca61-e66a-4240-8046-bd5696ae0bf4
+# ╠═20c8c338-fea5-4141-9d98-eca1618dbe5a
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

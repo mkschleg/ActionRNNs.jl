@@ -202,6 +202,12 @@ git-tree-sha1 = "a05b83d278a5c52111af07e2b2df64bf7b122f8c"
 uuid = "9de3a189-e0c0-4e15-ba3b-b14b9fb0aec1"
 version = "0.1.10"
 
+[[Cleaner]]
+deps = ["PrettyTables", "Tables"]
+git-tree-sha1 = "db3cc9bf584a652b7f13666268eb42bd7ca5f879"
+uuid = "caabdcdb-0ab6-47cf-9f62-08858e44f38f"
+version = "1.0.1"
+
 [[CloseOpenIntervals]]
 deps = ["ArrayInterface", "Static"]
 git-tree-sha1 = "f576084239e6bdf801007c80e27e2cc2cd963fe0"
@@ -1283,7 +1289,9 @@ version = "0.2.0"
 
 [[Reproduce]]
 deps = ["BSON", "CodeTracking", "DBInterface", "DataFrames", "Dates", "Distributed", "FileIO", "Git", "HDF5", "JLD2", "JSON", "Logging", "MySQL", "Parallelism", "Pkg", "ProgressMeter", "Random", "Reexport", "SharedArrays", "Sockets", "TOML", "Tables"]
-git-tree-sha1 = "91b8f4be866ce31228be2008d9a340022ce3d41b"
+git-tree-sha1 = "4c3114b65a744f3ceac9004dbb0887d8e1c034c1"
+repo-rev = "main"
+repo-url = "https://github.com/mkschleg/Reproduce.jl.git"
 uuid = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
 version = "0.12.0"
 

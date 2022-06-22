@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -75,14 +75,14 @@ cell_colors = Dict(
 at(dir) = joinpath("../../local_data/ringworld/", dir)
 
 # ╔═╡ 2148c874-e915-47af-9f67-6a565c23e9ff
-ic_test, dd_test = RPU.load_data(at("ringworld_fac_er_rmsprop_10_marnn/"))
+ic_test, dd_test = RPU.load_data(at("er/ringworld_fac_er_rmsprop_10_marnn/"))
 
 # ╔═╡ 4561c8c6-81a1-4966-915e-7b524135ae92
 ic, dd = let
-	ic1, dd = RPU.load_data(at("ringworld_fac_er_rmsprop_10/"))
-	ic2, dd = RPU.load_data(at("ringworld_fac_er_rmsprop_10_marnn/"))
-	ic3, dd = RPU.load_data(at("ringworld_fac_er_rmsprop_10_aagru/"))
-	ic4, dd = RPU.load_data(at("ringworld_fac_er_rmsprop_10_magru/"))
+	ic1, dd = RPU.load_data(at("er/ringworld_fac_er_rmsprop_10/"))
+	ic2, dd = RPU.load_data(at("er/ringworld_fac_er_rmsprop_10_marnn/"))
+	ic3, dd = RPU.load_data(at("er/ringworld_fac_er_rmsprop_10_aagru/"))
+	ic4, dd = RPU.load_data(at("er/ringworld_fac_er_rmsprop_10_magru/"))
 	ic = ItemCollection([ic1.items; ic2.items; ic3.items; ic4.items])
 	ic, diff(ic)
 end
@@ -195,7 +195,7 @@ end
 
 
 # ╔═╡ 1f57edbe-10b9-4857-a7ab-6f867090f159
-ic_ring, dd_ring = RPU.load_data(at("final_ringworld_er_rmsprop_10/"))
+ic_ring, dd_ring = RPU.load_data(at("er/final_ringworld_er_rmsprop_10/"))
 
 # ╔═╡ 78581ee5-b4e9-4e4b-baae-2aa778854a02
 save_at(plt_file) = joinpath("../../plots/ringworld/", plt_file)

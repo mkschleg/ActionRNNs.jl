@@ -60,11 +60,14 @@ cell_colors = Dict(
 # ╔═╡ ee43a945-7f64-436b-b391-ad64edab4f5c
 push!(RPU.stats_plot_types, :dotplot)
 
+# ╔═╡ 5e534ba1-d33c-4824-abde-0e9a25eaca29
+at(dir) = joinpath("../../local_data/ringworld/", dir)
+
 # ╔═╡ dfc801ef-c384-4505-88bc-09914c138e0b
-ic, dd = RPU.load_data("../../local_data/ringworld/ringworld_er_rmsprop_10_fac/")
+ic, dd = RPU.load_data(at("er/ringworld_er_rmsprop_10_fac/"))
 
 # ╔═╡ 48fcb600-3c42-4bd6-aa7a-33663c2e5d25
-ic_on, dd_on = RPU.load_data("../..//local_data/ringworld/ringworld_online_rmsprop_10_fac/")
+ic_on, dd_on = RPU.load_data(at("online/ringworld_online_rmsprop_10_fac/"))
 
 # ╔═╡ eb61ceb3-f6ac-4224-90d0-d2fcdf83b483
 data = RPU.get_line_data_for(
@@ -308,6 +311,7 @@ end
 # ╟─1b8ca44f-41d3-40d4-b32b-9299e24af861
 # ╟─8292a0f5-770d-43b4-ad4f-16752b7264cd
 # ╠═ee43a945-7f64-436b-b391-ad64edab4f5c
+# ╠═5e534ba1-d33c-4824-abde-0e9a25eaca29
 # ╠═dfc801ef-c384-4505-88bc-09914c138e0b
 # ╠═48fcb600-3c42-4bd6-aa7a-33663c2e5d25
 # ╠═eb61ceb3-f6ac-4224-90d0-d2fcdf83b483

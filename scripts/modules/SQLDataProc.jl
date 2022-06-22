@@ -175,15 +175,19 @@ function proc_control_data(database; save=nothing, vector_tables=["stps"=>"resul
             avg=(d)->mean(d),
             var=(d)->var(d),
             cnt=(d)->length(d), 
-            avg_end=(d)->end_mean(d, 100),
-            var_end=(d)->end_var(d, 100),
-            cnt_end=(d)->end_count(d, 100)) for (vt_n, vt) in vector_tables]
+            avg_end=(d)->end_mean(d, 0.1),
+            var_end=(d)->end_var(d, 0.1),
+            cnt_end=(d)->end_count(d, 0.1)) for (vt_n, vt) in vector_tables]
 
 
     DBInterface.close!(conn)
     params_and_results = DataFrames.innerjoin(params, results..., on=:_HASH)
 
-    params_and_results = SQLDataProc.simplify_dataframe((d)->[collect(d)], params_and_results)
+    params_and_results = SQLDataProc.simplify_dataframe((d)->begin
+                                                        c = collect(d)
+                                                        # @info typeof(c)
+                                                        typeof(c)[collect(d)]
+                                                        end, params_and_results)
     if !isnothing(save)
         FileIO.save(save, "params_and_results", params_and_results)
     end
@@ -225,7 +229,7 @@ function end_agg(agg::Function, d, num_steps::Int)
 end
 
 function end_agg(agg::Function, d, perc::AbstractFloat)
-    @assert 0.0 >= perc <= 1.0
+    @assert 0.0 <= perc <= 1.0
     num_steps = round(Int, length(d)*perc)
     if length(d) < num_steps
         agg(d)
@@ -257,6 +261,7 @@ function collapse_group_agg(agg::Function, grp_df)
             push!(values, vs[1])
         end
     end
+
     DataFrame(;(Symbol(n)=>v for (n, v) in zip(nms, values))...)
 end
 

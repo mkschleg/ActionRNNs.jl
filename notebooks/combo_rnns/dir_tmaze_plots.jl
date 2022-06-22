@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.1
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -7,8 +7,9 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
 end
@@ -16,7 +17,7 @@ end
 # ╔═╡ ac8f3d1b-82af-4917-bf1c-d7afc16fc43a
 let
 	import Pkg
-	Pkg.activate("../..")
+	Pkg.activate("..")
 end
 
 # ╔═╡ f7f500a8-a1e9-11eb-009b-d7afdcade891
@@ -237,7 +238,7 @@ let
 		label = "CaR",
 		color=cell_colors["RNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"CaddElRNN", "numhidden"=>15, "truncation"=>truncation, "num_experts"=>0); 
+	boxplot!(data_dist_combo_el, Dict("cell"=>"CaddElRNN", "numhidden"=>15, "truncation"=>truncation, "num_experts"=>0);
 		#label_idx="cell", 
 		label = "CaER",
 		color=cell_colors["AARNN"],
@@ -256,86 +257,86 @@ let
 		color=cell_colors["FacMARNN"])
 	
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MR1",
-		color=cell_colors["MARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MR1",
-		color=cell_colors["MARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MR1",
+	# 	color=cell_colors["MARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MR1",
+	# 	color=cell_colors["MARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MER1",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MER1",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MER1",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>30, "truncation"=>truncation, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MER1",
+	# 	color=cell_colors["FacMARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MR2",
-		color=cell_colors["MARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MR2",
-		color=cell_colors["MARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MR2",
+	# 	color=cell_colors["MARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MR2",
+	# 	color=cell_colors["MARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MER2",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MER2",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MER2",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>21, "truncation"=>truncation, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MER2",
+	# 	color=cell_colors["FacMARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MR3",
-		color=cell_colors["MARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MR3",
-		color=cell_colors["MARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MR3",
+	# 	color=cell_colors["MARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MR3",
+	# 	color=cell_colors["MARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MER3",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MER3",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MER3",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MER3",
+	# 	color=cell_colors["FacMARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MR5",
-		color=cell_colors["MARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MR5",
-		color=cell_colors["MARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MR5",
+	# 	color=cell_colors["MARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MR5",
+	# 	color=cell_colors["MARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MER5",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MER5",
-		color=cell_colors["FacMARNN"],
-		title="Dir TMaze ER RNN, truncation: $(truncation)")
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MER5",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "truncation"=>truncation, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MER5",
+	# 	color=cell_colors["FacMARNN"],
+	# 	title="Dir TMaze ER RNN, truncation: $(truncation)")
 	
 end
 
@@ -387,86 +388,86 @@ begin
 		color=cell_colors["FacMAGRU"])
 	
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MG1",
-		color=cell_colors["MAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MG1",
-		color=cell_colors["MAGRU"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MG1",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MG1",
+	# 	color=cell_colors["MAGRU"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MEG1",
-		color=cell_colors["FacMAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MEG1",
-		color=cell_colors["FacMAGRU"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MEG1",
+	# 	color=cell_colors["FacMAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>17, "truncation"=>truncation, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MEG1",
+	# 	color=cell_colors["FacMAGRU"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MG2",
-		color=cell_colors["MAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MG2",
-		color=cell_colors["MAGRU"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MG2",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MG2",
+	# 	color=cell_colors["MAGRU"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MEG2",
-		color=cell_colors["FacMAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MEG2",
-		color=cell_colors["FacMAGRU"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MEG2",
+	# 	color=cell_colors["FacMAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>11, "truncation"=>truncation, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MEG2",
+	# 	color=cell_colors["FacMAGRU"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MG3",
-		color=cell_colors["MAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MG3",
-		color=cell_colors["MAGRU"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MG3",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MG3",
+	# 	color=cell_colors["MAGRU"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MEG3",
-		color=cell_colors["FacMAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MEG3",
-		color=cell_colors["FacMAGRU"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MEG3",
+	# 	color=cell_colors["FacMAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>9, "truncation"=>truncation, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MEG3",
+	# 	color=cell_colors["FacMAGRU"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MG5",
-		color=cell_colors["MAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MG5",
-		color=cell_colors["MAGRU"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MG5",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MG5",
+	# 	color=cell_colors["MAGRU"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MEG5",
-		color=cell_colors["FacMAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MEG5",
-		color=cell_colors["FacMAGRU"], xtickfontsize=8, 
-		title="Dir TMaze ER GRU, truncation: $(truncation)")
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MEG5",
+	# 	color=cell_colors["FacMAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElGRU", "numhidden"=>6, "truncation"=>truncation, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MEG5",
+	# 	color=cell_colors["FacMAGRU"], xtickfontsize=8, 
+	# 	title="Dir TMaze ER GRU, truncation: $(truncation)")
 end
 
 # ╔═╡ 78102549-6117-4348-bff2-bbc52f92fc80

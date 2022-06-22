@@ -185,7 +185,7 @@ DataFrameUtils.get_diff_dict(best_over_eta_multil)
 # ╔═╡ f91fe4fb-537a-41a8-9ea9-b17d8f15ac3c
 let
 	# τ = 15
-	replay_size = 10000
+	replay_size = 20000
 	plot_data_sym = :successes_avg_end
 	
 	gr()

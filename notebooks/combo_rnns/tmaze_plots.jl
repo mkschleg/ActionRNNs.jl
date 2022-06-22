@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.15.1
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -7,8 +7,9 @@ using InteractiveUtils
 # This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
 macro bind(def, element)
     quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
         local el = $(esc(element))
-        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : missing
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
         el
     end
 end
@@ -16,7 +17,7 @@ end
 # ╔═╡ ac8f3d1b-82af-4917-bf1c-d7afc16fc43a
 let
 	import Pkg
-	Pkg.activate("../..")
+	Pkg.activate("..")
 end
 
 # ╔═╡ f7f500a8-a1e9-11eb-009b-d7afdcade891
@@ -57,7 +58,7 @@ cell_colors = Dict(
 	"FacMAGRU" => color_scheme[end-2])
 
 # ╔═╡ 842b3fbc-34aa-452d-81fb-2ade57dedecb
-at(dir) = joinpath("../../local_data/tmaze_er/", dir)
+at(dir) = joinpath("../../local_data/tmaze/", dir)
 
 # ╔═╡ cc4a219d-9118-4c34-93ce-317afc837f6c
 function get_final_argument_list(
@@ -199,86 +200,86 @@ let
 		color=cell_colors["FacMARNN"])
 	
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MR1",
-		color=cell_colors["MARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MR1",
-		color=cell_colors["MARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MR1",
+	# 	color=cell_colors["MARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>12, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MR1",
+	# 	color=cell_colors["MARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MER1",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "num_experts"=>1); 
-		#label_idx="cell", 
-		label = "MER1",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MER1",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>12, "num_experts"=>1); 
+	# 	#label_idx="cell", 
+	# 	label = "MER1",
+	# 	color=cell_colors["FacMARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>8, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MR2",
-		color=cell_colors["MARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>8, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MR2",
-		color=cell_colors["MARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>8, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MR2",
+	# 	color=cell_colors["MARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>8, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MR2",
+	# 	color=cell_colors["MARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>8, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MER2",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>8, "num_experts"=>2); 
-		#label_idx="cell", 
-		label = "MER2",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>8, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MER2",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>8, "num_experts"=>2); 
+	# 	#label_idx="cell", 
+	# 	label = "MER2",
+	# 	color=cell_colors["FacMARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>6, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MR3",
-		color=cell_colors["MARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>6, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MR3",
-		color=cell_colors["MARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>6, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MR3",
+	# 	color=cell_colors["MARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>6, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MR3",
+	# 	color=cell_colors["MARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>6, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MER3",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>6, "num_experts"=>3); 
-		#label_idx="cell", 
-		label = "MER3",
-		color=cell_colors["FacMARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>6, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MER3",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>6, "num_experts"=>3); 
+	# 	#label_idx="cell", 
+	# 	label = "MER3",
+	# 	color=cell_colors["FacMARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>4, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MR5",
-		color=cell_colors["MARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>4, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MR5",
-		color=cell_colors["MARNN"])
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>4, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MR5",
+	# 	color=cell_colors["MARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixRNN", "numhidden"=>4, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MR5",
+	# 	color=cell_colors["MARNN"])
 	
-	boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>4, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MER5",
-		color=cell_colors["FacMARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>4, "num_experts"=>5); 
-		#label_idx="cell", 
-		label = "MER5",
-		color=cell_colors["FacMARNN"],
-		title="TMaze ER RNN, truncation: 12")
+	# boxplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>4, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MER5",
+	# 	color=cell_colors["FacMARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_combo_el, Dict("cell"=>"MixElRNN", "numhidden"=>4, "num_experts"=>5); 
+	# 	#label_idx="cell", 
+	# 	label = "MER5",
+	# 	color=cell_colors["FacMARNN"],
+	# 	title="TMaze ER RNN, truncation: 12")
 	
 end
 
@@ -430,5 +431,5 @@ end
 # ╠═c1b80cfd-dbb8-41c5-a778-66b112e1c091
 # ╠═e4cc9109-d8b1-4bff-a176-3627e24ab757
 # ╠═b4805558-8a0c-4942-8462-d02b34452222
-# ╟─b99580cf-a793-4014-ad30-6993439bc61c
+# ╠═b99580cf-a793-4014-ad30-6993439bc61c
 # ╟─d789b99a-7c16-4d67-9fd6-0fe73e302ee6
