@@ -27,3 +27,5 @@ docs/site/
 local_data/
 tmp/
 *.DS_Store
+
+*.so

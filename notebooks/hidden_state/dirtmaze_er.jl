@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -82,7 +82,7 @@ function get_hs_over_time(
 			(:Env)]
 	)
 	if freeze_training
-		ActionRNNs.turn_off_training(agent)
+		ActionRNNs.turn_off_training!(agent)
 	end
 	
 	with_logger(data_logger) do
