@@ -54,8 +54,8 @@ function MinimalRLCore.reset!(env::DirectionalTMaze, rng::AbstractRNG=Random.GLO
     @data Env reset=true
 end
 
-function MinimalRLCore.reset!(env::DirectionalTMaze, dir::Int)
-    env.goal_dir = rand(rng, [DTMC.NORTH, DTMC.SOUTH])
+function MinimalRLCore.reset!(env::DirectionalTMaze, goal_dir::Int, dir::Int)
+    env.goal_dir = goal_dir #rand(rng, [DTMC.NORTH, DTMC.SOUTH])
     env.state = (x=1, y=0, dir=dir)
     
     @data Env state=env.state
