@@ -76,7 +76,7 @@ let
 				   i.gamma == 0.99 &&
 				   i.replay_size == 50000 &&
 				   i.batch_size == 16 &&
-				   i.numhidden == 5 &&
+				   i.numhidden == 25 &&
 				   i.cell == cell
 			@orderby ascending(i.truncation)
 			@select {x = i.truncation,
@@ -109,7 +109,7 @@ let
 				   i.gamma == 0.99 &&
 				   i.replay_size == 50000 &&
 				   i.batch_size == 16 &&
-				   i.numhidden == 25 &&
+				   i.numhidden == 5 &&
 				   i.cell == cell
 			@orderby ascending(i.truncation)
 			@select {x = i.truncation,

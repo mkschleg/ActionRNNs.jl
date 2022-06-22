@@ -1,20 +1,36 @@
 ### A Pluto.jl notebook ###
-# v0.19.9
+# v0.19.3
 
 using Markdown
 using InteractiveUtils
 
-# ╔═╡ 4d899862-cbba-11ec-119c-6de710107190
+# This Pluto notebook uses @bind for interactivity. When running this notebook outside of Pluto, the following 'mock version' of @bind gives bound variables a default value (instead of an error).
+macro bind(def, element)
+    quote
+        local iv = try Base.loaded_modules[Base.PkgId(Base.UUID("6e696c72-6542-2067-7265-42206c756150"), "AbstractPlutoDingetjes")].Bonds.initial_value catch; b -> missing; end
+        local el = $(esc(element))
+        global $(esc(def)) = Core.applicable(Base.get, el) ? Base.get(el) : iv(el)
+        el
+    end
+end
+
+# ╔═╡ 886f5e13-ed46-41c9-a83e-13a01b7c9ff5
 begin
 	using DataFrames, Query
 	using Statistics, ProgressLogging
-	using FileIO, JLD2
+	using FileIO, JLD2, PlutoUI
 end
 
-# ╔═╡ c5d81212-8033-4a30-b9c8-610c82e54308
+# ╔═╡ f7f500a8-a1e9-11eb-009b-d7afdcade891
 using StatsPlots
 
-# ╔═╡ 68fc736f-c3a2-43d8-90b4-1f3759f86476
+# ╔═╡ ac8f3d1b-82af-4917-bf1c-d7afc16fc43a
+# let
+# 	import Pkg
+# 	Pkg.activate("..")
+# end
+
+# ╔═╡ 0c746c1e-ea39-4415-a1b1-d7124b886f98
 color_scheme = [
     colorant"#44AA99",
     colorant"#332288",
@@ -28,7 +44,10 @@ color_scheme = [
 	colorant"#1E90FF",
 ]
 
-# ╔═╡ 39a87a2f-d941-444e-b467-ecbc43a9a547
+# ╔═╡ 1886bf05-f4be-4160-b61c-edf186a7f3cb
+# push!(RPU.stats_plot_types, :dotplot)
+
+# ╔═╡ fe50ffef-b691-47b5-acf8-8378fbf860a1
 cell_colors = Dict(
 	"RNN" => color_scheme[3],
 	"AARNN" => color_scheme[end],
@@ -41,242 +60,86 @@ cell_colors = Dict(
 	"FacMAGRU" => color_scheme[end-2], 
 	"DAAGRU" => color_scheme[9],)
 
-# ╔═╡ 1c946d75-e7bd-4b40-8068-d287b5043d71
-function local_ingredients(path::String)
-	# this is from the Julia source code (evalfile in base/loading.jl)
-	# but with the modification that it returns the module instead of the last object
-	name = Symbol(basename(path))
-	m = Module(name)
-	Core.eval(m,
-        Expr(:toplevel,
-             :(eval(x) = $(Expr(:core, :eval))($name, x)),
-             :(include(x) = $(Expr(:top, :include))($name, x)),
-             :(include(mapexpr::Function, x) = $(Expr(:top, :include))(mapexpr, $name, x)),
-             :(include($path))))
-	m
-end
-
-# ╔═╡ fca08a4c-9f69-424a-9ba8-bc29846d2b24
-function ingredients(;
-		url::Union{String,Nothing}=nothing, 
-		path::Union{String,Nothing}=nothing)
+# ╔═╡ cc4a219d-9118-4c34-93ce-317afc837f6c
+function get_final_argument_list(
+		base_params, 
+		data_col, 
+		diff_dict, 
+		extra_params, 
+		sweep_params)
 	
-	if url === nothing && path !== nothing
-		local_ingredients(path)
-	elseif url !== nothing && path === nothing
-		local_ingredients(download(url))
-	else
-		throw(ArgumentError("""Use `ingredients(url="...")` or `ingredients(path="...")`."""))
-	end
-end
+	args = Dict{String, Any}[]
+	for pms ∈ base_params
+		for eps ∈ Iterators.product([diff_dict[ep] for ep in extra_params]...)
 
-# ╔═╡ 3947f507-8b89-47e3-8d02-ed3c069b4a91
-DataFrameUtils = ingredients(path="../modules/DataFrameUtils.jl").DataFrameUtils
-
-# ╔═╡ 069d67d8-e5e2-43f6-aa49-f13c3c9466ee
-at(dir) = joinpath("../../local_data/dir_tmaze_er", dir)
-
-# ╔═╡ 5bc66e9c-3468-4415-b918-a8d42b73c04b
-load_dataframe(dir) = FileIO.load(at(dir))["params_and_results"]
-
-# ╔═╡ 8a7989fb-063b-46dc-af95-b0ef5d293496
-df = FileIO.load(at("dir_tmaze_er_gating_network_sweep/2022_05_04_processed_data.jld2"))["params_and_results"]
-
-# ╔═╡ 04c76c31-0b37-4ed1-a6f5-9ea3ca261b9a
-best_over_eta = DataFrameUtils.best_from_sweep_param(
-	order(:successes_avg_end, by=mean, rev=true), 
-	df, 
-	["eta"])
-
-# ╔═╡ 91359d83-97ec-4724-9260-a6887a0079d4
-names(best_over_eta)
-
-# ╔═╡ 49ddb3c5-fff1-4406-b4c7-8edce46a3800
-diff_dict_best_over_eta = DataFrameUtils.get_diff_dict(best_over_eta)
-
-# ╔═╡ 10f497c5-9544-4832-980f-adcc0d38e3cc
-let
-	τ = 15
-	replay_size = 20000
-	plot_data_sym = :successes_avg_end
-	
-	gr()
-	plts = []
-	diff_dict = DataFrameUtils.get_diff_dict(best_over_eta)
-
-
-	get_cell_data = (cell, ne) -> begin
-		@from i in best_over_eta begin
-			@where i.cell == cell &&
-				   i.truncation == τ &&
-				   i.num_experts == ne &&
-				   i.replay_size == replay_size
-			@orderby ascending(i.gating_network_layers_1_1)
-			@select {
-				x = i.gating_network_layers_1_1, 
-				μ = mean(getindex(i, plot_data_sym)), 
-				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))}
-			@collect DataFrame
+			pms_copy = copy(pms)
+			for (ep, epv) ∈ zip(extra_params, eps)
+				pms_copy[ep] = epv
+			end
+			idx = findfirst(data_col.data) do ld
+				all([pms_copy[k] == ld.line_params[k] for k in keys(pms_copy)])
+			end
+			ld = data_col[idx]
+			for (sp, spv) ∈ zip(sweep_params, ld.swept_params)
+				pms_copy[sp] = spv
+			end
+			push!(args, pms_copy)
 		end
 	end
-	
-	
-	for ne ∈ sort(diff_dict["num_experts"])
-		x_cells = [get_cell_data(cell, ne) for cell ∈ diff_dict["cell"]]
-		plt = plot(
-			title="Experts=$(ne)", 
-			xlabel="Gating Network Size", 
-			ylabel="Average Successes")
-		for cell ∈ diff_dict["cell"]
-			cd = get_cell_data(cell, ne)
-			plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label=cell)
-		end
-		push!(plts, plt)
-	end
-	plot(plts...)
+	return args
 end
 
-# ╔═╡ 4bd05cb5-ecf6-4416-8be6-d4d5df080682
+# ╔═╡ b59b2e9b-a5f2-46d0-8e14-29812406acf4
+module DataFrameUtilsWrapper
+	include("../modules/DataFrameUtils.jl")
+end
+
+# ╔═╡ c1c7eabb-6528-48a9-8214-574b9613b63e
+DataFrameUtils = DataFrameUtilsWrapper.DataFrameUtils
+
+# ╔═╡ f3ed490d-2f4f-45e3-bbf4-83f57392208e
+at(dir) = joinpath("../../local_data/image_tmaze/", dir)
+
+# ╔═╡ 703de186-5c7c-4de0-884d-39e26a39e0a3
+@bind s_dir PlutoUI.Select(readdir(at("")))
+
+# ╔═╡ 57c4ee92-136e-434b-aee6-0dfbc17e8d7e
+readdir(at(s_dir))
+
+# ╔═╡ cb4a4949-5d55-4cbd-93ba-4ddac51bd328
+s_dir
+
+# ╔═╡ 16834da6-6afc-480f-8ef1-1c01d44dc03a
+load_dataframe(loc) = FileIO.load(at(loc))["params_and_results"]
+
+# ╔═╡ 1756d1cc-1a88-4442-b55a-fdbb44f56313
 md"""
-## Hidden state equivalent to Additive.
+# Directional TMaze size 10
+
 """
 
-# ╔═╡ e195053f-5c4d-4b99-9c43-9e0bcd41a28e
-df_aa = FileIO.load(at("dir_tmaze_er_gating_network_sweep_size_aarnn/2022_05_12_processed_data.jld2"))["params_and_results"]
+# ╔═╡ c1b635b8-f093-4b4b-8125-54c41bbf80f3
+df_std_cells = load_dataframe("final_image_dir_tmaze_adam_6/2022_05_21_proc_data.jld2")
 
-# ╔═╡ b42d6baa-5a31-4a61-919c-f7b4ccade1ca
-best_over_eta_aa = DataFrameUtils.best_from_sweep_param(
+# ╔═╡ 6a2a0a1d-5dd8-4782-97f2-bd4ab1723ebf
+df_deep_a_aagru = load_dataframe("image_dir_tmaze_deep_a_aagru/2022-06-17-dataproc.jld2")
+
+# ╔═╡ cdf182a9-9884-4d5b-9a03-f2a0303eff0f
+df_deep_a_magru = load_dataframe("image_dir_tmaze_deep_a_magru/2022-06-17-dataproc.jld2")
+
+# ╔═╡ c5038463-08ab-49db-b053-7756129a9455
+boe_deep_a_magru = DataFrameUtils.best_from_sweep_param(
 	order(:successes_avg_end, by=mean, rev=true), 
-	df_aa, 
+	df_deep_a_magru, 
 	["eta"])
 
-# ╔═╡ 6b36ecb9-e25d-4409-9c15-cd5a6bd84901
-diff_dict_best_over_eta_aa = DataFrameUtils.get_diff_dict(best_over_eta_aa)
-
-# ╔═╡ 382ca0bc-8d58-4ba6-8c3a-58cd1bb4ff48
-let
-	τ = 12
-	replay_size = 20000
-	plot_data_sym = :successes_avg_end
-	
-	gr()
-	plts = []
-	diff_dict = DataFrameUtils.get_diff_dict(best_over_eta_aa)
-
-
-	get_cell_data = (cell, ne) -> begin
-		@from i in best_over_eta_aa begin
-			@where i.cell == cell &&
-				   i.truncation == τ &&
-				   i.num_experts == ne &&
-				   i.replay_size == replay_size
-			@orderby ascending(i.gating_network_layers_1_1)
-			@select {
-				x = i.gating_network_layers_1_1, 
-				μ = mean(getindex(i, plot_data_sym)), 
-				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))}
-			@collect DataFrame
-		end
-	end
-	
-	
-	for ne ∈ sort(diff_dict["num_experts"])
-		x_cells = [get_cell_data(cell, ne) for cell ∈ diff_dict["cell"]]
-		plt = plot(
-			title="Experts=$(ne)", 
-			xlabel="Gating Network Size", 
-			ylabel="Average Successes")
-		for cell ∈ diff_dict["cell"]
-			cd = get_cell_data(cell, ne)
-			plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label=cell)
-		end
-		push!(plts, plt)
-	end
-	plot(plts...)
-end
-
-# ╔═╡ 536ac943-5208-4d02-bfee-d06d32c750f1
-md"""
-## 3 Layer Gating Network
-
-Only ran w/ RNN bc GRU broken?
-"""
-
-# ╔═╡ 03ce92e0-6f3f-4f20-ab56-25ab266971a0
-df_3layer = FileIO.load(at("dir_tmaze_er_gating_network_3layer/2022_05_15_processed_data.jld2"))["params_and_results"]
-
-# ╔═╡ 6fae1c30-d0ac-40a5-8b85-e742acd87a4a
-best_over_eta_3layer = DataFrameUtils.best_from_sweep_param(
+# ╔═╡ 889c9459-e495-4972-8529-f4758201b3af
+boe_deep_a_aagru = DataFrameUtils.best_from_sweep_param(
 	order(:successes_avg_end, by=mean, rev=true), 
-	df_3layer, 
+	df_deep_a_aagru, 
 	["eta"])
 
-# ╔═╡ 9a657889-5efc-4918-9ef8-2794a1d4942d
-DataFrameUtils.get_diff_dict(df_3layer)
-
-# ╔═╡ 71bbe92a-7b29-4f80-8232-8c35fb86870c
-let
-	τ = 12
-	replay_size = 10000
-	plot_data_sym = :successes_avg_end
-
-	_df = df_3layer
-	_best_over_eta = best_over_eta_3layer
-	
-	gr()
-	plts = []
-	diff_dict = DataFrameUtils.get_diff_dict(_df)
-
-
-	get_cell_data = (nh, ne) -> begin
-		@from i in _best_over_eta begin
-			@where i.numhidden == nh &&
-				   i.truncation == τ &&
-				   i.num_experts == ne &&
-				   i.replay_size == replay_size
-			@orderby ascending(i.gating_network_layers_1_1)
-			@select {
-				x = i.gating_network_layers_1_1, 
-				μ = mean(getindex(i, plot_data_sym)), 
-				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))}
-			@collect DataFrame
-		end
-	end
-	
-	
-	for ne ∈ sort(diff_dict["num_experts"])
-		x_cells = [get_cell_data(nh, ne) for nh ∈ diff_dict["numhidden"]]
-		plt = plot(
-			title="Experts=$(ne)", 
-			xlabel="Gating Network Size", 
-			ylabel="Average Successes")
-		for nh ∈ diff_dict["numhidden"]
-			cd = get_cell_data(nh, ne)
-			plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label="$(nh)")
-		end
-		push!(plts, plt)
-	end
-	plot(plts...)
-end
-
-# ╔═╡ 43260240-ac4b-42b7-9567-5408322f9a92
-md"""
-# Combo with softmax activation
-"""
-
-# ╔═╡ 7733518c-cc6b-4135-80cb-5d2ef852a432
-df_combo_sm = load_dataframe("dir_tmaze_er_10_combo_softmax/2022-06-21-procdata.jld2")
-
-# ╔═╡ bd69bd97-41cf-4a7b-8ad7-bd784ce77463
-best_over_eta_combo_sm = DataFrameUtils.best_from_sweep_param(
-	order(:successes_avg_end, by=mean, rev=true), 
-	df_combo_sm, 
-	["eta"])
-
-# ╔═╡ ae1167ec-ab22-4706-b6c5-c4a4aefd8310
-df_std_cells = load_dataframe("final_dir_tmaze_er_rnn_rmsprop_10_2/2022_05_20_proc_data.jld2")
-
-# ╔═╡ a599032f-3a74-4adc-b771-3e2041e10177
+# ╔═╡ f2cea926-9902-40f8-92f0-23304cc8d5b2
 function boxviolinplot!(plt, x, data; color, kwargs...)
 	violin!(plt, [x], data, legend=false, color=color, 
 			lw=1, linecolor=color)
@@ -288,10 +151,10 @@ function boxviolinplot!(plt, x, data; color, kwargs...)
 			 linecolor=:black)
 end
 
-# ╔═╡ 68624b6a-d596-4912-9a70-a8cdf3b18599
+# ╔═╡ b1beea3f-28c4-4d6e-9738-601ac71e51df
 let
-	replay_size = 10000
-	
+	τ = 20
+
 	plt = plot(
 		legend=false, 
 		grid=false, 
@@ -300,66 +163,162 @@ let
 		# ylims=(0.45, 1.0))
 	plot_data_sym = :successes_avg_end
 
-	for cell ∈ ["MAGRU", "AAGRU"]
-		cd = @from i in df_std_cells begin
-			@where i.cell == cell && i.replay_size == replay_size 
+	plot_cell!(f, plt, df, cell, color=cell_colors[cell]) = begin
+		cd = @from i in df begin
+			@where f(i) && i.truncation == τ
 			@select {d=getindex(i, plot_data_sym)}
 			@collect DataFrame
 		end
 		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+		boxviolinplot!(plt, cell, d; color = color)
+	end
+
+	plot_cell!(plt, df_std_cells, "MAGRU") do i
+		i.cell == "MAGRU" && i.numhidden == 64 
+	end
+
+	plot_cell!(plt, df_std_cells, "AAGRU") do i
+		i.cell == "AAGRU" && i.numhidden == 132
+	end
+
+	
+	plot_cell!(plt, boe_deep_a_aagru, "DAAGRU_32", cell_colors["DAAGRU"]) do i
+		i.cell == "AAGRU" && i.numhidden == 122 && i.internal_a == 32
+	end
+
+	plot_cell!(plt, boe_deep_a_aagru, "DAAGRU_64", cell_colors["DAAGRU"]) do i
+		i.cell == "AAGRU" && i.numhidden == 112 && i.internal_a == 64
+	end
+
+	plot_cell!(plt, boe_deep_a_aagru, "DAAGRU_128", cell_colors["DAAGRU"]) do i
+		i.cell == "AAGRU" && i.numhidden == 100 && i.internal_a == 128
+	end
+
+	plot_cell!(plt, boe_deep_a_aagru, "DAAGRU_256", cell_colors["DAAGRU"]) do i
+		i.cell == "AAGRU" && i.numhidden == 75 && i.internal_a == 256
 	end
 	
-	for cell ∈ ["CsoftmaxElGRU"]
-		cd = @from i in best_over_eta_combo_sm begin
-			@where i.cell == cell && i.replay_size == replay_size 
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
-		end
-		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell[end-2:end]])
-	end
-
-	for cell ∈ ["AARNN", "MARNN"]
-		cd = @from i in df_std_cells begin
-			@where i.cell == cell && i.replay_size == replay_size 
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
-		end
-		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
-	end
-
-	for cell ∈ ["CsoftmaxElRNN"]
-		cd = @from i in best_over_eta_combo_sm begin
-			@where i.cell == cell && i.replay_size == replay_size 
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
-		end
-		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell[end-2:end]])
-	end
-
-	# , "CsoftmaxElRNN"
-		# τ = 12
 	
-	plt	
-
+	
+	# boxplot!(data_dist_magru, Dict("numhidden"=>32, "truncation"=>truncation, "internal_a"=>8); 
+	# 	label = "DMA8",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_magru, Dict("numhidden"=>32, "truncation"=>truncation, "internal_a"=>8); 
+	# 	label = "DMA8",
+	# 	color=cell_colors["MAGRU"])
+	
+	# boxplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
+	# 	label = "DMA16",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
+	# 	label = "DMA16",
+	# 	color=cell_colors["MAGRU"], title="AA nh: 132, MA nh: 64, truncation: $(truncation)")
 end
 
-# ╔═╡ e602111c-1074-4c58-b1e8-10070962e563
-DataFrameUtils.get_diff_dict(best_over_eta_combo_sm)
-
-# ╔═╡ 29c2e7ce-2d9e-4a8f-be6c-495e5c6f32b5
+# ╔═╡ 9725440a-b7d8-4b6b-b8e2-64b4cec96feb
 let
-	# dd = DataFrameUtils.get_diff_dict(best_over_eta_combo_sm)
-	args = [Dict("numhidden"=>rw.numhidden, "cell"=>rw.cell, "replay_size"=>rw.replay_size, "eta"=>rw.eta) for rw in eachrow(best_over_eta_combo_sm)]
+	τ = 20
 
-	FileIO.save("../../final_runs/dir_tmaze_10_combo_sm.jld2", "args", args)
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out)
+		# ylims=(0.45, 1.0))
+	plot_data_sym = :successes_avg_end
+
+	plot_cell!(f, plt, df, cell, color=cell_colors[cell]) = begin
+		cd = @from i in df begin
+			@where f(i) && i.truncation == τ
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = color)
+	end
+
+	plot_cell!(plt, df_std_cells, "MAGRU") do i
+		i.cell == "MAGRU" && i.numhidden == 32 
+	end
+
+	plot_cell!(plt, df_std_cells, "AAGRU") do i
+		i.cell == "AAGRU" && i.numhidden == 70
+	end
+
+
+	plot_cell!(plt, boe_deep_a_aagru, "DAAGRU_16", cell_colors["DAAGRU"]) do i
+		i.cell == "AAGRU" && i.numhidden == 65 && i.internal_a == 16
+	end
+	
+	plot_cell!(plt, boe_deep_a_aagru, "DAAGRU_32", cell_colors["DAAGRU"]) do i
+		i.cell == "AAGRU" && i.numhidden == 60 && i.internal_a == 32
+	end
+
+	plot_cell!(plt, boe_deep_a_aagru, "DAAGRU_64", cell_colors["DAAGRU"]) do i
+		i.cell == "AAGRU" && i.numhidden == 55 && i.internal_a == 64
+	end
+
+	plot_cell!(plt, boe_deep_a_aagru, "DAAGRU_128", cell_colors["DAAGRU"]) do i
+		i.cell == "AAGRU" && i.numhidden == 45 && i.internal_a == 128
+	end
+
+	# plot_cell!(plt, boe_deep_a_aagru, "DAAGRU_256", cell_colors["DAAGRU"]) do i
+	# 	i.cell == "AAGRU" && i.numhidden == 75 && i.internal_a == 256
+	# end
+
+	
+	
+	# boxplot!(data_dist_aagru, Dict("numhidden"=>65, "truncation"=>truncation, "internal_a"=>16); 
+	# 	label = "DAA16",
+	# 	color=cell_colors["AAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	# dotplot!(data_dist_aagru, Dict("numhidden"=>65, "truncation"=>truncation, "internal_a"=>16); 
+	# 	label = "DAA16",
+	# 	color=cell_colors["AAGRU"])
+	
+	# boxplot!(data_dist_aagru, Dict("numhidden"=>60, "truncation"=>truncation, "internal_a"=>32); 
+	# 	label = "DAA32",
+	# 	color=cell_colors["AAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	# dotplot!(data_dist_aagru, Dict("numhidden"=>60, "truncation"=>truncation, "internal_a"=>32); 
+	# 	label = "DAA32",
+	# 	color=cell_colors["AAGRU"])
+	
+	# boxplot!(data_dist_aagru, Dict("numhidden"=>55, "truncation"=>truncation, "internal_a"=>64); 
+	# 	label = "DAA64",
+	# 	color=cell_colors["AAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	# dotplot!(data_dist_aagru, Dict("numhidden"=>55, "truncation"=>truncation, "internal_a"=>64); 
+	# 	label = "DAA64",
+	# 	color=cell_colors["AAGRU"])
+	
+	# boxplot!(data_dist_aagru, Dict("numhidden"=>45, "truncation"=>truncation, "internal_a"=>128); 
+	# 	label = "DAA128",
+	# 	color=cell_colors["AAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1), tickdir=:out, grid=false)
+	# dotplot!(data_dist_aagru, Dict("numhidden"=>45, "truncation"=>truncation, "internal_a"=>128); 
+	# 	label = "DAA128",
+	# 	color=cell_colors["AAGRU"])
+	
+	
+	# boxplot!(data_dist_magru, Dict("numhidden"=>14, "truncation"=>truncation, "internal_a"=>8); 
+	# 	label = "DMA8",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_magru, Dict("numhidden"=>14, "truncation"=>truncation, "internal_a"=>8); 
+	# 	label = "DMA8",
+	# 	color=cell_colors["MAGRU"])
+	
+	# boxplot!(data_dist_magru, Dict("numhidden"=>11, "truncation"=>truncation, "internal_a"=>11); 
+	# 	label = "DMA11",
+	# 	color=cell_colors["MAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.3, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_magru, Dict("numhidden"=>16, "truncation"=>truncation, "internal_a"=>16); 
+	# 	label = "DMA11",
+	# 	color=cell_colors["MAGRU"], title="AA nh: 70, MA nh: 32, truncation: $(truncation)")
 end
-
-# ╔═╡ 457496ce-abda-4ce1-b8ef-c567b3429bac
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -367,6 +326,7 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 ProgressLogging = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
 Query = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
@@ -376,9 +336,10 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 DataFrames = "~1.3.4"
 FileIO = "~1.14.0"
 JLD2 = "~0.4.22"
+PlutoUI = "~0.7.39"
 ProgressLogging = "~0.1.4"
 Query = "~1.0.0"
-StatsPlots = "~0.14.33"
+StatsPlots = "~0.14.34"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -393,6 +354,12 @@ deps = ["ChainRulesCore", "LinearAlgebra"]
 git-tree-sha1 = "6f1d9bc1c08f9f4a8fa92e3ea3cb50153a1b40d4"
 uuid = "621f4979-c628-5d54-868e-fcf4e3e8185c"
 version = "1.1.0"
+
+[[deps.AbstractPlutoDingetjes]]
+deps = ["Pkg"]
+git-tree-sha1 = "8eaf9f1b4921132a4cff3f36a1d9ba923b14a481"
+uuid = "6e696c72-6542-2067-7265-42206c756150"
+version = "1.1.4"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra"]
@@ -447,15 +414,15 @@ version = "0.5.1"
 
 [[deps.ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "9950387274246d08af38f6eef8cb5480862a435f"
+git-tree-sha1 = "9489214b993cd42d17f44c36e359bf6a7c919abf"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.14.0"
+version = "1.15.0"
 
 [[deps.ChangesOfVariables]]
 deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
-git-tree-sha1 = "bf98fa45a0a4cee295de98d4c1462be26345b9a1"
+git-tree-sha1 = "1e315e3f4b0b7ce40feded39c73049692126cf53"
 uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
-version = "0.1.2"
+version = "0.1.3"
 
 [[deps.Clustering]]
 deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "SparseArrays", "Statistics", "StatsBase"]
@@ -464,16 +431,22 @@ uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 version = "0.14.2"
 
 [[deps.ColorSchemes]]
-deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random"]
-git-tree-sha1 = "12fc73e5e0af68ad3137b886e3f7c1eacfca2640"
+deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Random"]
+git-tree-sha1 = "7297381ccb5df764549818d9a7d57e45f1057d30"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.17.1"
+version = "3.18.0"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "024fe24d83e4a5bf5fc80501a314ce0d1aa35597"
+git-tree-sha1 = "0f4e115f6f34bbe43c19751c90a38b2f380637b9"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.11.0"
+version = "0.11.3"
+
+[[deps.ColorVectorSpace]]
+deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "SpecialFunctions", "Statistics", "TensorCore"]
+git-tree-sha1 = "d08c20eef1f2cbc6e60fd3612ac4340b89fea322"
+uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
+version = "0.9.9"
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
@@ -483,9 +456,9 @@ version = "0.12.8"
 
 [[deps.Compat]]
 deps = ["Base64", "Dates", "DelimitedFiles", "Distributed", "InteractiveUtils", "LibGit2", "Libdl", "LinearAlgebra", "Markdown", "Mmap", "Pkg", "Printf", "REPL", "Random", "SHA", "Serialization", "SharedArrays", "Sockets", "SparseArrays", "Statistics", "Test", "UUIDs", "Unicode"]
-git-tree-sha1 = "b153278a25dd42c65abbf4e62344f9d22e59191b"
+git-tree-sha1 = "87e84b2293559571802f97dd9c94cfd6be52c5e5"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "3.43.0"
+version = "3.44.0"
 
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -515,9 +488,9 @@ version = "1.3.4"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "3daef5523dd2e769dad2365274f760ff5f282c7d"
+git-tree-sha1 = "d1fff3a548102f48987a52a2e0d114fa97d730f0"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.11"
+version = "0.18.13"
 
 [[deps.DataValueInterfaces]]
 git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
@@ -556,9 +529,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "f206814c860c2a909d2a467af0484d08edd05ee7"
+git-tree-sha1 = "d29d8faf1a0ca59167f04edd4d0eb971a6ae009c"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.57"
+version = "0.25.59"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -666,15 +639,15 @@ version = "3.3.6+0"
 
 [[deps.GR]]
 deps = ["Base64", "DelimitedFiles", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Printf", "Random", "RelocatableFolders", "Serialization", "Sockets", "Test", "UUIDs"]
-git-tree-sha1 = "af237c08bda486b74318c8070adb96efa6952530"
+git-tree-sha1 = "b316fd18f5bc025fedcb708332aecb3e13b9b453"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.64.2"
+version = "0.64.3"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Pkg", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "cd6efcf9dc746b06709df14e462f0a3fe0786b1e"
+git-tree-sha1 = "1e5490a51b4e9d07e8b04836f6008f46b48aaa87"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.64.2+0"
+version = "0.64.3+0"
 
 [[deps.GeometryBasics]]
 deps = ["EarCut_jll", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
@@ -719,9 +692,27 @@ version = "2.8.1+1"
 
 [[deps.HypergeometricFunctions]]
 deps = ["DualNumbers", "LinearAlgebra", "SpecialFunctions", "Test"]
-git-tree-sha1 = "65e4589030ef3c44d3b90bdc5aac462b4bb05567"
+git-tree-sha1 = "cb7099a0109939f16a4d3b572ba8396b1f6c7c31"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
-version = "0.3.8"
+version = "0.3.10"
+
+[[deps.Hyperscript]]
+deps = ["Test"]
+git-tree-sha1 = "8d511d5b81240fc8e6802386302675bdf47737b9"
+uuid = "47d2ed2b-36de-50cf-bf87-49c2cf4b8b91"
+version = "0.0.4"
+
+[[deps.HypertextLiteral]]
+deps = ["Tricks"]
+git-tree-sha1 = "c47c5fa4c5308f27ccaac35504858d8914e102f9"
+uuid = "ac1192a8-f4b3-4bfe-ba22-af5b92cd3ab2"
+version = "0.9.4"
+
+[[deps.IOCapture]]
+deps = ["Logging", "Random"]
+git-tree-sha1 = "f7be53659ab06ddc986428d3a9dcc95f6fa6705a"
+uuid = "b5f81e59-6552-4d32-b1f0-c071b021bf89"
+version = "0.2.2"
 
 [[deps.IniFile]]
 git-tree-sha1 = "f550e6e32074c939295eb5ea6de31849ac2c9625"
@@ -746,9 +737,9 @@ version = "0.13.6"
 
 [[deps.InverseFunctions]]
 deps = ["Test"]
-git-tree-sha1 = "91b5dcf362c5add98049e6c29ee756910b03051d"
+git-tree-sha1 = "336cc738f03e069ef2cac55a104eb823455dca75"
 uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.3"
+version = "0.1.4"
 
 [[deps.InvertedIndices]]
 git-tree-sha1 = "bee5f1ef5bf65df56bdd2e40447590b272a5471f"
@@ -912,9 +903,9 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LogExpFunctions]]
 deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "76c987446e8d555677f064aaac1145c4c17662f8"
+git-tree-sha1 = "09e4b894ce6a976c354a69041a04748180d43637"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.14"
+version = "0.3.15"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -983,15 +974,15 @@ version = "0.4.10"
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 
 [[deps.Observables]]
-git-tree-sha1 = "fe29afdef3d0c4a8286128d4e45cc50621b1e43d"
+git-tree-sha1 = "dfd8d34871bc3ad08cd16026c1828e271d554db9"
 uuid = "510215fc-4207-5dde-b226-833fc4488ee2"
-version = "0.4.0"
+version = "0.5.1"
 
 [[deps.OffsetArrays]]
 deps = ["Adapt"]
-git-tree-sha1 = "043017e0bdeff61cfbb7afeb558ab29536bbb5ed"
+git-tree-sha1 = "9cf6b82f7f337c01eac9995be43d11483dee5d7b"
 uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
-version = "1.10.8"
+version = "1.12.0"
 
 [[deps.Ogg_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -1038,9 +1029,9 @@ version = "8.44.0+0"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "3114946c67ef9925204cc024a73c9e679cebe0d7"
+git-tree-sha1 = "027185efff6be268abbaf30cfd53ca9b59e3c857"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
-version = "0.11.8"
+version = "0.11.10"
 
 [[deps.Parsers]]
 deps = ["Dates"]
@@ -1072,9 +1063,15 @@ version = "1.2.0"
 
 [[deps.Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs", "UnicodeFun", "Unzip"]
-git-tree-sha1 = "d05baca9ec540de3d8b12ef660c7353aae9f9477"
+git-tree-sha1 = "d457f881ea56bbfa18222642de51e0abf67b9027"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.28.1"
+version = "1.29.0"
+
+[[deps.PlutoUI]]
+deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
+git-tree-sha1 = "8d1f54886b9037091edf146b517989fc4a09efec"
+uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+version = "0.7.39"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -1225,9 +1222,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.SpecialFunctions]]
 deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "5ba658aeecaaf96923dce0da9e703bd1fe7666f9"
+git-tree-sha1 = "bc40f042cfcc56230f781d92db71f0e21496dffd"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "2.1.4"
+version = "2.1.5"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
@@ -1253,21 +1250,21 @@ version = "0.33.16"
 
 [[deps.StatsFuns]]
 deps = ["ChainRulesCore", "HypergeometricFunctions", "InverseFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
-git-tree-sha1 = "ca9f8a0c9f2e41431dc5b7697058a3f8f8b89498"
+git-tree-sha1 = "5783b877201a82fc0014cbf381e7e6eb130473a4"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
-version = "1.0.0"
+version = "1.0.1"
 
 [[deps.StatsPlots]]
 deps = ["AbstractFFTs", "Clustering", "DataStructures", "DataValues", "Distributions", "Interpolations", "KernelDensity", "LinearAlgebra", "MultivariateStats", "Observables", "Plots", "RecipesBase", "RecipesPipeline", "Reexport", "StatsBase", "TableOperations", "Tables", "Widgets"]
-git-tree-sha1 = "4d9c69d65f1b270ad092de0abe13e859b8c55cad"
+git-tree-sha1 = "43a316e07ae612c461fd874740aeef396c60f5f8"
 uuid = "f3b207a7-027a-5e70-b257-86293d7955fd"
-version = "0.14.33"
+version = "0.14.34"
 
 [[deps.StructArrays]]
 deps = ["Adapt", "DataAPI", "StaticArrays", "Tables"]
-git-tree-sha1 = "8f705dd141733d79aa2932143af6c6e0b6cea8df"
+git-tree-sha1 = "9abba8f8fb8458e9adf07c8a2377a070674a24f1"
 uuid = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
-version = "0.6.6"
+version = "0.6.8"
 
 [[deps.SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
@@ -1311,6 +1308,12 @@ version = "1.7.0"
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
 
+[[deps.TensorCore]]
+deps = ["LinearAlgebra"]
+git-tree-sha1 = "1feb45f88d133a655e001435632f019a9a1bcdb6"
+uuid = "62fd8b95-f654-4bbd-a8a5-9c27f68ccd50"
+version = "0.1.1"
+
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
 uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
@@ -1320,6 +1323,11 @@ deps = ["Random", "Test"]
 git-tree-sha1 = "216b95ea110b5972db65aa90f88d8d89dcb8851c"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
 version = "0.9.6"
+
+[[deps.Tricks]]
+git-tree-sha1 = "6bac775f2d42a611cdfcd1fb217ee719630c4175"
+uuid = "410a4b4d-49e4-4fbc-ab6d-cb71b17b3775"
+version = "0.1.6"
 
 [[deps.URIs]]
 git-tree-sha1 = "97bbe755a53fe859669cd907f2d96aee8d2c1355"
@@ -1358,9 +1366,9 @@ version = "1.25.0+0"
 
 [[deps.Widgets]]
 deps = ["Colors", "Dates", "Observables", "OrderedCollections"]
-git-tree-sha1 = "505c31f585405fc375d99d02588f6ceaba791241"
+git-tree-sha1 = "fcdae142c1cfc7d89de2d11e08721d0f2f86c98a"
 uuid = "cc8bc4a8-27d6-5769-a93b-9d913e69aa62"
-version = "0.6.5"
+version = "0.6.6"
 
 [[deps.WoodburyMatrices]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1572,38 +1580,28 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╠═4d899862-cbba-11ec-119c-6de710107190
-# ╠═c5d81212-8033-4a30-b9c8-610c82e54308
-# ╠═68fc736f-c3a2-43d8-90b4-1f3759f86476
-# ╠═39a87a2f-d941-444e-b467-ecbc43a9a547
-# ╠═1c946d75-e7bd-4b40-8068-d287b5043d71
-# ╠═fca08a4c-9f69-424a-9ba8-bc29846d2b24
-# ╠═3947f507-8b89-47e3-8d02-ed3c069b4a91
-# ╠═069d67d8-e5e2-43f6-aa49-f13c3c9466ee
-# ╠═5bc66e9c-3468-4415-b918-a8d42b73c04b
-# ╠═8a7989fb-063b-46dc-af95-b0ef5d293496
-# ╠═04c76c31-0b37-4ed1-a6f5-9ea3ca261b9a
-# ╠═91359d83-97ec-4724-9260-a6887a0079d4
-# ╠═49ddb3c5-fff1-4406-b4c7-8edce46a3800
-# ╠═10f497c5-9544-4832-980f-adcc0d38e3cc
-# ╠═4bd05cb5-ecf6-4416-8be6-d4d5df080682
-# ╠═e195053f-5c4d-4b99-9c43-9e0bcd41a28e
-# ╠═b42d6baa-5a31-4a61-919c-f7b4ccade1ca
-# ╠═6b36ecb9-e25d-4409-9c15-cd5a6bd84901
-# ╠═382ca0bc-8d58-4ba6-8c3a-58cd1bb4ff48
-# ╠═536ac943-5208-4d02-bfee-d06d32c750f1
-# ╠═03ce92e0-6f3f-4f20-ab56-25ab266971a0
-# ╠═6fae1c30-d0ac-40a5-8b85-e742acd87a4a
-# ╠═9a657889-5efc-4918-9ef8-2794a1d4942d
-# ╠═71bbe92a-7b29-4f80-8232-8c35fb86870c
-# ╠═43260240-ac4b-42b7-9567-5408322f9a92
-# ╠═7733518c-cc6b-4135-80cb-5d2ef852a432
-# ╠═bd69bd97-41cf-4a7b-8ad7-bd784ce77463
-# ╠═ae1167ec-ab22-4706-b6c5-c4a4aefd8310
-# ╠═a599032f-3a74-4adc-b771-3e2041e10177
-# ╠═68624b6a-d596-4912-9a70-a8cdf3b18599
-# ╠═e602111c-1074-4c58-b1e8-10070962e563
-# ╠═29c2e7ce-2d9e-4a8f-be6c-495e5c6f32b5
-# ╠═457496ce-abda-4ce1-b8ef-c567b3429bac
+# ╠═ac8f3d1b-82af-4917-bf1c-d7afc16fc43a
+# ╠═886f5e13-ed46-41c9-a83e-13a01b7c9ff5
+# ╠═f7f500a8-a1e9-11eb-009b-d7afdcade891
+# ╠═0c746c1e-ea39-4415-a1b1-d7124b886f98
+# ╟─1886bf05-f4be-4160-b61c-edf186a7f3cb
+# ╠═fe50ffef-b691-47b5-acf8-8378fbf860a1
+# ╠═cc4a219d-9118-4c34-93ce-317afc837f6c
+# ╠═b59b2e9b-a5f2-46d0-8e14-29812406acf4
+# ╠═c1c7eabb-6528-48a9-8214-574b9613b63e
+# ╠═f3ed490d-2f4f-45e3-bbf4-83f57392208e
+# ╠═703de186-5c7c-4de0-884d-39e26a39e0a3
+# ╠═57c4ee92-136e-434b-aee6-0dfbc17e8d7e
+# ╠═cb4a4949-5d55-4cbd-93ba-4ddac51bd328
+# ╠═16834da6-6afc-480f-8ef1-1c01d44dc03a
+# ╟─1756d1cc-1a88-4442-b55a-fdbb44f56313
+# ╠═c1b635b8-f093-4b4b-8125-54c41bbf80f3
+# ╠═6a2a0a1d-5dd8-4782-97f2-bd4ab1723ebf
+# ╠═cdf182a9-9884-4d5b-9a03-f2a0303eff0f
+# ╠═c5038463-08ab-49db-b053-7756129a9455
+# ╠═889c9459-e495-4972-8529-f4758201b3af
+# ╠═f2cea926-9902-40f8-92f0-23304cc8d5b2
+# ╠═b1beea3f-28c4-4d6e-9738-601ac71e51df
+# ╠═9725440a-b7d8-4b6b-b8e2-64b4cec96feb
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
