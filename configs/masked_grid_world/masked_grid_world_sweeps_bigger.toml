@@ -6,8 +6,8 @@ making decisions about anscillary parameters.
 
 [config]
 save_backend="mysql" # mysql only database backend supported
-database="mkschleg_masked_gw_sweeps" # Database name
-save_dir="masked_gw_sweeps" # Directory name for exceptions, settings, and more!
+database="mkschleg_masked_gw_sweeps_bigger" # Database name
+save_dir="masked_gw_sweeps_bigger" # Directory name for exceptions, settings, and more!
 exp_file = "experiment/MaskedGridWorldERExperiment.jl"
 exp_module_name = "MaskedGridWorldERExperiment"
 exp_func_name = "main_experiment"
@@ -39,8 +39,8 @@ gamma=0.99
 [sweep_args]
 # Put args to sweep over here.
 seed = "1:20"
-replay_size=[20000, 50000]
-"cell+numhidden" = [["MARNN", 5], ["AARNN", 10], ["RNN", 12], ["MAGRU", 5], ["AAGRU", 10], ["GRU", 12]]
+replay_size=[20000, 50000, 100000]
+"cell+numhidden" = [["MARNN", 10], ["AARNN", 20], ["RNN", 24], ["MAGRU", 10], ["AAGRU", 20], ["GRU", 24]]
 truncation = [1, 8, 16, 32]
-"width+height+num_anchors" = [[25, 25, 10], [25, 25, 25], [50, 50, 25]]
+"width+height+num_anchors" = [[25, 25, 10], [25, 25, 25]]
 eta = "0.01*(2.0.^(-13:-6))"

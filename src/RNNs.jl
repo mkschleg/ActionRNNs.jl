@@ -54,5 +54,7 @@ include("rnns/mixture_rnns.jl")
 include("rnns/mixture_grus.jl")
 include("rnns/active_gating.jl")
 
+include("rnns/combo_cells_softmax.jl")
+
 
 

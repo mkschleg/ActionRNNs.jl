@@ -58,7 +58,7 @@ struct BuildComboCat end
 
 struct BuildComboAdd end
 
-for cell_func in [CaddRNN, CaddGRU, CaddAAGRU, CaddMAGRU, CaddElRNN]
+for cell_func in [CaddRNN, CaddGRU, CaddAAGRU, CaddMAGRU, CaddElRNN, CsoftmaxElRNN, CsoftmaxElGRU]
     @eval begin
         @create_rnn_build_trait $cell_func BuildComboAdd
     end
