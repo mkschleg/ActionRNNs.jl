@@ -23,7 +23,7 @@ update_wait = 4
 target_update_wait = 1000
 
 hs_learnable = true
-deepaction = true
+deepaction = false
 
 [sweep_args]
 "cell+numhidden" = [["CsoftmaxElGRU", 6], ["CsoftmaxElRNN", 20]]
