@@ -26,6 +26,8 @@ import .Macros: @info_str, @generate_config_funcs
 
 import Logging: with_logger
 
+import StatsBase: percentile
+
 using Statistics
 using Random
 using ProgressMeter
@@ -416,6 +418,41 @@ function make_intervention(agent::ActionRNNs.DRQNAgent,
     agent.action
 end
 
+mutable struct MultiActionInterventionUnderCondition
+    action_seq::Vector{Int}
+    condition::Function
+    i::Int
+    ing::Bool
+    ed::Bool
+    MultiActionInterventionUnderCondition(action_seq, condition) =
+        new(action_seq, condition, 1, false, false)
+end
+
+function reset!(intervention::MultiActionInterventionUnderCondition)
+    intervention.ed = false
+    intervention.ing = false
+end
+
+function make_intervention(agent::ActionRNNs.DRQNAgent,
+                           env::ActionRNNs.DirectionalTMaze,
+                           intervention::MultiActionInterventionUnderCondition, 
+                           agent_ret)
+
+    if !intervention.ed && (intervention.condition(env) || intervention.ing)
+	# agent.action = intervention.action
+        if intervention.i <= length(intervention.action_seq)
+            intervention.ing = true
+            agent.action = intervention.action_seq[intervention.i]
+            intervention.i += 1
+        else
+            intervention.ing = false
+            intervention.ed = true
+        end
+    end
+
+    agent.action
+end
+
 function get_intervention_list(config)
     get_intervention_list(Val(Symbol(config["inter_list"])))
 end
@@ -428,6 +465,25 @@ function get_intervention_list(::Val{:DTMazeV1})
 	(NoIntervention(), (_rng)->rand(_rng, 1:4)),
 	(ActionInterventionUnderCondition(
 	    1, (env)->env.state.x == 5, false), (_rng)->rand(_rng, 1:4))
+    ]
+end
+
+function get_intervention_list(::Val{:DTMazeV2})
+    inter_start_dir_list = [
+	(NoIntervention(), 2),
+	(ActionInterventionUnderCondition(
+	    2, (env)->env.state.x == 1, false), 2),
+	(NoIntervention(), (_rng)->rand(_rng, 1:4)),
+	(ActionInterventionUnderCondition(
+	    1, (env)->env.state.x == 5, false), (_rng)->rand(_rng, 1:4)),
+        (ActionInterventionUnderCondition(
+	    3, (env)->env.state.x == 5, false), (_rng)->rand(_rng, 1:4)),
+        (MultiActionInterventionUnderCondition(
+	    [1, 1, 1, 1, 1, 1], (env)->env.state.x == 5), (_rng)->rand(_rng, 1:4)),
+        (MultiActionInterventionUnderCondition(
+	    [3, 3, 3, 3, 3, 3], (env)->env.state.x == 5), (_rng)->rand(_rng, 1:4)),
+        (MultiActionInterventionUnderCondition(
+	    [1, 3, 1, 1], (env)->env.state.x == 5), (_rng)->rand(_rng, 1:4))
     ]
 end
 
@@ -458,9 +514,8 @@ function intervention_experiment(agent,
                                  start_dir,
                                  inter_num_episodes,
                                  rng)
-    s = 0
-    ts = 0
-    rews = 0.0f0
+    s = Bool[]
+    ts = Int[]
     max_episode_steps = 10_000 # set in training loop
     for eps in 1:inter_num_episodes
 	success = false
@@ -474,14 +529,13 @@ function intervention_experiment(agent,
 		success = success || (r == 4.0)
 	    end
 
-        s += success
-        ts += steps
-        rews += total_rew
+        push!(s, success)
+        push!(ts, steps)
+
     end
     
     @data EXP inter_successes=s
-    @data EXP inter_total_steps=ts/inter_num_episodes
-    @data EXP inter_total_rews=rews/inter_num_episodes
+    @data EXP inter_total_steps=ts
 end
 
 
