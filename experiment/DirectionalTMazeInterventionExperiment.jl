@@ -502,7 +502,7 @@ function run_intervention_experiment(config, agent, env;
     for (inter, start_dir) in inter_start_dir_list
 
         cp_agent, cp_env = deepcopy(agent), deepcopy(env)
-	intervention_experiment(agent, env, inter, start_dir, inter_num_episodes, rng)
+	intervention_experiment(cp_agent, cp_env, inter, start_dir, inter_num_episodes, rng)
 
     end
 end
