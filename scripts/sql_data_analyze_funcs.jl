@@ -1,9 +1,13 @@
-
+using Statistics
 
 import SQLDataProc
 import ItemColToDataFrame
-using Statistics
 import FileIO
+import DBInterface
+import DataFrames
+
+import StatsBase: StatsBase, percentile
+
 
 function analyze_dir_tmaze(db, savepath;
                            vector_tables = ["stps"=>"results_total_steps",
@@ -131,3 +135,48 @@ function analyze_lunar_lander_ic(dir, savepath=nothing)
 end
 
 
+# function analyze_dir_tmaze(db, savepath;
+#                            vector_tables = ["stps"=>"results_total_steps",
+#                                             "rews"=>"results_total_rews",
+#                                             "successes"=>"results_successes"])
+
+#     SQLDataProc.proc_control_data(db;
+#                       save=savepath,
+#                       vector_tables=vector_tables)
+# end
+function analyze_dir_tmaze_intervention(db, savepath=nothing)
+
+    conn = SQLDataProc.connect(db)
+    params = SQLDataProc.get_param_table(conn)
+    
+    results = [SQLDataProc.proc_matrix_data(conn, "results_inter_total_steps", _pre_name="total_steps_") do mat
+        int_mat = Int.(mat)
+        [
+            ("identity", int_mat),
+            ("mean", mean(int_mat; dims=1)),
+            ("var", var(int_mat; dims=1)),
+            ("median", mean(int_mat; dims=1)),
+            ("25_perc", [percentile(col, 25) for col in eachcol(int_mat)]),
+            ("75_perc", [percentile(col, 75) for col in eachcol(int_mat)])
+        ]
+    end,
+    SQLDataProc.proc_matrix_data(conn, "results_inter_successes", _pre_name="successes_") do mat
+        bool_mat = Bool.(mat)
+        [
+            ("mean", mean(bool_mat; dims=1))
+        ]
+    end]
+
+    DBInterface.close!(conn)
+    params_and_results = DataFrames.innerjoin(params, results..., on=:_HASH)
+
+    params_and_results = SQLDataProc.simplify_dataframe((d)->begin
+                                                        c = collect(d)
+                                                        # @info typeof(c)
+                                                        typeof(c)[collect(d)]
+                                                        end, params_and_results)
+    if !isnothing(savepath)
+        FileIO.save(savepath, "params_and_results", params_and_results)
+    end
+    params_and_results
+end

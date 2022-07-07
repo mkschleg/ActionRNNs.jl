@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.18.1
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -17,7 +17,7 @@ end
 # ╔═╡ 06ace5d8-8483-11ec-2aea-636a33727c97
 let
 	import Pkg
-	Pkg.activate("../..")
+	Pkg.activate("..")
 end
 
 # ╔═╡ 5c1f4401-7698-4785-b5b6-d810c9d38a2a
@@ -27,7 +27,7 @@ using Revise, PlutoUI
 using ActionRNNs, Plots
 
 # ╔═╡ bb25acf6-940a-41b9-be82-d8e2165ed3cd
-env = ActionRNNs.MaskedGridWorld(50, 50, 150, 1; obs_strategy=:aliased, pacman_wrapping=true)
+env = ActionRNNs.MaskedGridWorld(10, 10, 25, 1; obs_strategy=:aliased, pacman_wrapping=true)
 
 # ╔═╡ 81ea766d-f24e-4a48-8516-c568428e16b0
 begin
@@ -78,6 +78,7 @@ let
 	s, r, t = ActionRNNs.MinimalRLCore.step!(env, action[])
 	plot(env, 
 		title=(o=Int.(ActionRNNs.MinimalRLCore.get_state(env)), r=r, t=t))
+	# savefig("../../plots/masked_gw.pdf")
 end
 
 # ╔═╡ 6c4f153d-3484-4f3d-bf77-52a6ba648805

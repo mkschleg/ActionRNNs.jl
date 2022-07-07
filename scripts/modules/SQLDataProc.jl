@@ -57,6 +57,46 @@ function create_indexes(table_selector::Function, conn)
 end
 
 
+function proc_matrix_data(proc, conn, table, hashes=UInt[]; _pre_name="")
+
+    if length(hashes) == 0
+        hashes = DataFrame(DBInterface.execute(conn, "select _HASH from params;"))[!, :_HASH]
+    end
+    μ = zeros(Float32, length(hashes))
+    sql_stmt = """select data, step_1, step_2
+                  from $(table)
+                  WHERE _HASH=?
+                  ORDER BY step_1, step_2;
+               """
+    stmt = DBInterface.prepare(conn, sql_stmt)
+    dat = DataFrame(DBInterface.execute(stmt, [hashes[1]]))
+    cols = Int(maximum(dat[!, :step_1]))
+    proc_dat = proc(reshape(dat[!, :data], :, cols))
+    get_initial = (x)->if x isa Number
+        zeros(typeof(x), length(hashes))
+    elseif x isa AbstractArray
+        Vector{typeof(x)}(undef, length(hashes))
+    end
+
+    ret_strg = Dict(
+        r[1]=>get_initial(r[2]) for r in proc_dat
+    )
+
+    @progress for (i, hsh) in enumerate(hashes)
+        curs = DBInterface.execute(stmt, [hsh])
+        dat = DataFrame(DBInterface.execute(stmt, hsh))
+        cols = Int(maximum(dat[!, :step_1]))
+        proc_dat = proc(reshape(dat[!, :data], :, cols))
+        curs = nothing
+        for (k, d) ∈ proc_dat
+            ret_strg[k][i] = d
+        end
+    end
+    DBInterface.close!(stmt)
+    DataFrame(;_HASH=hashes, (Symbol(_pre_name*string(k))=>v for (k, v) in ret_strg)...)
+end
+
+
 function proc_vec_data(conn, table, hashes=UInt[]; _pre_name="", kwargs...)
 
     if length(hashes) == 0
@@ -199,26 +239,29 @@ function proc_data(database, vec_tables, non_vec_tables, save=nothing)
     params = get_param_table(conn)
     results = get_results_table(conn)
 
-    # vector_tables = ["lc"=>"results_lc"] #, "var"=>"results_var"]
+    vector_tables = ["lc"=>"results_lc"] #, "var"=>"results_var"]
     
-    # # proc_vec_data
-    # results = [
-    #     SQLDataProc.proc_vec_data(
-    #         db_conn,
-    #         vt;
-    #         _pre_name=vt_n * "_",
-    #         identity=(d)->Float32.(d)) for (vt_n, vt) in vector_tables]
-    # res_numbers = DataFrame(DBInterface.execute(db_conn, "SELECT _HASH, avg_all, avg_end from results order by _HASH"))
+    # proc_vec_data
+    results = [
+        SQLDataProc.proc_vec_data(
+            db_conn,
+            vt;
+            _pre_name=vt_n * "_",
+            identity=(d)->Float32.(d)) for (vt_n, vt) in vector_tables]
+    res_numbers = DataFrame(DBInterface.execute(db_conn, "SELECT _HASH, avg_all, avg_end from results order by _HASH"))
 
-    # mid = DataFrames.innerjoin(params, res_numbers, results..., on=:_HASH)
-    # params_and_results = SQLDataProc.simplify_dataframe((d)->[collect(d)], mid)
+    mid = DataFrames.innerjoin(params, res_numbers, results..., on=:_HASH)
+    params_and_results = SQLDataProc.simplify_dataframe((d)->[collect(d)], mid)
     
     
-    # SQLDataProc.proc_vec_data()
+    SQLDataProc.proc_vec_data()
     
     DBInterface.close!(conn)
     params, results
 end
+
+
+
 
 function end_agg(agg::Function, d, num_steps::Int)
     if length(d) < num_steps

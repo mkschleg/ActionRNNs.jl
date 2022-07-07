@@ -14,85 +14,151 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ c33c621e-d84f-11ec-3859-bfd8a4d9e50f
+# ╔═╡ 4d899862-cbba-11ec-119c-6de710107190
 begin
 	using DataFrames, Query
 	using Statistics, ProgressLogging
 	using FileIO, JLD2, PlutoUI
 end
 
-# ╔═╡ d2f18951-d72c-4625-a91a-45d299a466a8
+# ╔═╡ c5d81212-8033-4a30-b9c8-610c82e54308
 using StatsPlots
 
-# ╔═╡ b802dcb1-9636-4ccb-9e4a-a4204b9189fc
-color_scheme = [
-    colorant"#44AA99",
-    colorant"#332288",
-    colorant"#DDCC77",
-    colorant"#999933",
-    colorant"#CC6677",
-    colorant"#AA4499",
-    colorant"#DDDDDD",
-	colorant"#117733",
-	colorant"#882255",
-	colorant"#1E90FF",
-]
-
-# ╔═╡ 55358cec-faf3-46e7-ae19-851f3a4c3ac4
-cell_colors = Dict(
-	"RNN" => color_scheme[3],
-	"AARNN" => color_scheme[end],
-	"MARNN" => color_scheme[5],
-	"FacMARNN" => color_scheme[1],
-	"DAARNN" => color_scheme[7],
-	"GRU" => color_scheme[4],
-	"AAGRU" => color_scheme[2],
-	"MAGRU" => color_scheme[6],
-	"FacMAGRU" => color_scheme[end-2], 
-	"DAAGRU" => color_scheme[9],
-	"CsoftmaxElGRU"=>colorant"#883a94",
-	"CsoftmaxElRNN"=>colorant"#8677ad")
-
-# ╔═╡ 0f23d06b-bd67-491b-bffd-61bc8845804b
-module DataFrameUtilsWrapper
-	include("../modules/DataFrameUtils.jl")
+# ╔═╡ a63dccc7-1993-40ba-a2a7-25f92cdfc12d
+cell_colors = let
+	color_scheme = [
+	    colorant"#44AA99",
+	    colorant"#332288",
+	    colorant"#DDCC77",
+	    colorant"#999933",
+	    colorant"#CC6677",
+	    colorant"#AA4499",
+	    colorant"#DDDDDD",
+		colorant"#117733",
+		colorant"#882255",
+		colorant"#1E90FF",
+	]
+	cell_colors = Dict(
+		"RNN" => color_scheme[3],
+		"AARNN" => color_scheme[end],
+		"MARNN" => color_scheme[5],
+		"FacMARNN" => color_scheme[1],
+		"DAARNN" => color_scheme[7],
+		"GRU" => color_scheme[4],
+		"AAGRU" => color_scheme[2],
+		"MAGRU" => color_scheme[6],
+		"FacMAGRU" => color_scheme[end-2], 
+		"DAAGRU" => color_scheme[9],)
 end
 
-# ╔═╡ 51261fca-0b9d-4501-a30b-ae465524e895
-DataFrameUtils = DataFrameUtilsWrapper.DataFrameUtils
+# ╔═╡ 1c946d75-e7bd-4b40-8068-d287b5043d71
+function local_ingredients(path::String)
+	# this is from the Julia source code (evalfile in base/loading.jl)
+	# but with the modification that it returns the module instead of the last object
+	name = Symbol(basename(path))
+	m = Module(name)
+	Core.eval(m,
+        Expr(:toplevel,
+             :(eval(x) = $(Expr(:core, :eval))($name, x)),
+             :(include(x) = $(Expr(:top, :include))($name, x)),
+             :(include(mapexpr::Function, x) = $(Expr(:top, :include))(mapexpr, $name, x)),
+             :(include($path))))
+	m
+end
 
-# ╔═╡ acb3cbab-e7e5-4ce3-9d60-4700a443516f
-at(dir) = joinpath("../../local_data/tmaze", dir)
+# ╔═╡ fca08a4c-9f69-424a-9ba8-bc29846d2b24
+function ingredients(;
+		url::Union{String,Nothing}=nothing, 
+		path::Union{String,Nothing}=nothing)
+	
+	if url === nothing && path !== nothing
+		local_ingredients(path)
+	elseif url !== nothing && path === nothing
+		local_ingredients(download(url))
+	else
+		throw(ArgumentError("""Use `ingredients(url="...")` or `ingredients(path="...")`."""))
+	end
+end
 
-# ╔═╡ 74b5f02f-7c0b-4112-aea0-802497f4b264
+# ╔═╡ 3947f507-8b89-47e3-8d02-ed3c069b4a91
+DataFrameUtils = ingredients(path="../modules/DataFrameUtils.jl").DataFrameUtils
+
+# ╔═╡ 069d67d8-e5e2-43f6-aa49-f13c3c9466ee
+at(dir) = joinpath("../../local_data/intervention", dir)
+
+# ╔═╡ db3bdb5c-bb54-41eb-bf38-b1be067bd2ec
 @bind s_dir PlutoUI.Select(readdir(at("")))
 
-# ╔═╡ e912da30-fed5-4eb0-b931-8ce0b04ab0a5
+# ╔═╡ 49e2d4ae-4e4b-4ea3-bb67-dfc5ef4fd5ff
 readdir(at(s_dir))
 
-# ╔═╡ f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
-df_final_tmaze = FileIO.load(at("final_act_tmaze_er_rnn_rmsprop_10/2022_05_20_proc_data.jld2"))["params_and_results"]
+# ╔═╡ 8a7989fb-063b-46dc-af95-b0ef5d293496
+df_no_train = FileIO.load(at("inter_dir_tmaze_er_10_v2/2022-06-27-procdata.jld2"))["params_and_results"]
 
-# ╔═╡ 6244b0ef-6734-4007-9067-e218191b3b79
-df_fac_tmaze = FileIO.load(at("tmaze_fac_er_rnn_init_rmsprop_10/2022_05_20_proc_data.jld2"))["params_and_results"]
+# ╔═╡ 6f98fc99-dc38-4216-b2c0-41df8deaccbb
+df_train = FileIO.load(at("inter_dir_tmaze_er_10_v2_ftoff/2022-06-27-procdata.jld2"))["params_and_results"]
 
-# ╔═╡ 3e59c36a-545d-4a52-961f-ee5ba4c7c3d6
-best_over_eta_fac_tmaze = DataFrameUtils.best_from_sweep_param(
-	order(:successes_avg_end, by=mean, rev=true), 
-	df_fac_tmaze, 
-	["eta"])
+# ╔═╡ 60c57b0b-6807-44e5-9a40-1d295c554c7a
+names(df_no_train)
 
-# ╔═╡ 6b0e3ce9-cf5c-4666-b1f9-7953ed5a3596
-df_deep_action_tmaze = FileIO.load(at("tmaze_er_deep_action/2022_05_19_proc_data.jld2"))["params_and_results"]
+# ╔═╡ 622165c9-7861-4e81-a463-20a87a3bb06b
+function find_differences(::Val{:DTMazeV2}, mat::AbstractMatrix, agg=mean)
 
-# ╔═╡ d4f5e400-a46c-47d1-a18d-9d068ce10da1
-best_over_eta_deep_action = DataFrameUtils.best_from_sweep_param(
-	order(:successes_avg_end, by=mean, rev=true), 
-	df_deep_action_tmaze, 
-	["eta"])
+	ret = zeros(6)
+	
+	ret[1] = mean(mat[:, 2]) - mean(mat[:, 1])
+	# @info size(mat)
+	for i in 4:size(mat)[2]
+		ret[i-2] = mean(mat[:, i]) - mean(mat[:, 3])
+	end
+	ret
+	
+end
 
-# ╔═╡ 4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
-function boxviolinplot!(plt, x, data; color, kwargs...)
+# ╔═╡ 527aa694-0f3b-47fc-ba4b-d054fac57d91
+function find_differences(::Val{:DTMazeV2}, vec::AbstractVector)
+
+	ret = zeros(6)
+	
+	ret[1] = vec[2] - vec[1]
+	# @info size(mat)
+	for i in 4:8
+		ret[i-2] = vec[i] - vec[3]
+	end
+	ret
+	
+end
+
+# ╔═╡ c9b9b4db-c8f7-4e50-ab80-dc3f4b91bc70
+function find_ratios(::Val{:DTMazeV2}, mat::AbstractMatrix, agg=mean)
+
+	ret = zeros(6)
+	
+	ret[1] = (mean(mat[:, 2]) - mean(mat[:, 1]))/mean(mat[:, 1])
+	# @info size(mat)
+	for i in 4:size(mat)[2]
+		ret[i-2] = (mean(mat[:, i]) - mean(mat[:, 3]))/mean(mat[:, 3])
+	end
+	ret
+	
+end
+
+# ╔═╡ de664cc7-d71c-4687-b95c-893d32f4a53c
+function find_ratios(::Val{:DTMazeV2}, vec::AbstractVector)
+
+	ret = zeros(6)
+	
+	ret[1] = (vec[2] - vec[1])/vec[1]
+	# @info size(mat)
+	for i in 4:8
+		ret[i-2] = (vec[i] - vec[3])/vec[3]
+	end
+	ret
+	
+end
+
+# ╔═╡ 7f31d94d-68a4-45c8-8e59-16011ae142d3
+function boxviolinplot!(plt, x, data, color; kwargs...)
 	violin!(plt, [x], data, legend=false, color=color, 
 			lw=1, linecolor=color)
 	boxplot!(plt, [x], data, 
@@ -103,147 +169,549 @@ function boxviolinplot!(plt, x, data; color, kwargs...)
 			 linecolor=:black)
 end
 
-# ╔═╡ 47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╔═╡ 10f497c5-9544-4832-980f-adcc0d38e3cc
 let
-	plt = plot(
-		legend=false, 
-		grid=false, 
-		tickfontsize=11, 
-		tickdir=:out, 
-		ylims=(0.45, 1.0))
-	plot_data_sym = :successes_avg_end
-	
-	for cell ∈ ["GRU", "AAGRU", "MAGRU"]
-		cd = @from i in df_final_tmaze begin
+
+	gr()
+	plts = []
+	df = df_no_train
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
 			@where i.cell == cell
-			@select {d=getindex(i, plot_data_sym)}
+			@select {μ = getindex(i, :successes_mean)}
 			@collect DataFrame
 		end
-		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
 	end
 
-	cd = @from i in best_over_eta_deep_action begin
-			@where i.cell == "AAGRU" && 
-			i.internal_a_layers == 1 && 
-			i.internal_a == 4
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
-	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, "DeepAAGRU", d; color = cell_colors["DAAGRU"])
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
 
-	cd = @from i in best_over_eta_fac_tmaze begin
-		@where i.cell == "FacMAGRU" &&
-			   i.init_style == "tensor" &&
-			   i.replay_size == 1000 && 
-			   i.numhidden == 6
-		@select {d=getindex(i, plot_data_sym)}
-		@collect DataFrame
-	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, "FacMAGRU", d; color = cell_colors["FacMAGRU"])
-		
-	
-	plt = vline!([7], linestyle=:dot, color=:white, lw=2)
-	
-	for cell ∈ ["RNN", "AARNN", "MARNN"]
-		cd = @from i in df_final_tmaze begin
-			@where i.cell == cell
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
+	plts = [plot(title=i) for i in 1:8]
+	@progress for cell ∈ diff_dict["cell"]
+		cd = get_cell_data(cell)
+		for i in 1:8
+			boxviolinplot!(plts[i], cell, getindex.(cd.μ[1], i), cell_colors[cell])
 		end
-		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
 	end
-
-	cd = @from i in best_over_eta_deep_action begin
-			@where i.cell == "AARNN" && 
-			i.internal_a_layers == 1 && 
-			i.internal_a == 4
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
-	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, "DeepAARNN", d; color = cell_colors["DAARNN"])
-
-	cd = @from i in best_over_eta_fac_tmaze begin
-		@where i.cell == "FacMARNN" &&
-			   i.init_style == "tensor" &&
-			   i.replay_size == 1000  && 
-			   i.numhidden == 20
-		@select {d=getindex(i, plot_data_sym)}
-		@collect DataFrame
-	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, "FacMARNN", d; color = cell_colors["FacMARNN"])
-	
-	
-	savefig("../../plots/tmaze_er.pdf")
-	plt
+	plts[8]
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
 end
 
-# ╔═╡ f4ea8ec5-a899-493c-bcee-17d10141b4bb
-md"""
-# Combo Cells
-"""
-
-# ╔═╡ 7e47a5fc-ce5d-4f1b-85aa-1b013ec8b477
-df_deep_sm = FileIO.load(at("tmaze_er_combo_sm/2022-07-07-procdata.jld2"))["params_and_results"]
-
-# ╔═╡ b4335a43-aec4-4eac-9cd4-c12e527ab79f
-best_over_eta_sm = DataFrameUtils.best_from_sweep_param(
-	order(:successes_avg_end, by=mean, rev=true), 
-	df_deep_sm, 
-	["eta"])
-
-# ╔═╡ e453af9e-b6d5-4300-9215-dbdc1eb56d2b
+# ╔═╡ 64675b1b-b4dc-48b3-861a-afcfa3398ac8
 let
-	plt = plot(
-		legend=false, 
-		grid=false, 
-		tickfontsize=11, 
-		tickdir=:out, 
-		ylims=(0.45, 1.0))
-	plot_data_sym = :successes_avg_end
+
+	gr()
+	plts = []
+	df = df_train
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :successes_mean)}
+			@collect DataFrame
+		end
+	end
+
+	mean(get_cell_data("MAGRU").μ[1])
 	
-	for cell ∈ ["GRU", "AAGRU", "MAGRU"]
-		cd = @from i in df_final_tmaze begin
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title=i) for i in 1:8]
+	@progress for cell ∈ diff_dict["cell"]
+		cd = get_cell_data(cell)
+		for i in 1:8
+			boxviolinplot!(plts[i], cell, getindex.(cd.μ[1], i), cell_colors[cell])
+		end
+	end
+	plts[8]
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ 32230048-e61d-47b3-aa36-11ad50022e55
+let
+
+	gr()
+	plts = []
+	df = df_no_train
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
 			@where i.cell == cell
-			@select {d=getindex(i, plot_data_sym)}
+			@select {μ = getindex(i, :successes_mean)}
 			@collect DataFrame
 		end
-		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
 	end
 
-	cell = "CsoftmaxElGRU"
-	cd = @from i in best_over_eta_sm begin
-		@where i.cell == cell && i.deepaction==false
-		@select {d=getindex(i, plot_data_sym)}
-		@collect DataFrame
-	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
 
-	for cell ∈ ["RNN", "AARNN", "MARNN"]
-		cd = @from i in df_final_tmaze begin
+	plts = [plot(title=cell) for cell ∈ diff_dict["cell"]]
+	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
+		cd = get_cell_data(cell)
+		for i in 1:8
+			boxviolinplot!(plt, i, getindex.(cd.μ[1], i), cell_colors[cell])
+		end
+	end
+	plts
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ 35893a02-6ea2-47e6-8815-9b95ad275455
+let
+
+	gr()
+	plts = []
+	df = df_train
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
 			@where i.cell == cell
-			@select {d=getindex(i, plot_data_sym)}
+			@select {μ = getindex(i, :successes_mean)}
 			@collect DataFrame
 		end
-		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
 	end
 
-	cell = "CsoftmaxElRNN"
-	cd = @from i in best_over_eta_sm begin
-		@where i.cell == cell && i.deepaction==false
-		@select {d=getindex(i, plot_data_sym)}
-		@collect DataFrame
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title=cell) for cell ∈ diff_dict["cell"]]
+	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
+		cd = get_cell_data(cell)
+		for i in 1:8
+			boxviolinplot!(plt, i, getindex.(cd.μ[1], i), cell_colors[cell])
+		end
 	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	plts
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ 963b2a56-8101-49ec-87d0-0712ef296798
+let
+
+	gr()
+	plts = []
+	df = df_no_train
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :total_steps_75_perc)}
+			@collect DataFrame
+		end
+	end
+
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title=cell, ylims=(0, 1000)) for cell ∈ diff_dict["cell"]]
+	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
+		cd = get_cell_data(cell)
+		for i in 1:8
+			boxviolinplot!(plt, i, getindex.(cd.μ[1], i), cell_colors[cell])
+		end
+	end
+	plts
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ 8143a5dd-6373-4008-b4d4-61d33b18b40c
+let
+
+	gr()
+	plts = []
+	df = df_no_train
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title=cell, ylims=(-100, 100)) for cell ∈ diff_dict["cell"]]
+	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
+		cd = get_cell_data(cell)
+		for i in 1:6
+			boxviolinplot!(plt, i, getindex.(find_differences.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
+		end
+	end
+	plts
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ 8b6edbdd-8811-4d66-bdad-69f425b4835a
+let
+
+	gr()
+	plts = []
+	df = df_no_train
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :successes_mean)}
+			@collect DataFrame
+		end
+	end
+
+	[find_differences(Val{:DTMazeV2}(), v[1, :]) for v in get_cell_data("MAGRU").μ[1]]
+
+
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title=cell) for cell ∈ diff_dict["cell"]]
+	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
+		cd = get_cell_data(cell)
+		for i in 1:6
+			d = [find_differences(Val{:DTMazeV2}(), v[1, :]) 
+					for v in get_cell_data(cell).μ[1]]
+			boxviolinplot!(plt, i, getindex.(d, i), cell_colors[cell])
+		end
+	end
+	plts
+	# 	# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ 0b24f971-4618-49e4-97a8-11388783b9c0
+md"""# Long"""
+
+# ╔═╡ b98f910f-5ddf-4bfb-b365-bd50438f842d
+df_no_train_long = FileIO.load(at("inter_dir_tmaze_er_10_long/2022-06-28-procdata.jld2"))["params_and_results"]
+
+# ╔═╡ 2b33d0df-4ba2-47b1-b9ca-095e238520c9
+df_train_long = FileIO.load(at("inter_dir_tmaze_er_10_v2_ftoff_long/2022-06-29-procdata.jld2"))["params_and_results"]
+
+# ╔═╡ 59d22a67-6d97-472e-8f9d-9f1506d7daa9
+let
+
+	gr()
+	plts = []
+	df = df_no_train_long
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :successes_mean)}
+			@collect DataFrame
+		end
+	end
+
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title=cell) for cell ∈ diff_dict["cell"]]
+	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
+		cd = get_cell_data(cell)
+		for i in 1:8
+			boxviolinplot!(plt, i, getindex.(cd.μ[1], i), cell_colors[cell])
+		end
+	end
+	plts
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ 84aa9553-c25d-4b38-a72d-48e719a44226
+let
+
+	gr()
+	plts = []
+	df = df_no_train_long
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title=cell, ylims=(-100, 100)) for cell ∈ diff_dict["cell"]]
+	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
+		cd = get_cell_data(cell)
+		for i in 1:6
+			boxviolinplot!(plt, i, getindex.(find_differences.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
+		end
+	end
+	plts
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ 8e20b0e7-e56e-41ec-b508-5484d42ba9fb
+let
+
+	gr()
+	plts = []
+	df = df_no_train_long
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title=cell, ylims=(-1,1)) for cell ∈ diff_dict["cell"]]
+	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
+		cd = get_cell_data(cell)
+		for i in 1:6
+			boxviolinplot!(plt, i, getindex.(find_ratios.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
+		end
+	end
+	plts
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ aff04b6a-3b5b-49b1-8b9d-8835eebd1dc4
+let
+
+	gr()
+	plts = []
+	df = df_no_train_long
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	# mean(get_cell_data("MAGRU").μ[1])
+	
+	plts = [plot(title="Intervention: $(i)", ylims=(0, 300)) for i in 1:8]
+	@progress for (plt, i) in zip(plts, 1:8)
+		for cell ∈ diff_dict["cell"]
+			cd = get_cell_data(cell)
+			boxviolinplot!(plt, cell, getindex.(mean.(cd.μ[1], dims=1), i), cell_colors[cell])
+		end
+	end
+	[savefig(plt, "../../plots/interventions/long_ft/inter_steps_$(i).pdf") for (i, plt) in enumerate(plts)]
+	plts
+
+end
+
+# ╔═╡ d857a8b8-fa75-4fd5-93d9-afdd98d85237
+let
+
+	gr()
+	plts = []
+	df = df_no_train_long
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :successes_mean)}
+			@collect DataFrame
+		end
+	end
+
+	# mean(get_cell_data("MAGRU").μ[1])
+	
+	plts = [plot(title="Intervention: $(i)") for i in 1:8]
+	@progress for (plt, i) in zip(plts, 1:8)
+		for cell ∈ diff_dict["cell"]
+			cd = get_cell_data(cell)
+			boxviolinplot!(plt, cell, getindex.(cd.μ[1], i), cell_colors[cell])
+		end
+	end
+	[savefig(plt, "../../plots/interventions/long_ft/inter_$(i).pdf") for (i, plt) in enumerate(plts)]
+	plts
+
+end
+
+# ╔═╡ b9bdf6b0-4449-4580-b4c8-13a8a0037f25
+let
+
+	gr()
+	plts = []
+	df = df_no_train_long
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :successes_mean)}
+			@collect DataFrame
+		end
+	end
+
+	# mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title="Intervention: $(i)") for i in 1:6]
+	@progress for (plt, i) in zip(plts, 1:6)
+		for cell ∈ diff_dict["cell"]
+			cd = get_cell_data(cell)
+			boxviolinplot!(plt, cell, getindex.(find_differences.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
+		end
+	end
+	[savefig(plt, "../../plots/interventions/long_ft/inter_diffs_$(i).pdf") for (i, plt) in enumerate(plts)]
+	plts
+
+end
+
+# ╔═╡ cfa736b0-a850-4b4d-b6b1-2717f58cea44
+let
+
+	gr()
+	plts = []
+	df = df_no_train_long
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title="Intervention: $(i)", ylims=(-100,100)) for i in 1:6]
+	@progress for (plt, i) in zip(plts, 1:6)
+		for cell ∈ diff_dict["cell"]
+			cd = get_cell_data(cell)
+			boxviolinplot!(plt, cell, getindex.(find_differences.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
+		end
+	end
+	[savefig(plt, "../../plots/interventions/long_ft/inter_steps_diffs_$(i).pdf") for (i, plt) in enumerate(plts)]
+	plts
+
+end
+
+# ╔═╡ 7aaaef83-e6c5-4bb6-84ef-571fc3630400
+let
+
+	gr()
+	plts = []
+	df = df_no_train_long
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	plts = [plot(title="Intervention: $(i)", ylims=(-1,1)) for i in 1:6]
+	@progress for (plt, i) in zip(plts, 1:6)
+		for cell ∈ ["MARNN", "RNN", "AARNN", "MAGRU", "GRU", "AAGRU"]#diff_dict["cell"]
+			cd = get_cell_data(cell)
+			[savefig(plt, "../../plots/interventions/long_ft/inter_steps_ratios_$(i).pdf") for (i, plt) in enumerate(plts)]
+			boxviolinplot!(plt, cell, getindex.(find_ratios.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
+		end
+	end
+	plts
+		# push!(plts, plt)
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ 5eb174d7-d3c3-4666-81c9-8dc3731469e5
+let
+
+	gr()
+	plts = []
+	df = df_train_long
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell
+			@select {μ = getindex(i, :successes_mean)}
+			@collect DataFrame
+		end
+	end
+
+	# mean(get_cell_data("MAGRU").μ[1])
+	
+	plts = [plot(title="Intervention: $(i)") for i in 1:8]
+	@progress for (plt, i) in zip(plts, 1:8)
+		for cell ∈ ["MARNN", "RNN", "AARNN", "MAGRU", "GRU", "AAGRU"]
+			cd = get_cell_data(cell)
+			boxviolinplot!(plt, cell, getindex.(cd.μ[1], i), cell_colors[cell])
+		end
+	end
+	[savefig(plt, "../../plots/interventions/long_ftoff/inter_$(i).pdf") for (i, plt) in enumerate(plts)]
+	plts
 
 end
 
@@ -263,10 +731,10 @@ StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 DataFrames = "~1.3.4"
 FileIO = "~1.14.0"
 JLD2 = "~0.4.22"
-PlutoUI = "~0.7.39"
+PlutoUI = "~0.7.38"
 ProgressLogging = "~0.1.4"
 Query = "~1.0.0"
-StatsPlots = "~0.14.34"
+StatsPlots = "~0.14.33"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -347,9 +815,9 @@ version = "1.14.0"
 
 [[deps.ChangesOfVariables]]
 deps = ["ChainRulesCore", "LinearAlgebra", "Test"]
-git-tree-sha1 = "1e315e3f4b0b7ce40feded39c73049692126cf53"
+git-tree-sha1 = "bf98fa45a0a4cee295de98d4c1462be26345b9a1"
 uuid = "9e997f8a-9a97-42d5-a9f1-ce6bfc15e2c0"
-version = "0.1.3"
+version = "0.1.2"
 
 [[deps.Clustering]]
 deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "SparseArrays", "Statistics", "StatsBase"]
@@ -358,22 +826,16 @@ uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 version = "0.14.2"
 
 [[deps.ColorSchemes]]
-deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Random"]
-git-tree-sha1 = "7297381ccb5df764549818d9a7d57e45f1057d30"
+deps = ["ColorTypes", "Colors", "FixedPointNumbers", "Random"]
+git-tree-sha1 = "12fc73e5e0af68ad3137b886e3f7c1eacfca2640"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.18.0"
+version = "3.17.1"
 
 [[deps.ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
-git-tree-sha1 = "a985dc37e357a3b22b260a5def99f3530fb415d3"
+git-tree-sha1 = "024fe24d83e4a5bf5fc80501a314ce0d1aa35597"
 uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
-version = "0.11.2"
-
-[[deps.ColorVectorSpace]]
-deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "SpecialFunctions", "Statistics", "TensorCore"]
-git-tree-sha1 = "3f1f500312161f1ae067abe07d13b40f78f32e07"
-uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
-version = "0.9.8"
+version = "0.11.0"
 
 [[deps.Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
@@ -415,9 +877,9 @@ version = "1.3.4"
 
 [[deps.DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "cc1a8e22627f33c789ab60b36a9132ac050bbf75"
+git-tree-sha1 = "3daef5523dd2e769dad2365274f760ff5f282c7d"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.12"
+version = "0.18.11"
 
 [[deps.DataValueInterfaces]]
 git-tree-sha1 = "bfc1187b79289637fa0ef6d4436ebdfe6905cbd6"
@@ -456,9 +918,9 @@ uuid = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 
 [[deps.Distributions]]
 deps = ["ChainRulesCore", "DensityInterface", "FillArrays", "LinearAlgebra", "PDMats", "Printf", "QuadGK", "Random", "SparseArrays", "SpecialFunctions", "Statistics", "StatsBase", "StatsFuns", "Test"]
-git-tree-sha1 = "8a6b49396a4058771c5c072239b2e0a76e2e898c"
+git-tree-sha1 = "f206814c860c2a909d2a467af0484d08edd05ee7"
 uuid = "31c24e10-a181-5473-b8eb-7969acd0382f"
-version = "0.25.58"
+version = "0.25.57"
 
 [[deps.DocStringExtensions]]
 deps = ["LibGit2"]
@@ -566,15 +1028,15 @@ version = "3.3.6+0"
 
 [[deps.GR]]
 deps = ["Base64", "DelimitedFiles", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Printf", "Random", "RelocatableFolders", "Serialization", "Sockets", "Test", "UUIDs"]
-git-tree-sha1 = "b316fd18f5bc025fedcb708332aecb3e13b9b453"
+git-tree-sha1 = "af237c08bda486b74318c8070adb96efa6952530"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.64.3"
+version = "0.64.2"
 
 [[deps.GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Pkg", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
-git-tree-sha1 = "1e5490a51b4e9d07e8b04836f6008f46b48aaa87"
+git-tree-sha1 = "cd6efcf9dc746b06709df14e462f0a3fe0786b1e"
 uuid = "d2c73de3-f751-5644-a686-071e5b155ba9"
-version = "0.64.3+0"
+version = "0.64.2+0"
 
 [[deps.GeometryBasics]]
 deps = ["EarCut_jll", "IterTools", "LinearAlgebra", "StaticArrays", "StructArrays", "Tables"]
@@ -619,9 +1081,9 @@ version = "2.8.1+1"
 
 [[deps.HypergeometricFunctions]]
 deps = ["DualNumbers", "LinearAlgebra", "SpecialFunctions", "Test"]
-git-tree-sha1 = "cb7099a0109939f16a4d3b572ba8396b1f6c7c31"
+git-tree-sha1 = "65e4589030ef3c44d3b90bdc5aac462b4bb05567"
 uuid = "34004b35-14d8-5ef3-9330-4cdb6864b03a"
-version = "0.3.10"
+version = "0.3.8"
 
 [[deps.Hyperscript]]
 deps = ["Test"]
@@ -664,9 +1126,9 @@ version = "0.13.6"
 
 [[deps.InverseFunctions]]
 deps = ["Test"]
-git-tree-sha1 = "336cc738f03e069ef2cac55a104eb823455dca75"
+git-tree-sha1 = "91b5dcf362c5add98049e6c29ee756910b03051d"
 uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.4"
+version = "0.1.3"
 
 [[deps.InvertedIndices]]
 git-tree-sha1 = "bee5f1ef5bf65df56bdd2e40447590b272a5471f"
@@ -830,9 +1292,9 @@ uuid = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 
 [[deps.LogExpFunctions]]
 deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "09e4b894ce6a976c354a69041a04748180d43637"
+git-tree-sha1 = "76c987446e8d555677f064aaac1145c4c17662f8"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.15"
+version = "0.3.14"
 
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -901,15 +1363,15 @@ version = "0.4.10"
 uuid = "ca575930-c2e3-43a9-ace4-1e988b2c1908"
 
 [[deps.Observables]]
-git-tree-sha1 = "dfd8d34871bc3ad08cd16026c1828e271d554db9"
+git-tree-sha1 = "fe29afdef3d0c4a8286128d4e45cc50621b1e43d"
 uuid = "510215fc-4207-5dde-b226-833fc4488ee2"
-version = "0.5.1"
+version = "0.4.0"
 
 [[deps.OffsetArrays]]
 deps = ["Adapt"]
-git-tree-sha1 = "52addd9e91df8a6a5781e5c7640787525fd48056"
+git-tree-sha1 = "043017e0bdeff61cfbb7afeb558ab29536bbb5ed"
 uuid = "6fe1bfb0-de20-5000-8ca7-80f57d26f881"
-version = "1.11.2"
+version = "1.10.8"
 
 [[deps.Ogg_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -956,9 +1418,9 @@ version = "8.44.0+0"
 
 [[deps.PDMats]]
 deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
-git-tree-sha1 = "027185efff6be268abbaf30cfd53ca9b59e3c857"
+git-tree-sha1 = "3114946c67ef9925204cc024a73c9e679cebe0d7"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
-version = "0.11.10"
+version = "0.11.8"
 
 [[deps.Parsers]]
 deps = ["Dates"]
@@ -990,15 +1452,15 @@ version = "1.2.0"
 
 [[deps.Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "GeometryBasics", "JSON", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "Requires", "Scratch", "Showoff", "SparseArrays", "Statistics", "StatsBase", "UUIDs", "UnicodeFun", "Unzip"]
-git-tree-sha1 = "d457f881ea56bbfa18222642de51e0abf67b9027"
+git-tree-sha1 = "d05baca9ec540de3d8b12ef660c7353aae9f9477"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.29.0"
+version = "1.28.1"
 
 [[deps.PlutoUI]]
 deps = ["AbstractPlutoDingetjes", "Base64", "ColorTypes", "Dates", "Hyperscript", "HypertextLiteral", "IOCapture", "InteractiveUtils", "JSON", "Logging", "Markdown", "Random", "Reexport", "UUIDs"]
-git-tree-sha1 = "8d1f54886b9037091edf146b517989fc4a09efec"
+git-tree-sha1 = "670e559e5c8e191ded66fa9ea89c97f10376bb4c"
 uuid = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
-version = "0.7.39"
+version = "0.7.38"
 
 [[deps.PooledArrays]]
 deps = ["DataAPI", "Future"]
@@ -1149,9 +1611,9 @@ uuid = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
 
 [[deps.SpecialFunctions]]
 deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jll", "OpenSpecFun_jll"]
-git-tree-sha1 = "bc40f042cfcc56230f781d92db71f0e21496dffd"
+git-tree-sha1 = "5ba658aeecaaf96923dce0da9e703bd1fe7666f9"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
-version = "2.1.5"
+version = "2.1.4"
 
 [[deps.StaticArrays]]
 deps = ["LinearAlgebra", "Random", "Statistics"]
@@ -1177,21 +1639,21 @@ version = "0.33.16"
 
 [[deps.StatsFuns]]
 deps = ["ChainRulesCore", "HypergeometricFunctions", "InverseFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
-git-tree-sha1 = "5783b877201a82fc0014cbf381e7e6eb130473a4"
+git-tree-sha1 = "ca9f8a0c9f2e41431dc5b7697058a3f8f8b89498"
 uuid = "4c63d2b9-4356-54db-8cca-17b64c39e42c"
-version = "1.0.1"
+version = "1.0.0"
 
 [[deps.StatsPlots]]
 deps = ["AbstractFFTs", "Clustering", "DataStructures", "DataValues", "Distributions", "Interpolations", "KernelDensity", "LinearAlgebra", "MultivariateStats", "Observables", "Plots", "RecipesBase", "RecipesPipeline", "Reexport", "StatsBase", "TableOperations", "Tables", "Widgets"]
-git-tree-sha1 = "43a316e07ae612c461fd874740aeef396c60f5f8"
+git-tree-sha1 = "4d9c69d65f1b270ad092de0abe13e859b8c55cad"
 uuid = "f3b207a7-027a-5e70-b257-86293d7955fd"
-version = "0.14.34"
+version = "0.14.33"
 
 [[deps.StructArrays]]
 deps = ["Adapt", "DataAPI", "StaticArrays", "Tables"]
-git-tree-sha1 = "e75d82493681dfd884a357952bbd7ab0608e1dc3"
+git-tree-sha1 = "8f705dd141733d79aa2932143af6c6e0b6cea8df"
 uuid = "09ab397b-f2b6-538f-b94a-2f83cf4a842a"
-version = "0.6.7"
+version = "0.6.6"
 
 [[deps.SuiteSparse]]
 deps = ["Libdl", "LinearAlgebra", "Serialization", "SparseArrays"]
@@ -1234,12 +1696,6 @@ version = "1.7.0"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-
-[[deps.TensorCore]]
-deps = ["LinearAlgebra"]
-git-tree-sha1 = "1feb45f88d133a655e001435632f019a9a1bcdb6"
-uuid = "62fd8b95-f654-4bbd-a8a5-9c27f68ccd50"
-version = "0.1.1"
 
 [[deps.Test]]
 deps = ["InteractiveUtils", "Logging", "Random", "Serialization"]
@@ -1293,9 +1749,9 @@ version = "1.25.0+0"
 
 [[deps.Widgets]]
 deps = ["Colors", "Dates", "Observables", "OrderedCollections"]
-git-tree-sha1 = "fcdae142c1cfc7d89de2d11e08721d0f2f86c98a"
+git-tree-sha1 = "505c31f585405fc375d99d02588f6ceaba791241"
 uuid = "cc8bc4a8-27d6-5769-a93b-9d913e69aa62"
-version = "0.6.6"
+version = "0.6.5"
 
 [[deps.WoodburyMatrices]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1507,25 +1963,41 @@ version = "0.9.1+5"
 """
 
 # ╔═╡ Cell order:
-# ╠═c33c621e-d84f-11ec-3859-bfd8a4d9e50f
-# ╠═d2f18951-d72c-4625-a91a-45d299a466a8
-# ╠═b802dcb1-9636-4ccb-9e4a-a4204b9189fc
-# ╠═55358cec-faf3-46e7-ae19-851f3a4c3ac4
-# ╠═0f23d06b-bd67-491b-bffd-61bc8845804b
-# ╠═51261fca-0b9d-4501-a30b-ae465524e895
-# ╠═acb3cbab-e7e5-4ce3-9d60-4700a443516f
-# ╠═74b5f02f-7c0b-4112-aea0-802497f4b264
-# ╠═e912da30-fed5-4eb0-b931-8ce0b04ab0a5
-# ╠═f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
-# ╠═6244b0ef-6734-4007-9067-e218191b3b79
-# ╠═3e59c36a-545d-4a52-961f-ee5ba4c7c3d6
-# ╠═6b0e3ce9-cf5c-4666-b1f9-7953ed5a3596
-# ╠═d4f5e400-a46c-47d1-a18d-9d068ce10da1
-# ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
-# ╠═47df1a1e-727a-4d20-bd82-3965ca769df9
-# ╠═f4ea8ec5-a899-493c-bcee-17d10141b4bb
-# ╠═7e47a5fc-ce5d-4f1b-85aa-1b013ec8b477
-# ╠═b4335a43-aec4-4eac-9cd4-c12e527ab79f
-# ╠═e453af9e-b6d5-4300-9215-dbdc1eb56d2b
+# ╠═4d899862-cbba-11ec-119c-6de710107190
+# ╠═c5d81212-8033-4a30-b9c8-610c82e54308
+# ╠═a63dccc7-1993-40ba-a2a7-25f92cdfc12d
+# ╠═1c946d75-e7bd-4b40-8068-d287b5043d71
+# ╠═fca08a4c-9f69-424a-9ba8-bc29846d2b24
+# ╠═3947f507-8b89-47e3-8d02-ed3c069b4a91
+# ╠═069d67d8-e5e2-43f6-aa49-f13c3c9466ee
+# ╠═db3bdb5c-bb54-41eb-bf38-b1be067bd2ec
+# ╠═49e2d4ae-4e4b-4ea3-bb67-dfc5ef4fd5ff
+# ╠═8a7989fb-063b-46dc-af95-b0ef5d293496
+# ╠═6f98fc99-dc38-4216-b2c0-41df8deaccbb
+# ╠═60c57b0b-6807-44e5-9a40-1d295c554c7a
+# ╠═622165c9-7861-4e81-a463-20a87a3bb06b
+# ╠═527aa694-0f3b-47fc-ba4b-d054fac57d91
+# ╠═c9b9b4db-c8f7-4e50-ab80-dc3f4b91bc70
+# ╠═de664cc7-d71c-4687-b95c-893d32f4a53c
+# ╠═7f31d94d-68a4-45c8-8e59-16011ae142d3
+# ╠═10f497c5-9544-4832-980f-adcc0d38e3cc
+# ╠═64675b1b-b4dc-48b3-861a-afcfa3398ac8
+# ╠═32230048-e61d-47b3-aa36-11ad50022e55
+# ╠═35893a02-6ea2-47e6-8815-9b95ad275455
+# ╠═963b2a56-8101-49ec-87d0-0712ef296798
+# ╠═8143a5dd-6373-4008-b4d4-61d33b18b40c
+# ╠═8b6edbdd-8811-4d66-bdad-69f425b4835a
+# ╠═0b24f971-4618-49e4-97a8-11388783b9c0
+# ╠═b98f910f-5ddf-4bfb-b365-bd50438f842d
+# ╠═2b33d0df-4ba2-47b1-b9ca-095e238520c9
+# ╠═59d22a67-6d97-472e-8f9d-9f1506d7daa9
+# ╠═84aa9553-c25d-4b38-a72d-48e719a44226
+# ╠═8e20b0e7-e56e-41ec-b508-5484d42ba9fb
+# ╠═aff04b6a-3b5b-49b1-8b9d-8835eebd1dc4
+# ╠═d857a8b8-fa75-4fd5-93d9-afdd98d85237
+# ╠═b9bdf6b0-4449-4580-b4c8-13a8a0037f25
+# ╠═cfa736b0-a850-4b4d-b6b1-2717f58cea44
+# ╠═7aaaef83-e6c5-4bb6-84ef-571fc3630400
+# ╠═5eb174d7-d3c3-4666-81c9-8dc3731469e5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

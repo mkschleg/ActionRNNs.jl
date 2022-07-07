@@ -147,6 +147,7 @@ end
 # ╔═╡ 8132f595-ce46-4a78-816e-3a6b279b3a06
 function intervention_experiment(agent, env, intervention, start_dir, rng)
 
+	s_str = Bool[]
 	max_episode_steps = 5_000
 	@progress for eps in 1:1_000
 		success = false
@@ -154,7 +155,7 @@ function intervention_experiment(agent, env, intervention, start_dir, rng)
 			env,
 			agent,
 			intervention,
-			start_dir isa Int ? start_dir : start_dir(),
+			start_dir isa Int ? start_dir : start_dir(rng),
 			max_episode_steps,
 			rng) do (s, a, s′, r)
 			
@@ -162,23 +163,28 @@ function intervention_experiment(agent, env, intervention, start_dir, rng)
 		end
 		# @data "EXP" total_rews=rews
 		# @data "EXP" total_steps=steps
-		@data "EXP" successes=success
+		j = 1
+		push!(s_str, success)
 	end
-
+	@data "EXP" successes=sum(s_str)
 end
 
 # ╔═╡ f99084ba-21ec-4677-9e18-0963bebf6cf0
 function run_intervention_experiment(
-		exp::Function, 
-		freeze_training::Bool;
+		exp::Function;
+		freeze_training::Bool=true,
 		rng=Random.GLOBAL_RNG,
 		inter_start_dir_list=[(NoIntervention(),rand(rng, 1:4))]
 )
 	
 	results, agent, env = exp()
-	ActionRNNs.turn_off_training!(agent)
+	if freeze_training
+		ActionRNNs.turn_off_training!(agent)
+	end
+	
 	ret = []
 	for (inter, start_dir) in inter_start_dir_list
+		cp_agent, cp_env = deepcopy(agent), deepcopy(env)
 		data, data_logger = DirectionalTMazeERExperiment.construct_logger()
 		with_logger(data_logger) do
 			intervention_experiment(agent, env, inter, start_dir, rng)
@@ -265,40 +271,43 @@ let
 end
 
 # ╔═╡ f81c9ceb-c6cc-4448-8dcb-f4b79aeb47b6
-test_inter_ret = let
-	rng=Random.MersenneTwister(2)
-	run_intervention_experiment(
-			true, 
-			rng = rng,
-			inter_start_dir_list = [
-				(NoIntervention(), 2),
-				(ActionInterventionUnderCondition(
-					2, (env)->env.state.x == 1, false), 2),
-				(NoIntervention(), ()->rand(rng, 1:4)),
-				(ActionInterventionUnderCondition(
-					1, (env)->env.state.x == 5, false), ()->rand(rng, 1:4))
-			]) do
+function inter_exp(seed, cell_args, base_args; freeze_training=true)
+	rng=Random.MersenneTwister(seed)
+	inter_start_dir_list = [
+		(NoIntervention(), 2),
+		(ActionInterventionUnderCondition(
+			2, (env)->env.state.x == 1, false), 2),
+		(NoIntervention(), (_rng)->rand(rng, 1:4)),
+		(ActionInterventionUnderCondition(
+			1, (env)->env.state.x == 5, false), (_rng)->rand(rng, 1:4))
+	]
+	ret = run_intervention_experiment(
+			freeze_training=freeze_training, 
+			rng = rng, inter_start_dir_list=inter_start_dir_list,
+			) do
 		ret = DirectionalTMazeERExperiment.working_experiment(
 			false;
-			cell="MAGRU",
-			numhidden=10,
-			truncation=12,
-			eta = 0.0003125,
+			cell_args...,
+			# cell="MAGRU",
+			# numhidden=10,
+			# truncation=12,
+			# eta = 0.0003125,
 			base_args...,
-			seed=3,
+			seed=seed,
 			log_extras=[["EXPExtra", "agent"], ["EXPExtra", "env"]])
 		(ret.save_results, 
 		 ret.data[:EXPExtra][:agent][1],
 		 ret.data[:EXPExtra][:env][1])
 	end
+
+	[sum(ret[i].second[:EXP][:successes]) for i in 1:length(inter_start_dir_list)]
 	
 end
 
-# ╔═╡ b2dd5a73-07c4-4422-b971-44feadc6aaa5
-sum(test_inter_ret[1].second[:EXP][:successes]), sum(test_inter_ret[2].second[:EXP][:successes])
-
-# ╔═╡ b554978f-988b-41ec-bd38-101df9c4816f
-sum(test_inter_ret[3].second[:EXP][:successes]), sum(test_inter_ret[4].second[:EXP][:successes])
+# ╔═╡ ab4c5a80-0400-49e4-82e2-fc81051983b8
+inter_exp(
+	3, 
+	Dict(:cell=>"MAGRU", :numhidden=>10, :truncation=>12, :eta => 0.0003125), base_args)
 
 # ╔═╡ Cell order:
 # ╠═dc24843b-568a-4e2b-a998-994e025486b9
@@ -328,5 +337,4 @@ sum(test_inter_ret[3].second[:EXP][:successes]), sum(test_inter_ret[4].second[:E
 # ╠═a721c380-ba5d-4430-adfb-6dd9c291e2d5
 # ╠═ac2ee0dc-dd6a-42d4-a61c-dc625461061f
 # ╠═f81c9ceb-c6cc-4448-8dcb-f4b79aeb47b6
-# ╠═b2dd5a73-07c4-4422-b971-44feadc6aaa5
-# ╠═b554978f-988b-41ec-bd38-101df9c4816f
+# ╠═ab4c5a80-0400-49e4-82e2-fc81051983b8

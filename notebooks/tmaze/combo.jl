@@ -247,6 +247,27 @@ let
 
 end
 
+# ╔═╡ 97955014-12da-4fed-bc20-1523587a2a57
+DataFrameUtils.get_diff_dict(df_deep_sm)
+
+# ╔═╡ 4893730a-f490-4bc1-bf8a-e65fc5bd2e36
+let
+
+	df = filter(best_over_eta_sm) do i 
+		i.deepaction == false
+	end
+
+	get_relavent_params(rw) = Dict(
+		"numhidden"=>rw.numhidden,
+		"eta" => rw.eta,
+		"cell" => rw.cell
+	)
+	
+	args = [get_relavent_params(rw) for rw in eachrow(df)]
+
+	FileIO.save("../../final_runs/tmaze_combo_sm.jld2", "args", args)
+end
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -1527,5 +1548,7 @@ version = "0.9.1+5"
 # ╠═7e47a5fc-ce5d-4f1b-85aa-1b013ec8b477
 # ╠═b4335a43-aec4-4eac-9cd4-c12e527ab79f
 # ╠═e453af9e-b6d5-4300-9215-dbdc1eb56d2b
+# ╠═97955014-12da-4fed-bc20-1523587a2a57
+# ╠═4893730a-f490-4bc1-bf8a-e65fc5bd2e36
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

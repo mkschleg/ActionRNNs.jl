@@ -49,7 +49,9 @@ cell_colors = Dict(
 	"AAGRU" => color_scheme[2],
 	"MAGRU" => color_scheme[6],
 	"FacMAGRU" => color_scheme[end-2], 
-	"DAAGRU" => color_scheme[9],)
+	"DAAGRU" => color_scheme[9],
+	"CsoftmaxElGRU"=>colorant"#883a94",
+	"CsoftmaxElRNN"=>colorant"#8677ad")
 
 # ╔═╡ 0f23d06b-bd67-491b-bffd-61bc8845804b
 module DataFrameUtilsWrapper
@@ -69,7 +71,14 @@ at(dir) = joinpath("../../local_data/dir_tmaze_er", dir)
 readdir(at(s_dir))
 
 # ╔═╡ f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
+df_dtmaze_sc = FileIO.load(at("dir_tmaze_er_rnn_rmsprop_10/2022_05_20_proc_data.jld2"))["params_and_results"]
+
+# ╔═╡ 1b393e1a-7084-4c56-a6df-3e83bdd0ef26
 df_final_tmaze = FileIO.load(at("final_dir_tmaze_er_rnn_rmsprop_10_2/2022_05_20_proc_data.jld2"))["params_and_results"]
+# df_final_tmaze = DataFrameUtils.best_from_sweep_param(
+# 	order(:successes_avg_end, by=mean, rev=true), 
+# 	df_dtmaze_sc, 
+# 	["eta"])
 
 # ╔═╡ 6244b0ef-6734-4007-9067-e218191b3b79
 df_fac_tmaze = FileIO.load(at("final_fac_dir_tmaze_er_rnn_rmsprop_10_2_300k/2022_05_20_proc_data.jld2"))["params_and_results"]
@@ -103,6 +112,7 @@ end
 
 # ╔═╡ 47df1a1e-727a-4d20-bd82-3965ca769df9
 let
+	truncation = 12
 	plt = plot(
 		legend=false, 
 		grid=false, 
@@ -113,7 +123,7 @@ let
 	
 	for cell ∈ ["GRU", "AAGRU", "MAGRU"]
 		cd = @from i in df_final_tmaze begin
-			@where i.cell == cell
+			@where i.cell == cell && i.truncation == 12
 			@select {d=getindex(i, plot_data_sym)}
 			@collect DataFrame
 		end
@@ -147,7 +157,7 @@ let
 	
 	for cell ∈ ["RNN", "AARNN", "MARNN"]
 		cd = @from i in df_final_tmaze begin
-			@where i.cell == cell
+			@where i.cell == cell && i.truncation == 12
 			@select {d=getindex(i, plot_data_sym)}
 			@collect DataFrame
 		end
@@ -178,6 +188,75 @@ let
 	
 	
 	savefig("../../plots/dir_tmaze_er_deep_action.pdf")
+	plt
+end
+
+# ╔═╡ 4356c69e-05b9-4bb7-bb3a-15e3eae2acd5
+md"# Combo Cells"
+
+# ╔═╡ 4c3cba15-9f3d-47a8-b2fc-b7175e70e035
+s_dir
+
+# ╔═╡ e5e22810-ab0e-4921-9528-f2d06e541b75
+df_deep_sm = FileIO.load(at("dir_tmaze_er_10_combo_softmax/2022-06-21-procdata.jld2"))["params_and_results"]
+
+# ╔═╡ 4925ff8f-c816-4e7c-a637-7f313b5510fb
+best_over_eta_sm = DataFrameUtils.best_from_sweep_param(
+	order(:successes_avg_end, by=mean, rev=true), 
+	df_deep_sm, 
+	["eta"])
+
+# ╔═╡ 6fba2550-6908-4945-a435-bec5d08905cc
+let
+	replay_size = 10000
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out)
+		# ylims=(0.45, 1.0))
+	plot_data_sym = :successes_avg_end
+
+	for cell ∈ ["GRU", "AAGRU", "MAGRU"]
+		cd = @from i in df_final_tmaze begin
+			@where i.cell == cell
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	end
+	
+	for cell ∈ ["CsoftmaxElGRU"]
+		cd = @from i in best_over_eta_sm begin
+			@where i.cell == cell && i.replay_size == replay_size
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	end
+
+	for cell ∈ ["RNN", "AARNN", "MARNN"]
+		cd = @from i in df_final_tmaze begin
+			@where i.cell == cell
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	end
+
+	for cell ∈ ["CsoftmaxElRNN"]
+		cd = @from i in best_over_eta_sm begin
+			@where i.cell == cell && i.replay_size == replay_size
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	end
+	
 	plt
 end
 
@@ -1451,11 +1530,17 @@ version = "0.9.1+5"
 # ╠═74b5f02f-7c0b-4112-aea0-802497f4b264
 # ╠═e912da30-fed5-4eb0-b931-8ce0b04ab0a5
 # ╠═f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
+# ╠═1b393e1a-7084-4c56-a6df-3e83bdd0ef26
 # ╠═6244b0ef-6734-4007-9067-e218191b3b79
 # ╠═3e59c36a-545d-4a52-961f-ee5ba4c7c3d6
 # ╠═6b0e3ce9-cf5c-4666-b1f9-7953ed5a3596
 # ╠═d4f5e400-a46c-47d1-a18d-9d068ce10da1
 # ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
 # ╠═47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╠═4356c69e-05b9-4bb7-bb3a-15e3eae2acd5
+# ╠═4c3cba15-9f3d-47a8-b2fc-b7175e70e035
+# ╠═e5e22810-ab0e-4921-9528-f2d06e541b75
+# ╠═4925ff8f-c816-4e7c-a637-7f313b5510fb
+# ╠═6fba2550-6908-4945-a435-bec5d08905cc
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

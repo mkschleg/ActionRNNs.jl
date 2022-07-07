@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -305,7 +305,7 @@ let
 	for i in 1:10, j in 1:2
 		colors[(s .== i) .&& (a_tm1 .== j)] .= base_colors[i]
  	end
-	data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, progress=false)
+	data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, 30, progress=false)
 	plt = scatter(data[:, 1], data[:, 2], color=colors, legend=nothing, title="Multiplicative")
 	# savefig(plt, "tsne-ringworld-mult.pdf")
 	plt
