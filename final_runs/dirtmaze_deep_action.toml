@@ -26,4 +26,4 @@ target_update_wait = 1000
 
 deepaction = true
 
-truncation = 10
+truncation = 12

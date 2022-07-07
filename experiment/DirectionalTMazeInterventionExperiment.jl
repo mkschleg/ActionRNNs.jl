@@ -1,17 +1,17 @@
 """
-    DirectionalTMazeERExperiment
+    DirectionalTMazeInterventionExperiment
 
 An experiment to compare different RNN cells using the [`ActionRNNs.DirectionalTMaze`](@ref) environment.
 
 Usage is detailed through the docs for 
-- [`DirectionalTMazeERExperiment.default_config`](@ref)
-- [`DirectionalTMazeERExperiment.main_experiment`](@ref)
-- [`DirectionalTMazeERExperiment.working_experiment`](@ref)
-- [`DirectionalTMazeERExperiment.construct_env`](@ref)
-- [`DirectionalTMazeERExperiment.construct_agent`](@ref)
+- [`DirectionalTMazeInterventionExperiment.default_config`](@ref)
+- [`DirectionalTMazeInterventionExperiment.main_experiment`](@ref)
+- [`DirectionalTMazeInterventionExperiment.working_experiment`](@ref)
+- [`DirectionalTMazeInterventionExperiment.construct_env`](@ref)
+- [`DirectionalTMazeInterventionExperiment.construct_agent`](@ref)
 
 """
-module DirectionalTMazeERExperiment
+module DirectionalTMazeInterventionExperiment
 
 # import Flux
 import JLD2
@@ -25,6 +25,8 @@ import .ExpUtils: experiment_wrapper
 import .Macros: @info_str, @generate_config_funcs
 
 import Logging: with_logger
+
+import StatsBase: percentile
 
 using Statistics
 using Random
@@ -133,17 +135,17 @@ const FLU = FluxUtils
     "hs_strategy" => "minimize"
 
     info"""
-    ## Default performance:
-    ```
-    Time: 0:02:28
-      episode:    5385
-      successes:  0.8351648351648352
-      loss:       1.0
-      l1:         0.0
-      action:     2
-      preds:      Float32[0.369189, 0.48326853, 0.993273]
-    ```
+    - Intervention details:
+        - `inter_list::String`: Points to the constructor fot the list of interventions to run on the agent after training.
+            - `"DTMazeV1"`: Testing the start intervention and middle intervention.
+        - `inter_freeze_training::Bool`: whether to pause training when performing interventions.
+        - `inter_num_episodes::Int`: Number of episodes to perform interventions (these are after training episodes).
     """
+    "inter_list"=>"DTMazeV1"
+    "inter_freeze_training"=>true
+    "inter_num_episodes"=>1000
+
+
 end
 
 
@@ -160,7 +162,7 @@ function build_ann(config, in, actions::Int, rng)
         #=
         If we are using [zhu et al 2018]() style action embeddings
         
-        DirectionalTMazeERExperiment only re-embeds the action encoding. Here we encode the integer as a 
+        DirectionalTMazeInterventionExperiment only re-embeds the action encoding. Here we encode the integer as a 
         one-hot encoding then pass to a dense layer w/ relu activation.
         =#
         
@@ -197,7 +199,7 @@ end
 """
     construct_agent
 
-Construct the agent for `DirectionalTMazeERExperiment`. See 
+Construct the agent for `DirectionalTMazeInterventionExperiment`. See 
 """
 function construct_agent(env, config, rng)
 
@@ -276,8 +278,8 @@ Macros.@generate_working_function
 """
     main_experiment
 
-Run an experiment from config. See [`DirectionalTMazeERExperiment.working_experiment`](@ref) 
-for details on running on the command line and [`DirectionalTMazeERExperiment.default_config`](@ref) 
+Run an experiment from config. See [`DirectionalTMazeInterventionExperiment.working_experiment`](@ref) 
+for details on running on the command line and [`DirectionalTMazeInterventionExperiment.default_config`](@ref) 
 for info about the default configuration.
 """
 function main_experiment(config;
@@ -301,16 +303,23 @@ function main_experiment(config;
 
         extras = union(get(config, "log_extras", []), get(config, "save_extras", []))
         extra_proc = [c isa AbstractArray ? (Symbol(c[1]), Symbol(c[2])) : Symbol(c) for c in extras]
+
+        env = construct_env(config)
+        agent = construct_agent(env, config, rng)
+
+        # throw away logger for training.
+        _dta, _lgr = ChoosyDataLoggers.construct_logger([:NA])
+        with_logger(_lgr) do
+            train_loop!(env, agent, num_steps, _dta, rng, progress=progress)
+        end
+
+        inter_start_dir_list = get_intervention_list(config)
+
         data, logger = ExpUtils.construct_logger(extra_groups_and_names=extra_proc)
-        
+
         with_logger(logger) do
-            env = construct_env(config)
-            agent = construct_agent(env, config, rng)
-            
-            experiment_loop(env, agent, num_steps, data, rng, progress=progress)
-            
-            @data EXPExtra env
-            @data EXPExtra agent
+            run_intervention_experiment(config, agent, env;
+                                        rng=rng, inter_start_dir_list)
         end
 
         save_results = ExpUtils.prep_save_results(data, get(config, "save_extras", []))
@@ -319,24 +328,24 @@ function main_experiment(config;
 end
 
 
-function experiment_loop(env, agent, num_steps, data, rng; progress=false)
+function train_loop!(env, agent, num_steps, data, rng; progress=false)
 
     prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
-    generate_showvalues(eps, usa, a, n) = () -> begin
-        pr_suc = if (:EXP ∈ keys(data)) && (:successes ∈ keys(data[:EXP]))
-            if (length(data[:EXP][:successes]) <= 1000)
-                mean(data[:EXP][:successes])
-            else
-                mean(data[:EXP][:successes][end-1000:end])
-            end
-        end
-        [(:episode, eps),
-         (:successes, pr_suc),
-         (:loss, usa[:avg_loss]),
-         (:l1, usa[:l1]/n),
-         (:action, a.action),
-         (:preds, a.preds)]
-    end
+    # generate_showvalues(eps, usa, a, n) = () -> begin
+    #     pr_suc = if (:EXP ∈ keys(data)) && (:successes ∈ keys(data[:EXP]))
+    #         if (length(data[:EXP][:successes]) <= 1000)
+    #             mean(data[:EXP][:successes])
+    #         else
+    #             mean(data[:EXP][:successes][end-1000:end])
+    #         end
+    #     end
+    #     [(:episode, eps),
+    #      (:successes, pr_suc),
+    #      (:loss, usa[:avg_loss]),
+    #      (:l1, usa[:l1]/n),
+    #      (:action, a.action),
+    #      (:preds, a.preds)]
+    # end
     
     eps = 1
     total_steps = 0
@@ -350,12 +359,12 @@ function experiment_loop(env, agent, num_steps, data, rng; progress=false)
             ))
         success = false
 
-        max_episode_steps = min(max((num_steps - total_steps), 2), 10000)
+        max_episode_steps = min(max((num_steps - total_steps), 2), 10_000)
         n = 0
         
         total_rew, steps = run_episode!(env, agent, max_episode_steps, rng) do (s, a, s′, r)
             if progress
-                next!(prg_bar, showvalues=generate_showvalues(eps, usa, a, n))
+                next!(prg_bar)
             end
             success = success || (r == 4.0)
             if !(a.update_state isa Nothing)
@@ -377,8 +386,195 @@ function experiment_loop(env, agent, num_steps, data, rng; progress=false)
     end
 end
 
+struct NoIntervention end
+reset!(::NoIntervention) = nothing
+make_intervention(agent, env, ::NoIntervention, agent_ret) = 
+    if agent_ret isa Int
+	agent_ret
+    else
+	agent_ret.action
+    end
 
+mutable struct ActionInterventionUnderCondition
+    action::Int
+    condition::Function
+    intervened::Bool
+end
+
+function reset!(intervention::ActionInterventionUnderCondition)
+    intervention.intervened = false
+end
+
+function make_intervention(agent::ActionRNNs.DRQNAgent,
+                           env::ActionRNNs.DirectionalTMaze,
+                           intervention::ActionInterventionUnderCondition, 
+                           agent_ret)
+
+    if !intervention.intervened && intervention.condition(env)
+	agent.action = intervention.action
+	intervention.intervened = true
+    end
+
+    agent.action
+end
+
+mutable struct MultiActionInterventionUnderCondition
+    action_seq::Vector{Int}
+    condition::Function
+    i::Int
+    ing::Bool
+    ed::Bool
+    MultiActionInterventionUnderCondition(action_seq, condition) =
+        new(action_seq, condition, 1, false, false)
+end
+
+function reset!(intervention::MultiActionInterventionUnderCondition)
+    intervention.ed = false
+    intervention.ing = false
+end
+
+function make_intervention(agent::ActionRNNs.DRQNAgent,
+                           env::ActionRNNs.DirectionalTMaze,
+                           intervention::MultiActionInterventionUnderCondition, 
+                           agent_ret)
+
+    if !intervention.ed && (intervention.condition(env) || intervention.ing)
+	# agent.action = intervention.action
+        if intervention.i <= length(intervention.action_seq)
+            intervention.ing = true
+            agent.action = intervention.action_seq[intervention.i]
+            intervention.i += 1
+        else
+            intervention.ing = false
+            intervention.ed = true
+        end
+    end
+
+    agent.action
+end
+
+function get_intervention_list(config)
+    get_intervention_list(Val(Symbol(config["inter_list"])))
+end
+
+function get_intervention_list(::Val{:DTMazeV1})
+    inter_start_dir_list = [
+	(NoIntervention(), 2),
+	(ActionInterventionUnderCondition(
+	    2, (env)->env.state.x == 1, false), 2),
+	(NoIntervention(), (_rng)->rand(_rng, 1:4)),
+	(ActionInterventionUnderCondition(
+	    1, (env)->env.state.x == 5, false), (_rng)->rand(_rng, 1:4))
+    ]
+end
+
+function get_intervention_list(::Val{:DTMazeV2})
+    inter_start_dir_list = [
+	(NoIntervention(), 2),
+	(ActionInterventionUnderCondition(
+	    2, (env)->env.state.x == 1, false), 2),
+	(NoIntervention(), (_rng)->rand(_rng, 1:4)),
+	(ActionInterventionUnderCondition(
+	    1, (env)->env.state.x == 5, false), (_rng)->rand(_rng, 1:4)),
+        (ActionInterventionUnderCondition(
+	    3, (env)->env.state.x == 5, false), (_rng)->rand(_rng, 1:4)),
+        (MultiActionInterventionUnderCondition(
+	    [1, 1, 1, 1, 1, 1], (env)->env.state.x == 5), (_rng)->rand(_rng, 1:4)),
+        (MultiActionInterventionUnderCondition(
+	    [3, 3, 3, 3, 3, 3], (env)->env.state.x == 5), (_rng)->rand(_rng, 1:4)),
+        (MultiActionInterventionUnderCondition(
+	    [1, 3, 1, 1], (env)->env.state.x == 5), (_rng)->rand(_rng, 1:4))
+    ]
+end
+
+
+function run_intervention_experiment(config, agent, env;
+                                     rng=Random.GLOBAL_RNG,
+                                     inter_start_dir_list=[(NoIntervention(),rand(rng, 1:4))])
+	
+    # results, agent, env = exp()
+    if config["inter_freeze_training"]
+        ActionRNNs.turn_off_training!(agent)
+    end
+    inter_num_episodes = config["inter_num_episodes"]
+    
+    ret = []
+    for (inter, start_dir) in inter_start_dir_list
+
+        cp_agent, cp_env = deepcopy(agent), deepcopy(env)
+	intervention_experiment(cp_agent, cp_env, inter, start_dir, inter_num_episodes, rng)
+
+    end
+end
+
+
+function intervention_experiment(agent,
+                                 env::DirectionalTMaze,
+                                 intervention,
+                                 start_dir,
+                                 inter_num_episodes,
+                                 rng)
+    s = Bool[]
+    ts = Int[]
+    max_episode_steps = 10_000 # set in training loop
+    for eps in 1:inter_num_episodes
+	success = false
+	total_rew, steps = intervention_episode!(
+	    env,
+	    agent,
+	    intervention,
+	    start_dir isa Int ? start_dir : start_dir(rng),
+	    max_episode_steps,
+	    rng) do (s, a, s′, r)
+		success = success || (r == 4.0)
+	    end
+
+        push!(s, success)
+        push!(ts, steps)
+
+    end
+    
+    @data EXP inter_successes=s
+    @data EXP inter_total_steps=ts
+end
+
+
+function intervention_episode!(f, 
+                               env::DirectionalTMaze, 
+                               agent, 
+                               intervention, 
+                               start_dir,
+                               max_episode_steps, 
+                               rng)
+    
+    terminal = false
+
+    s = MinimalRLCore.start!(env, rand(rng, [1,3]), start_dir)
+    ar = MinimalRLCore.start!(agent, s, rng)
+    reset!(intervention)
+
+    na = make_intervention(agent, env, intervention, ar)
+    step = 0
+    rews = 0.0f0
+    while !terminal && step < max_episode_steps
+
+	s′, r, terminal = MinimalRLCore.step!(env, na, rng)
+	ar = MinimalRLCore.step!(agent, s′, r, terminal, rng)
+
+	# na = _get_action(ar)
+	na = make_intervention(agent, env, intervention, ar)
+	
+	f((s, na, s′, r, terminal))
+
+        rews += r
+
+	step += 1 
+    end
+
+    rews, step
+end
 
 
 
 end
+
