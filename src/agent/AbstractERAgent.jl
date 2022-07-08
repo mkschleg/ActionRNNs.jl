@@ -157,6 +157,7 @@ function MinimalRLCore.start!(agent::AbstractERAgent, s, rng=Random.GLOBAL_RNG; 
     @data Agent action_tm1=agent.am1 #idx=:track
     @data Agent preds=values #idx=:track
     @data Agent start=true
+
     
     return agent.action
 
@@ -202,6 +203,8 @@ function MinimalRLCore.step!(agent::AbstractERAgent, env_s_tp1, r, terminal, rng
         # progress update_timers
         step!(agent.update_timer), step!(agent.target_update_timer)
 
+        log_model_data(agent)
+        
         us
     end
 
@@ -340,3 +343,14 @@ update_target_network!(agent::AbstractERAgent) = begin
 end
 
 update_target_network!(::AbstractERAgent{LU, ER, Nothing}) where {LU, ER} = nothing
+
+function log_model_data(agent::AbstractERAgent)
+
+    model = get_model(agent)
+    if contains_layer_type(model, CsoftmaxElGRUCell) || contains_layer_type(model, CsoftmaxElRNNCell)
+        idx = find_layers_with_recur(model)
+        @data AgentModel rnn_sm_w_a=copy(model[idx[1]].cell.θa)
+        @data AgentModel rnn_sm_w_m=copy(model[idx[1]].cell.θm)
+    end
+end
+

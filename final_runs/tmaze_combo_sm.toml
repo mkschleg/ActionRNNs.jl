@@ -1,0 +1,23 @@
+[config]
+save_dir="final_tmaze_er_combo_sm"
+exp_file="experiment/TMazeERExperiment.jl"
+exp_module_name = "TMazeERExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "looper"
+run_param = "seed"
+run_list = "21:70"
+arg_file = "final_runs/tmaze_combo_sm.jld2"
+
+[static_args]
+"steps" = 300000
+"opt" = "RMSProp"
+"rho" = 0.99
+"size" = 10
+"gamma" = 0.99
+"batch_size" = 4
+"replay_size" = 1000
+"warm_up" = 1000
+"target_update_wait" = 1000
+"hs_learnable" = true
+"update_wait" = 4
+"save_extras" = [["AgentModel", "rnn_sm_w_a", 100], ["AgentModel", "rnn_sm_w_m", 100]]
