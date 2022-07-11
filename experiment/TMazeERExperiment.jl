@@ -260,12 +260,8 @@ function main_experiment(config;
         seed = config["seed"]
         rng = Random.MersenneTwister(seed)
         
-        # env = construct_env(config)
-        # agent = construct_agent(env, config, rng)
-
         extras = union(get(config, "log_extras", []), get(config, "save_extras", []))
-        extra_proc = [c isa AbstractArray ? (Symbol(c[1]), Symbol(c[2])) : Symbol(c) for c in extras]
-        data, logger = ExpUtils.construct_logger(extra_groups_and_names=extra_proc)
+        data, logger = ExpUtils.construct_logger(extra_groups_and_names=extrsa
 
         with_logger(logger) do
             env = construct_env(config)
