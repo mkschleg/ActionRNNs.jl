@@ -1,0 +1,31 @@
+[config]
+save_backend="mysql" # mysql only database backend supported
+database="mkschleg_dir_tmaze_er_10_combo_cat" # Database name
+save_dir="dir_tmaze_er_10_combo_cat"
+exp_file="experiment/DirectionalTMazeERExperiment.jl"
+exp_module_name = "DirectionalTMazeERExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iterV2"
+
+[static_args]
+steps = 300000
+opt = "RMSProp"
+rho = 0.99
+
+size = 10
+gamma = 0.99
+batch_size = 8
+
+warm_up = 1000
+hs_learnable = true
+update_wait = 4
+target_update_wait = 1000
+
+deepaction = false
+
+[sweep_args]
+"cell+numhidden" = [["CcatGRU", 12], ["CcatRNN", 22]]
+replay_size = [10000, 20000]
+eta = "0.01*(2.0.^(-11:2:0))"
+truncation = [12]
+seed = "1:20"
