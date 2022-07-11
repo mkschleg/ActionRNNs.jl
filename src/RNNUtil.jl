@@ -11,7 +11,7 @@ tuple_hidden_state(rnn::Flux.Recur) = rnn.state isa Tuple
     find_layers_with_eq(eq::Function, model)
 
 A function which takes a model and a function and returns the locations where the function returns true.
-This only supports composing chaings twice.
+This only supports composing chains twice.
 """
 function find_layers_with_eq(eq::Function, model)
     layer_indecies = Union{Int, Tuple}[]

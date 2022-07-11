@@ -58,6 +58,10 @@ function ringworld_tsne(args; progress=false)
 	 ret.data[:EXPExtra][:agent][1], 
 	 ret.data[:EXPExtra][:env][1])
     end
+
+    results = test_ret[1]
+    err = results[:EXP][:out_err]
+    
     data = test_ret[2]
     hs = data[:Agent][:hidden_state]
     s = data[:Env][:state]
@@ -226,7 +230,7 @@ function plot_dirtmaze_tsnes(save_loc)
         parg["seed"] = seed
 
         save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",seed=$(seed).pdf"
-        data, colors, mkstroke = dirtmaze_tsne(parg)
+        data, colors, mkstroke, err = dirtmaze_tsne(parg)
 
         lock(lk)
         try

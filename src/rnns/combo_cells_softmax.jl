@@ -90,8 +90,6 @@ Flux.Recur(m::CsoftmaxElRNNCell) = Flux.Recur(m, m.state0)
 
 
 
-
-
 struct CsoftmaxElGRUCell{A,V,T,S}  <: AbstractActionRNN
     θa::V
     θm::V

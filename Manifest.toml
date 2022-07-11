@@ -166,9 +166,9 @@ version = "0.1.3"
 
 [[deps.ChoosyDataLoggers]]
 deps = ["EllipsisNotation", "Logging", "LoggingExtras", "MacroTools", "Markdown"]
-git-tree-sha1 = "2a1bb3ff42f274f86f66762ad102ea9e51b6ff4d"
+git-tree-sha1 = "2630db6450256dbb4f35176f72a48ab507ce1b3e"
 uuid = "edd8e46e-3ca5-477d-bc67-b483295d3b14"
-version = "0.1.0"
+version = "0.2.1"
 
 [[deps.CircularArrayBuffers]]
 deps = ["Adapt"]
