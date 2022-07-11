@@ -4,9 +4,9 @@
 import ActionRNNs: MinimalRLCore
 import ActionRNNs: @data
 using ActionRNNs, Random
-using RollingFunctions
+using RollingFunctions, Statistics
 
-import RingWorldERExperiment, DirTMazeERExperiment
+import RingWorldERExperiment, DirectionalTMazeERExperiment
 
 using Plots
 import Plots: @colorant_str
@@ -67,6 +67,8 @@ function ringworld_tsne(args; progress=false)
     s = data[:Env][:state]
     obs = nothing
     a_tm1 = data[:Agent][:action][1:end-1]
+
+    err = test_ret[1][:EXP][:out_err]
 
     Random.seed!(3)
     data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, progress=false)
@@ -137,11 +139,34 @@ function dirtmaze_tsne(args; progress=false)
 end
 
 
-function plot_ringworld_tsnes(save_loc)
-    args = FileIO.load("final_runs/ringworld_er_10.jld2")["args"]
-    config = TOML.parsefile("final_runs/ringworld_er_10.toml")
+function plot_final_ringworld_tsnes(save_loc)
+    args = FileIO.load("../final_runs/ringworld_er_10.jld2")["args"]
+    config = TOML.parsefile("../final_runs/ringworld_er_10.toml")
+    plot_ringworld_tsnes(save_loc, args, config)
+end
+
+function plot_specific_final_rw_tsnes(filt, save_loc)
+    args = FileIO.load("../final_runs/ringworld_er_10.jld2")["args"]
+    filter!(filt, args)
+    config = TOML.parsefile("../final_runs/ringworld_er_10.toml")
+    plot_ringworld_tsnes(save_loc, args, config)
+end
+
+function plot_ringworld_tsnes(save_loc, args, config)
 
     pargs = config["static_args"]
+
+    if !isdir(save_loc)
+        mkdir(save_loc)
+    end
+
+    if !isdir(joinpath(save_loc, "tsne"))
+        mkdir(joinpath(save_loc, "tsne"))
+    end
+
+    if !isdir(joinpath(save_loc, "learning_curves"))
+        mkdir(joinpath(save_loc, "learning_curves"))
+    end
 
     lk = ReentrantLock()
 
@@ -153,12 +178,16 @@ function plot_ringworld_tsnes(save_loc)
         parg["seed"] = seed
 
         save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",seed=$(seed).pdf"
-        data, colors, mkstroke = ringworld_tsne(parg)
+        data, colors, mkstroke, err = ringworld_tsne(parg)
 
         lock(lk)
         try
             plt = scatter(data[:, 1], data[:, 2], color=colors, markerstrokecolor=mkstroke, markerstrokewidth=2, grid=false, xtick=false, ytick=false, axis=false, legend=false)
-            savefig(plt, joinpath(save_loc, save_str))
+            savefig(plt, joinpath(save_loc, "tsne", save_str))
+
+            plt_lc = plot(rollmean(sqrt.(mean(err.^2; dims=1))[1, :], 100)[1:100:end],
+                        grid=false, tickdir=:out, ylims=(0.0, 0.6))
+            savefig(plt_lc, joinpath(save_loc, "learning_curves", save_str))
         finally
             unlock(lk)
         end
@@ -206,7 +235,8 @@ function plot_dirtmaze_tsnes(save_loc)
         lock(lk)
         try
             plt = scatter(data[:, 1], data[:, 2], color=colors, markerstrokecolor=mkstroke, markerstrokewidth=2, grid=false, xtick=false, ytick=false, axis=false, legend=false)
-            savefig(plt, joinpath(save_loc, save_str))
+            savefig(plt, joinpath(save_loc, "tsne", save_str))
+            
         finally
             unlock(lk)
         end
