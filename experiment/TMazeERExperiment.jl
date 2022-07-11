@@ -261,7 +261,7 @@ function main_experiment(config;
         rng = Random.MersenneTwister(seed)
         
         extras = union(get(config, "log_extras", []), get(config, "save_extras", []))
-        data, logger = ExpUtils.construct_logger(extra_groups_and_names=extrsa
+        data, logger = ExpUtils.construct_logger(extra_groups_and_names=extras)
 
         with_logger(logger) do
             env = construct_env(config)
