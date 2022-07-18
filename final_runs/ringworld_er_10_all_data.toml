@@ -1,0 +1,29 @@
+[config]
+save_backend="mysql" # mysql only database backend supported
+database="mkschleg_final_ringworld_er_10_all_data" # Database name
+save_dir="final_ringworld_er_10_all_data"
+exp_file="experiment/RingWorldERExperiment.jl"
+exp_module_name = "RingWorldERExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "looper"
+run_param = "seed"
+run_list = "21:70"
+arg_file = "final_runs/ringworld_er_10.jld2"
+
+[static_args]
+steps = 300000
+opt = "RMSProp"
+rho = 0.9
+size = 10
+batch_size = 4
+replay_size = 1000
+warm_up = 1000
+target_update_freq = 1000
+update_freq = 4
+
+outgamma = 0.9
+action_features = false
+synopsis = false
+
+outhorde = "gammas_term"
+hs_learnable = true
