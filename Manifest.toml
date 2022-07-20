@@ -1138,9 +1138,11 @@ version = "0.2.0"
 
 [[deps.Reproduce]]
 deps = ["BSON", "CodeTracking", "DBInterface", "DataFrames", "Dates", "Distributed", "FileIO", "Git", "HDF5", "JLD2", "JSON", "Logging", "MySQL", "Parallelism", "Pkg", "ProgressMeter", "Random", "Reexport", "SharedArrays", "Sockets", "TOML", "Tables"]
-git-tree-sha1 = "b3821d7bc9941e4677f99abb6a249932b9cec85e"
+git-tree-sha1 = "fc5cb29bdae60316e38a3415d805108da9cfb1b2"
+repo-rev = "main"
+repo-url = "https://github.com/mkschleg/Reproduce.jl.git"
 uuid = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
-version = "0.12.2"
+version = "0.12.3-dev"
 
 [[deps.Requires]]
 deps = ["UUIDs"]

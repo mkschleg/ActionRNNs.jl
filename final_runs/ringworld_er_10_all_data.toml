@@ -1,6 +1,5 @@
 [config]
-save_backend="mysql" # mysql only database backend supported
-database="mkschleg_final_ringworld_er_10_all_data" # Database name
+save_backend="jld2" # mysql only database backend supported
 save_dir="final_ringworld_er_10_all_data"
 exp_file="experiment/RingWorldERExperiment.jl"
 exp_module_name = "RingWorldERExperiment"
@@ -8,7 +7,7 @@ exp_func_name = "main_experiment"
 arg_iter_type = "looper"
 run_param = "seed"
 run_list = "21:70"
-arg_file = "final_runs/ringworld_er_10.jld2"
+arg_file = "final_runs/ringworld_er_10_trunc_6.jld2"
 
 [static_args]
 steps = 300000
