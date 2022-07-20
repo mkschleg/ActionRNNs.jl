@@ -234,7 +234,7 @@ function main_experiment(config; progress=false, testing=false, overwrite=false)
         num_steps = config["steps"]
         seed = config["seed"]
         rng = Random.MersenneTwister(seed)
-        exp_rng = Random.Xoshiro(rand(Int, rng))
+        exp_rng = Random.Xoshiro(rand(rng, UInt))
 
         extras = union(get(config, "log_extras", []), get(config, "save_extras", []))
         data, logger = ExpUtils.construct_logger(steps=num_steps, extra_groups_and_names=extras)
