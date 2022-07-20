@@ -1,4 +1,4 @@
-module RingWorldERExperiment
+module RingWorldERExperiment_FixRNG
 
 using MinimalRLCore
 
@@ -234,7 +234,7 @@ function main_experiment(config; progress=false, testing=false, overwrite=false)
         num_steps = config["steps"]
         seed = config["seed"]
         rng = Random.MersenneTwister(seed)
-
+        exp_rng = Random.Xoshiro(rand(Int, rng))
 
         extras = union(get(config, "log_extras", []), get(config, "save_extras", []))
         data, logger = ExpUtils.construct_logger(steps=num_steps, extra_groups_and_names=extras)
@@ -242,7 +242,7 @@ function main_experiment(config; progress=false, testing=false, overwrite=false)
         with_logger(logger) do
             env = construct_env(config)
             agent = construct_agent(env, config, rng)
-            experiment_loop(env, agent, config["outhorde"], num_steps, rng; prgs=progress)
+            experiment_loop(env, agent, config["outhorde"], num_steps, exp_rng; prgs=progress)
 
             @data EXPExtra env
             @data EXPExtra agent
