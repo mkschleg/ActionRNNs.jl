@@ -22,5 +22,6 @@ warm_up = 1000
 target_update_wait = 1000
 hs_learnable = true
 update_wait = 4
+truncation = 10
 
 deepaction=true

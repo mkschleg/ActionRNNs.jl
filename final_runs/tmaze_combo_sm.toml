@@ -22,5 +22,6 @@ warm_up = 1000
 target_update_wait = 1000
 hs_learnable = true
 update_wait = 4
+truncation = 10
 
 save_extras = [["AgentModel", "rnn_sm_w_a", 100], ["AgentModel", "rnn_sm_w_m", 100]]

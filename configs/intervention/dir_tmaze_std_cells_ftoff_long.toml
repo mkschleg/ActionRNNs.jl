@@ -1,7 +1,7 @@
 [config]
 save_backend="mysql" # mysql only database backend supported
-database="mkschleg_inter_dir_tmaze_er_10_v2" # Database name
-save_dir="inter_dir_tmaze_er_10_v2"
+database="mkschleg_inter_dir_tmaze_er_10_v2_ftoff_long" # Database name
+save_dir="inter_dir_tmaze_er_10_v2_ftoff_long"
 exp_file="experiment/DirectionalTMazeInterventionExperiment.jl"
 exp_module_name = "DirectionalTMazeInterventionExperiment"
 exp_func_name = "main_experiment"
@@ -11,7 +11,7 @@ run_list = "21:120"
 arg_file = "final_runs/dir_tmaze_10.jld2"
 
 [static_args]
-steps = 300000
+steps = 600000
 opt = "RMSProp"
 rho = 0.99
 
@@ -28,7 +28,7 @@ target_update_wait = 1000
 deepaction = false
 
 inter_list = "DTMazeV2"
-inter_freeze_training = true
+inter_freeze_training = false
 inter_num_episodes = 5000
 
 

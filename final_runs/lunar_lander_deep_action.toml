@@ -6,7 +6,7 @@ exp_func_name = "main_experiment"
 arg_iter_type = "iterV2"
 
 [static_args]
-steps = 4000
+steps = 4000000
 opt = "RMSProp"
 gamma = 0.99
 batch_size = 32
