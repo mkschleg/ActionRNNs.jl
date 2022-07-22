@@ -494,14 +494,14 @@ end
 function get_intervention_list(::Val{:DTMazeStraight1})
     inter_start_dir_list = [
         (ActionInterventionUnderCondition(
-	    2, (env)->env.state.x == 1, false), 2),
+	    2, (env)->env.state.x == 1), 2),
     ]
 end
 
 function get_intervention_list(::Val{:DTMazeStraight2})
     inter_start_dir_list = [
         (MultiActionInterventionUnderCondition(
-	    [2, 2], (env)->env.state.x == 1, false), 2),
+	    [2, 2], (env)->env.state.x == 1), 2),
     ]
 end
 
