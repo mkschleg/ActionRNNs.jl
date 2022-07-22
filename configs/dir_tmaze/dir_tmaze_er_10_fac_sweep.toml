@@ -1,0 +1,49 @@
+info="""
+This is a re-run of the factored sweep. Something funky is going on with the old data. I'm using a larger number of runs here to get a better estimate of the underlying data, but I'm not planning on using these to gather "final runs".
+
+Sizes
+FacMARNN:
+- numhidden: 18, factors: 27 (1263)
+- numhidden: 25, factors: 20 (1298)
+- numhidden: 30, factors: 15 (1203)
+
+FacMAGRU
+- numhidden: 10, factors: 25 (1283)
+- numhidden: 14, factors: 18 (1301)
+- numhidden: 17, factors: 14 (1260)
+"""
+
+
+[config]
+save_backend="mysql" # mysql only database backend supported
+database="mkschleg_dir_tmaze_er_factored" # Database name
+save_dir="dir_tmaze_er_factored"
+exp_file="experiment/DirectionalTMazeERExperiment.jl"
+exp_module_name = "DirectionalTMazeERExperiment"
+exp_func_name = "main_experiment"
+arg_iter_type = "iterV2"
+
+[static_args]
+steps = 300000
+opt = "RMSProp"
+rho = 0.99
+
+size = 10
+gamma = 0.99
+batch_size = 8
+
+warm_up = 1000
+hs_learnable = true
+update_wait = 4
+target_update_wait = 1000
+
+deepaction = false
+init_style = "tensor"
+
+[sweep_args]
+cell_numhidden = [["FacMARNN", 18], ["FacMARNN", 25], ["FacMARNN", 30], ["FacMAGRU", 10], ["FacMAGRU", 14] ["FacMAGRU", 17]]
+eta = "0.01*(2.0.^(-11:2:-2))"
+replay_size = [10000, 20000]
+truncation = [12]
+factors = [5, 10, 14, 15, 17, 20, 25, 27, 30, 50, 75, 100]
+seed = "1:40"
