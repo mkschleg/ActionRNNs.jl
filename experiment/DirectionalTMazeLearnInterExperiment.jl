@@ -473,6 +473,24 @@ function get_intervention_list(::Val{:DTMazeStep})
     ]
 end
 
+function get_intervention_list(::Val{:DTMazeStepSmall})
+    inter_start_dir_list = [
+	(NoIntervention(), 2),
+	# (MultiActionInterventionUnderCondition(
+	#     [2, 3, 3], (env)->env.state.x == 1), 2),
+        # (MultiActionInterventionUnderCondition(
+	#     [2, 3], (env)->env.state.x == 1), 2),
+        (MultiActionInterventionUnderCondition(
+	    [2], (env)->env.state.x == 1), 2),
+        # (MultiActionInterventionUnderCondition(
+	#     [2, 2, 3, 3], (env)->env.state.x == 1), 2),
+        # (MultiActionInterventionUnderCondition(
+	#     [2, 2, 3], (env)->env.state.x == 1), 2),
+        (MultiActionInterventionUnderCondition(
+	    [2, 2], (env)->env.state.x == 1), 2),
+    ]
+end
+
 function get_intervention_list(::Val{:DTMazeStraight1})
     inter_start_dir_list = [
         (ActionInterventionUnderCondition(
