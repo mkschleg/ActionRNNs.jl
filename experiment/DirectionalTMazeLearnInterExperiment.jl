@@ -510,15 +510,50 @@ function run_intervention_experiment(config, agent, env;
                                      rng=Random.GLOBAL_RNG,
                                      inter_start_dir_list=[(NoIntervention(),rand(rng, 1:4))])
 	
-    # results, agent, env = exp()
-    inter_num_episodes = config["inter_num_episodes"]
-    
-    ret = []
     for (inter, start_dir) in inter_start_dir_list
-	intervention_experiment(agent, env, inter, start_dir, inter_num_episodes, rng)
+        if  "inter_num_episodes" ∈ keys(config)
+            inter_num_episodes = config["inter_num_episodes"]
+	    intervention_experiment(agent, env, inter, start_dir, inter_num_episodes,
+                                    rng)
+        elseif "inter_num_steps" ∈ keys(config)
+            inter_num_steps = config["inter_num_steps"]
+            intervention_experiment_by_steps(
+                agent, env, inter, start_dir, inter_num_steps, rng)
+        end
     end
 end
 
+
+function intervention_experiment_by_steps(agent,
+                                          env::DirectionalTMaze,
+                                          intervention,
+                                          start_dir,
+                                          inter_num_steps,
+                                          rng)
+    s = Bool[]
+    ts = Int[]
+
+    while sum(ts) < inter_num_steps
+        max_episode_steps = min(10_000, max(inter_num_steps - sum(ts), 2)) # set in training loop
+	success = false
+	total_rew, steps = intervention_episode!(
+	    env,
+	    agent,
+	    intervention,
+	    start_dir isa Int ? start_dir : start_dir(rng),
+	    max_episode_steps,
+	    rng) do (s, a, s′, r)
+		success = success || (r == 4.0)
+	    end
+
+        push!(s, success)
+        push!(ts, steps)
+
+    end
+    
+    @data EXP inter_successes=s
+    @data EXP inter_total_steps=ts
+end
 
 function intervention_experiment(agent,
                                  env::DirectionalTMaze,
