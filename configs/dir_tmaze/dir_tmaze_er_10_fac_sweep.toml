@@ -41,7 +41,7 @@ deepaction = false
 init_style = "tensor"
 
 [sweep_args]
-cell_numhidden = [["FacMARNN", 18], ["FacMARNN", 25], ["FacMARNN", 30], ["FacMAGRU", 10], ["FacMAGRU", 14] ["FacMAGRU", 17]]
+"cell+numhidden" = [["FacMARNN", 18], ["FacMARNN", 25], ["FacMARNN", 30], ["FacMAGRU", 10], ["FacMAGRU", 14], ["FacMAGRU", 17]]
 eta = "0.01*(2.0.^(-11:2:-2))"
 replay_size = [10000, 20000]
 truncation = [12]
