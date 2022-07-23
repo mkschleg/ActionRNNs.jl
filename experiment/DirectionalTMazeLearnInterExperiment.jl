@@ -498,8 +498,33 @@ function get_intervention_list(::Val{:DTMazeStraight1})
     ]
 end
 
-function get_intervention_list(::Val{:DTMazeStraight2})
+function get_intervention_list(::Val{:DTMazeStraight1_v2})
     inter_start_dir_list = [
+        (ActionInterventionUnderCondition(
+	    2, (env)->env.state.x == 1, false), 2),
+        (ActionInterventionUnderCondition(
+	    2, (env)->env.state.x == 1, false), 2)
+        (ActionInterventionUnderCondition(
+	    2, (env)->env.state.x == 1, false), 2)
+        (ActionInterventionUnderCondition(
+	    2, (env)->env.state.x == 1, false), 2)
+    ]
+end
+
+function get_intervention_list(::Val{:DTMazeStraight2_v2})
+    inter_start_dir_list = [
+        (MultiActionInterventionUnderCondition(
+	    [2, 2], (env)->env.state.x == 1), 2),
+        (MultiActionInterventionUnderCondition(
+	    [2, 2], (env)->env.state.x == 1), 2),
+        (MultiActionInterventionUnderCondition(
+	    [2, 2], (env)->env.state.x == 1), 2),
+        (MultiActionInterventionUnderCondition(
+	    [2, 2], (env)->env.state.x == 1), 2),
+        (MultiActionInterventionUnderCondition(
+	    [2, 2], (env)->env.state.x == 1), 2),
+        (MultiActionInterventionUnderCondition(
+	    [2, 2], (env)->env.state.x == 1), 2),
         (MultiActionInterventionUnderCondition(
 	    [2, 2], (env)->env.state.x == 1), 2),
     ]

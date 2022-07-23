@@ -1,6 +1,6 @@
 [config]
 save_backend="mysql" # mysql only database backend supported
-database="mkschleg_inter_learn_straight_1_dir_tmaze_steps" # Database name
+database="mkschleg_inter_learn_straight_1_dir_tmaze_steps_v2" # Database name
 save_dir="inter_learn_straight_1_dir_tmaze"
 exp_file="experiment/DirectionalTMazeLearnInterExperiment.jl"
 exp_module_name = "DirectionalTMazeLearnInterExperiment"
@@ -27,7 +27,5 @@ target_update_wait = 1000
 
 deepaction = false
 
-inter_list = "DTMazeStraight1"
-inter_num_steps = 80000
-
-
+inter_list = "DTMazeStraight1_v2"
+inter_num_steps = 20000
