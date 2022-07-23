@@ -28,6 +28,6 @@ target_update_wait = 1000
 deepaction = false
 
 inter_list = "DTMazeStraight1"
-inter_num_steps = 140000
+inter_num_steps = 80000
 
 
