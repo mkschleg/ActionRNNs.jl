@@ -503,11 +503,11 @@ function get_intervention_list(::Val{:DTMazeStraight1_v2})
         (ActionInterventionUnderCondition(
 	    2, (env)->env.state.x == 1, false), 2),
         (ActionInterventionUnderCondition(
-	    2, (env)->env.state.x == 1, false), 2)
+	    2, (env)->env.state.x == 1, false), 2),
         (ActionInterventionUnderCondition(
-	    2, (env)->env.state.x == 1, false), 2)
+	    2, (env)->env.state.x == 1, false), 2),
         (ActionInterventionUnderCondition(
-	    2, (env)->env.state.x == 1, false), 2)
+	    2, (env)->env.state.x == 1, false), 2),
     ]
 end
 
