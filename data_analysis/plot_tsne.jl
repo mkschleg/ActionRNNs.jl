@@ -6,7 +6,7 @@ import ActionRNNs: @data
 using ActionRNNs, Random
 using RollingFunctions, Statistics
 
-import RingWorldERExperiment, DirectionalTMazeERExperiment
+import RingWorldERExperiment_FixRNG, DirectionalTMazeERExperiment
 
 using Plots
 import Plots: @colorant_str
@@ -27,14 +27,14 @@ function get_hs_over_time(
 		rng=Random.GLOBAL_RNG)
     results, agent, env = exp()
 
-    data, data_logger = RingWorldERExperiment.construct_logger(
+    data, data_logger = RingWorldERExperiment_FixRNG.construct_logger(
 	extra_groups_and_names = [
 	    (:Agent, :action),
 	    (:Agent, :hidden_state, :get_hs_1_layer),
 	    (:Env, :state)]
     )
     
-    RingWorldERExperiment.with_logger(data_logger) do
+    RingWorldERExperiment_FixRNG.with_logger(data_logger) do
 	a = agent.action
 	@data Agent action=a
 	for i in 1:1000
@@ -53,7 +53,7 @@ end
 function ringworld_tsne(args; progress=false)
     args["log_extras"] = [["EXPExtra", "agent"], ["EXPExtra", "env"]]
     test_ret = get_hs_over_time(false) do
-	ret = RingWorldERExperiment.main_experiment(args, testing=true, progress=progress)
+	ret = RingWorldERExperiment_FixRNG.main_experiment(args, testing=true, progress=progress)
 	(ret.data, 
 	 ret.data[:EXPExtra][:agent][1], 
 	 ret.data[:EXPExtra][:env][1])
