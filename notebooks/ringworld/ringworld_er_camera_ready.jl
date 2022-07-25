@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -22,10 +22,13 @@ begin
 end
 
 # ╔═╡ 17668324-c5cd-473a-9c3c-c763ae283d5c
-using RollingFunctions
+using RollingFunctions, Printf
 
 # ╔═╡ d2f18951-d72c-4625-a91a-45d299a466a8
 using StatsPlots
+
+# ╔═╡ c1903188-ae83-468f-969e-1d2ba84f3745
+using Reproduce
 
 # ╔═╡ b802dcb1-9636-4ccb-9e4a-a4204b9189fc
 color_scheme = [
@@ -325,6 +328,57 @@ let
 	plt
 end
 
+# ╔═╡ 28320c88-e37c-4fe7-b585-096da1a4c18e
+df_final.avg_end[1]
+
+# ╔═╡ a5939ecb-3756-40d0-bb11-69b2f235e180
+let
+
+	plot_lc(y, color) = begin
+		plt = plot(
+			ylims=(0.0,0.35),
+			legend=nothing,
+			grid=false,
+			tickdir=:out, 
+			ticks=false)
+		plot!(plt, y,
+			  lw=2, color=color)
+	end
+
+	save_dir = "../../plots/ringworld_indv_learning_curves"
+	if !isdir(save_dir)
+		mkdir(save_dir)
+	end
+	
+	# plts = []
+	diff_dict = DataFrameUtils.get_diff_dict(df_final)
+
+	for (cell, nh) ∈ [("MARNN", 9), ("RNN", 15), ("AARNN", 15), ("MAGRU", 9), ("GRU", 12), ("AAGRU", 12)]
+		
+		for trunc ∈ diff_dict["truncation"]
+			cd = @from i in df_final begin
+				@where i.cell == cell &&
+					   i.numhidden == nh &&
+					   i.truncation == trunc
+				@select {
+					y = i.lc_identity[1],
+					avg_end = i.avg_end
+				}
+				@collect DataFrame
+			end
+	
+			sort_idx = sortperm(cd.avg_end[1][1])
+	
+			y_sort = rollmean.(cd[1, :y][sort_idx], (10,))
+			plt = plot([plot_lc(lc, cell_colors[cell]) for lc in y_sort]..., 
+				 layout=(5, 10), size=(800, 500), margins = 0Plots.cm)
+			savefig("$(save_dir)/$(cell)_$(nh)_$(trunc).pdf")
+		end
+	end
+
+	# plts
+end
+
 # ╔═╡ 99d37317-1d62-4000-8c02-52fa0e40a127
 begin
 function mean_uneven(d::Vector{Array{F, 1}}) where {F}
@@ -361,7 +415,7 @@ let
 		grid=false,
 		tickdir=:out, 
 		tickfontsize=11)
-	for (cell, nh) ∈ [("MARNN", 9), ("RNN", 15), ("AARNN", 15)]
+	for (cell, nh) ∈ [("MARNN", 9), ("RNN", 15), ("AARNN", 15), ]
 		cd = @from i in df_final begin
 			@where i.cell == cell &&
 				   i.numhidden == nh &&
@@ -382,8 +436,194 @@ let
 	plt
 end
 
-# ╔═╡ 5a270f43-c36d-4dbb-b28f-00ef8eebcb20
+# ╔═╡ 97cdd685-193e-4ea4-b8cd-d6be800b4dd5
+md"""# All Data """
 
+# ╔═╡ 30247efc-417a-45be-98cf-d3e234133490
+all_data_ic = ItemCollection(at("final_ringworld_er_10_all_data_fix_rng"))
+
+# ╔═╡ e1b95eee-0d66-4bb8-9629-d6b61804770e
+
+
+# ╔═╡ 8f462b88-4840-42cd-918d-a8d1fb0298aa
+function plot_ind_gvf_lcs(cell, seed; kwargs...)
+
+	sub_ic = Reproduce.search(all_data_ic) do i
+		i.parsed_args["cell"] == cell && i.parsed_args["seed"] == seed
+	end
+
+	err = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_err"]
+	# pred = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_pred"]
+	plts = []
+	# actual = (pred .- err)
+	
+	for i in 1:20
+		# plt = plot()
+		plt = plot(
+			# ylims=(0.0,1.0),
+			legend=nothing,
+			grid=false,
+			tickdir=:out)
+
+		γ = i > 10 ? 0.1 * (i - 10 - 1) : 0.1 * (i - 1)
+		γ_str = Printf.@sprintf("%5.1f", γ)
+		plot!(rollmean(abs.(err[i, :]), 1000)[1:1000:end], color = cell_colors[cell], lw=2, title="γ: $(γ_str)"; kwargs...)
+		# plot!(x_rng, actual[i, :], color = :black, linealpha=0.5, lw=2)
+
+		push!(plts, plt)
+	end
+	plts
+end
+
+# ╔═╡ af431856-af86-4d54-a481-6198ac57b97f
+function plot_rmse_lc(cell, seed; kwargs...)
+
+	sub_ic = Reproduce.search(all_data_ic) do i
+		i.parsed_args["cell"] == cell && i.parsed_args["seed"] == seed
+	end
+
+	err = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_err"]
+	# pred = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_pred"]
+
+	plt = plot(
+		# ylims=(0.0,1.0),
+		legend=nothing,
+		grid=false,
+		tickdir=:out)
+	
+	rmse = sqrt.(mean(err.^2; dims=1))[1, :]
+	plot!(mean(reshape(rmse, 1000, :); dims=1)[1,:], color=cell_colors[cell], lw=2, title="seed: $(seed)"; kwargs...)
+
+	avg_end = mean(rmse[end-50000:end])
+	
+	plt, avg_end
+end
+
+# ╔═╡ 9218c9b2-ef34-4872-aaf5-dc8f24851357
+let
+	savepath = "../../plots/ringworld_indv_plots_fix_rng"
+	if !isdir(savepath)
+		mkdir(savepath)
+	end
+	for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
+		plts = [plot_rmse_lc(cell, i, ticks=:none, titlefontsize=5, ylims=(0.0, 0.5)) for i in 21:70]
+		srt_idx = sortperm(getindex.(plts, 2))
+		plt = plot(getindex.(plts, 1)[srt_idx]..., layout=(5, 10), size=(800, 500))
+		savefig(plt, joinpath(savepath, "$(cell).pdf"))
+	end
+end
+
+# ╔═╡ 863f90aa-f329-4f20-8855-3b3f096cd330
+function plot_ind_gvf_pred_truth(cell, seed, x_rng = 250000:250100; kwargs...)
+
+	sub_ic = Reproduce.search(all_data_ic) do i
+		i.parsed_args["cell"] == cell && i.parsed_args["seed"] == seed
+	end
+
+	err = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_err"]
+	pred = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_pred"]
+	plts = []
+	actual = (pred .- err)
+	
+	for i in 1:20
+		# plt = plot()
+		plt = plot(
+			# ylims=(0.0,1.0),
+			legend=nothing,
+			grid=false,
+			tickdir=:out)
+		
+		
+		plot!(x_rng, pred[i, x_rng], color = cell_colors[cell], lw=2; kwargs...)
+		plot!(x_rng, actual[i, x_rng], color = :black, linealpha=0.5, lw=2; kwargs...)
+
+		push!(plts, plt)
+	end
+	plts
+end
+
+# ╔═╡ 6ffb578f-f996-4f31-944d-8fa702cc228f
+function plot_ind_gvf_pred_truth(cells, gvf, seed, x_rng; kwargs...)
+
+	plt = plot(
+		legend=nothing,
+		grid=false,
+		tickdir=:out)
+	actual = nothing
+	for cell in cells
+		sub_ic = Reproduce.search(all_data_ic) do i
+			i.parsed_args["cell"] == cell && i.parsed_args["seed"] == seed
+		end
+		
+		
+		
+		err = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_err"]
+		pred = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_pred"]
+		actual = (pred .- err)
+		
+		plot!(x_rng, pred[gvf, x_rng], color = cell_colors[cell], lw=2.5; kwargs...)
+		
+	end
+
+	plot!(x_rng, actual[gvf, x_rng], color = :black, linealpha=1.0, lw=1; kwargs...)
+	
+	plt
+end
+
+# ╔═╡ ec8b2a51-cf3f-441c-b4cb-1545f0dac29a
+let
+	plt = plot_ind_gvf_pred_truth(["AARNN", "MARNN"], 10, 62, 250475:250605)
+	savefig(plt, "../../plots/ringworld_aarnn_marnn_gvf_10_seed_62_pred_truth.pdf")
+	plt = plot_ind_gvf_pred_truth(["AARNN", "MARNN"], 1, 62, 250475:250605)
+	savefig(plt, "../../plots/ringworld_aarnn_marnn_gvf_1_seed_62_pred_truth.pdf")
+end
+
+# ╔═╡ 7ea7ccbf-6e2c-4e7d-bd23-0a56b465b901
+let
+	savepath = "../../plots/ringworld_ind_gvf_lcs/"
+	if !isdir(savepath)
+		mkdir(savepath)
+	end
+	@progress for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
+		for r in 21:70
+			plt = plot(plot_ind_gvf_lcs(cell, r)..., ticks=:none, ylims = (0.0, 0.5))
+			savefig(plt, joinpath(savepath, "$(cell)_$(r).pdf"))
+		end
+	end
+end
+
+# ╔═╡ b6a9ffcd-8479-4839-b5a8-f16f69d65a29
+let
+	savepath = "../../plots/ringworld_ind_pred_truth_better_ylims/"
+	if !isdir(savepath)
+		mkdir(savepath)
+	end
+	for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
+		seed = 62
+		plt = plot_ind_gvf_pred_truth(cell, seed, 250450:250650, ylims=(-0.05, 1.1))
+		i = 1
+		savefig(plt[i], joinpath(savepath, "$(cell)_$(seed)_gvf_$(i).pdf"))
+		# end
+	end
+end
+
+# ╔═╡ 2b553e7e-9149-474d-b942-9928c5a755d1
+let
+	savepath = "../../plots/ringworld_ind_pred_truth_better_ylims/"
+	if !isdir(savepath)
+		mkdir(savepath)
+	end
+	for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
+		seed = 62
+		plt = plot_ind_gvf_pred_truth(cell, seed, 250450:250650, ylims=(0.25, 1.1))
+		i = 10
+		savefig(plt[i], joinpath(savepath, "$(cell)_$(seed)_gvf_$(i).pdf"))
+		# end
+	end
+end
+
+# ╔═╡ 57e9561b-db04-49a2-b231-d0ba1aeb5ac7
+plot_ind_gvf_pred_truth("AARNN", 62, 250450:250650, ylims=(0.25, 1.1))[10]
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -392,8 +632,10 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 ProgressLogging = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
 Query = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"
+Reproduce = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
 RollingFunctions = "b0e4dd01-7b14-53d8-9b45-175a3e362653"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
@@ -405,6 +647,7 @@ JLD2 = "~0.4.22"
 PlutoUI = "~0.7.39"
 ProgressLogging = "~0.1.4"
 Query = "~1.0.0"
+Reproduce = "~0.12.1"
 RollingFunctions = "~0.6.2"
 StatsPlots = "~0.14.34"
 """
@@ -458,8 +701,31 @@ git-tree-sha1 = "66771c8d21c8ff5e3a93379480a2307ac36863f7"
 uuid = "13072b0f-2c55-5437-9ae7-d433b7a33950"
 version = "1.0.1"
 
+[[deps.BSON]]
+git-tree-sha1 = "306bb5574b0c1c56d7e1207581516c557d105cad"
+uuid = "fbb218c0-5317-5bc6-957e-2ee96dd4b1f0"
+version = "0.3.5"
+
 [[deps.Base64]]
 uuid = "2a0f44e3-6c83-55bd-87e4-b1978d98bd5f"
+
+[[deps.BinaryProvider]]
+deps = ["Libdl", "Logging", "SHA"]
+git-tree-sha1 = "ecdec412a9abc8db54c0efc5548c64dfce072058"
+uuid = "b99e7846-7c00-51b0-8f62-c81ae34c0232"
+version = "0.5.10"
+
+[[deps.Blosc]]
+deps = ["Blosc_jll"]
+git-tree-sha1 = "310b77648d38c223d947ff3f50f511d08690b8d5"
+uuid = "a74b3585-a348-5f62-a45c-50e91977d574"
+version = "0.7.3"
+
+[[deps.Blosc_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Lz4_jll", "Pkg", "Zlib_jll", "Zstd_jll"]
+git-tree-sha1 = "91d6baa911283650df649d0aea7c28639273ae7b"
+uuid = "0b7ba130-8d10-5ba8-a3d6-c5182647fed9"
+version = "1.21.1+0"
 
 [[deps.Bzip2_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -496,6 +762,12 @@ deps = ["Distances", "LinearAlgebra", "NearestNeighbors", "Printf", "SparseArray
 git-tree-sha1 = "75479b7df4167267d75294d14b58244695beb2ac"
 uuid = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
 version = "0.14.2"
+
+[[deps.CodeTracking]]
+deps = ["InteractiveUtils", "UUIDs"]
+git-tree-sha1 = "6d4fa04343a7fc9f9cb9cff9558929f3d2752717"
+uuid = "da1fd8a2-8d9e-5ec2-8556-3022fb5608a2"
+version = "1.0.9"
 
 [[deps.ColorSchemes]]
 deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "Random"]
@@ -542,6 +814,11 @@ git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 version = "4.1.1"
 
+[[deps.DBInterface]]
+git-tree-sha1 = "9b0dc525a052b9269ccc5f7f04d5b3639c65bca5"
+uuid = "a10d1c49-ce27-4219-8d33-6db1a4562965"
+version = "2.5.0"
+
 [[deps.DataAPI]]
 git-tree-sha1 = "fb5f5316dd3fd4c5e7c30a24d50643b73e37cd40"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
@@ -573,6 +850,18 @@ version = "0.4.13"
 [[deps.Dates]]
 deps = ["Printf"]
 uuid = "ade2ca70-3891-5945-98fb-dc099432e06a"
+
+[[deps.DecFP]]
+deps = ["DecFP_jll", "Printf", "Random", "SpecialFunctions"]
+git-tree-sha1 = "a8269e0a6af8c9d9ae95d15dcfa5628285980cbb"
+uuid = "55939f99-70c6-5e9b-8bb0-5071ed7d61fd"
+version = "1.3.1"
+
+[[deps.DecFP_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "e9a8da19f847bbfed4076071f6fef8665a30d9e5"
+uuid = "47200ebd-12ce-5be5-abb7-8e082af23329"
+version = "2.0.3+1"
 
 [[deps.DelimitedFiles]]
 deps = ["Mmap"]
@@ -728,6 +1017,18 @@ git-tree-sha1 = "9b02998aba7bf074d14de89f9d37ca24a1a0b046"
 uuid = "78b55507-aeef-58d4-861c-77aaff3498b1"
 version = "0.21.0+0"
 
+[[deps.Git]]
+deps = ["Git_jll"]
+git-tree-sha1 = "d7bffc3fe097e9589145493c08c41297b457e5d0"
+uuid = "d7ba0133-e1db-5d97-8f8c-041e4b3a1eb2"
+version = "1.2.1"
+
+[[deps.Git_jll]]
+deps = ["Artifacts", "Expat_jll", "Gettext_jll", "JLLWrappers", "LibCURL_jll", "Libdl", "Libiconv_jll", "OpenSSL_jll", "PCRE2_jll", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "6e93d42b97978709e9c941fa43d0f01701f0d290"
+uuid = "f8c6e375-362e-5223-8a59-34ff63f689eb"
+version = "2.34.1+0"
+
 [[deps.Glib_jll]]
 deps = ["Artifacts", "Gettext_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Libiconv_jll", "Libmount_jll", "PCRE_jll", "Pkg", "Zlib_jll"]
 git-tree-sha1 = "a32d672ac2c967f3deb8a81d828afc739c838a06"
@@ -744,6 +1045,18 @@ version = "1.3.14+0"
 git-tree-sha1 = "53bb909d1151e57e2484c3d1b53e19552b887fb2"
 uuid = "42e2da0e-8278-4e71-bc24-59509adca0fe"
 version = "1.0.2"
+
+[[deps.HDF5]]
+deps = ["Blosc", "Compat", "HDF5_jll", "Libdl", "Mmap", "Random", "Requires"]
+git-tree-sha1 = "698c099c6613d7b7f151832868728f426abe698b"
+uuid = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+version = "0.15.7"
+
+[[deps.HDF5_jll]]
+deps = ["Artifacts", "JLLWrappers", "LibCURL_jll", "Libdl", "OpenSSL_jll", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "bab67c0d1c4662d2c4be8c6007751b0b6111de5c"
+uuid = "0234f1f7-429e-5d53-9886-15a909be8d59"
+version = "1.12.1+0"
 
 [[deps.HTTP]]
 deps = ["Base64", "Dates", "IniFile", "Logging", "MbedTLS", "NetworkOptions", "Sockets", "URIs"]
@@ -977,6 +1290,12 @@ version = "0.3.15"
 [[deps.Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
 
+[[deps.Lz4_jll]]
+deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
+git-tree-sha1 = "5d494bc6e85c4c9b626ee0cab05daa4085486ab1"
+uuid = "5ced341a-0733-55b8-9ab6-a4889d929147"
+version = "1.9.3+0"
+
 [[deps.MKL_jll]]
 deps = ["Artifacts", "IntelOpenMP_jll", "JLLWrappers", "LazyArtifacts", "Libdl", "Pkg"]
 git-tree-sha1 = "e595b205efd49508358f7dc670a940c790204629"
@@ -988,6 +1307,12 @@ deps = ["Markdown", "Random"]
 git-tree-sha1 = "3d3e902b31198a27340d0bf00d6ac452866021cf"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
 version = "0.5.9"
+
+[[deps.MariaDB_Connector_C_jll]]
+deps = ["Artifacts", "JLLWrappers", "LibCURL_jll", "Libdl", "Libiconv_jll", "OpenSSL_jll", "Pkg", "Zlib_jll"]
+git-tree-sha1 = "30523a011413b08ee38a6ed6a18e84c363d0ce79"
+uuid = "aabc7e14-95f1-5e66-9f32-aea603782360"
+version = "3.1.12+0"
 
 [[deps.Markdown]]
 deps = ["Base64"]
@@ -1008,6 +1333,12 @@ git-tree-sha1 = "e498ddeee6f9fdb4551ce855a46f54dbd900245f"
 uuid = "442fdcdd-2543-5da2-b0f3-8c86c306513e"
 version = "0.3.1"
 
+[[deps.Memento]]
+deps = ["Dates", "Distributed", "Requires", "Serialization", "Sockets", "Test", "UUIDs"]
+git-tree-sha1 = "bb1167df2fae4a2e6a9350aedc2193a3b70d59fc"
+uuid = "f28f55f0-a522-5efc-85c2-fe41dfb9b2d9"
+version = "1.4.0"
+
 [[deps.Missings]]
 deps = ["DataAPI"]
 git-tree-sha1 = "bf210ce90b6c9eed32d25dbcae1ebc565df2687f"
@@ -1025,6 +1356,12 @@ deps = ["Arpack", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "St
 git-tree-sha1 = "7008a3412d823e29d370ddc77411d593bd8a3d03"
 uuid = "6f286f6a-111f-5878-ab1e-185364afe411"
 version = "0.9.1"
+
+[[deps.MySQL]]
+deps = ["BinaryProvider", "DBInterface", "Dates", "DecFP", "Libdl", "MariaDB_Connector_C_jll", "Parsers", "Tables"]
+git-tree-sha1 = "9b1984ea6e2adc64172ee93916272fbb5480cc59"
+uuid = "39abe10b-433b-5dbd-92d4-e302a9df00cd"
+version = "1.3.1"
 
 [[deps.NaNMath]]
 git-tree-sha1 = "737a5957f387b17e74d4ad2f440eb330b39a62c5"
@@ -1088,6 +1425,10 @@ git-tree-sha1 = "85f8e6578bf1f9ee0d11e7bb1b1456435479d47c"
 uuid = "bac558e1-5e72-5ebc-8fee-abe8a469f55d"
 version = "1.4.1"
 
+[[deps.PCRE2_jll]]
+deps = ["Artifacts", "Libdl"]
+uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
+
 [[deps.PCRE_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
 git-tree-sha1 = "b2a7af664e098055a7529ad1a900ded962bca488"
@@ -1099,6 +1440,12 @@ deps = ["LinearAlgebra", "SparseArrays", "SuiteSparse"]
 git-tree-sha1 = "027185efff6be268abbaf30cfd53ca9b59e3c857"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
 version = "0.11.10"
+
+[[deps.Parallelism]]
+deps = ["Distributed", "LinearAlgebra", "Memento"]
+git-tree-sha1 = "2d672911d884a29330e95856fc99498b07875c12"
+uuid = "c8c83da1-e5f9-4e2c-a857-b8617bac3554"
+version = "0.1.2"
 
 [[deps.Parsers]]
 deps = ["Dates"]
@@ -1168,6 +1515,12 @@ git-tree-sha1 = "80d919dee55b9c50e8d9e2da5eeafff3fe58b539"
 uuid = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
 version = "0.1.4"
 
+[[deps.ProgressMeter]]
+deps = ["Distributed", "Printf"]
+git-tree-sha1 = "d7a7aef8f8f2d537104f170139553b14dfe39fe9"
+uuid = "92933f4c-e287-5a05-a399-4b506db050ca"
+version = "1.7.2"
+
 [[deps.Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
 git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
@@ -1227,6 +1580,12 @@ deps = ["SHA", "Scratch"]
 git-tree-sha1 = "cdbd3b1338c72ce29d9584fdbe9e9b70eeb5adca"
 uuid = "05181044-ff0b-4ac5-8273-598c1e38db00"
 version = "0.1.3"
+
+[[deps.Reproduce]]
+deps = ["BSON", "CodeTracking", "DBInterface", "DataFrames", "Dates", "Distributed", "FileIO", "Git", "HDF5", "JLD2", "JSON", "Logging", "MySQL", "Parallelism", "Pkg", "ProgressMeter", "Random", "Reexport", "SharedArrays", "Sockets", "TOML", "Tables"]
+git-tree-sha1 = "9e50ba71e74e124788786e3bd801fbcfcb25fd41"
+uuid = "560a9c3a-0b8c-11e9-0329-d39dfcb85ed2"
+version = "0.12.1"
 
 [[deps.Requires]]
 deps = ["UUIDs"]
@@ -1668,10 +2027,25 @@ version = "0.9.1+5"
 # ╠═f1f0a35e-8c5e-4791-9d14-e1a793564728
 # ╠═7bde35d3-6e81-48c1-90fe-6226e811e885
 # ╠═21f71119-33d8-478a-8acd-15874b7bf4d6
-# ╠═b9085338-8f8a-4133-8124-64c772c9ea10
-# ╠═8171f992-f105-41fb-8d35-bae4d5fb14da
+# ╟─b9085338-8f8a-4133-8124-64c772c9ea10
+# ╟─8171f992-f105-41fb-8d35-bae4d5fb14da
 # ╠═0b26db67-084b-4ebd-a3e2-45e9cc03bd7e
+# ╠═28320c88-e37c-4fe7-b585-096da1a4c18e
+# ╠═a5939ecb-3756-40d0-bb11-69b2f235e180
 # ╠═99d37317-1d62-4000-8c02-52fa0e40a127
-# ╠═5a270f43-c36d-4dbb-b28f-00ef8eebcb20
+# ╠═97cdd685-193e-4ea4-b8cd-d6be800b4dd5
+# ╠═c1903188-ae83-468f-969e-1d2ba84f3745
+# ╠═30247efc-417a-45be-98cf-d3e234133490
+# ╠═e1b95eee-0d66-4bb8-9629-d6b61804770e
+# ╠═8f462b88-4840-42cd-918d-a8d1fb0298aa
+# ╠═af431856-af86-4d54-a481-6198ac57b97f
+# ╠═9218c9b2-ef34-4872-aaf5-dc8f24851357
+# ╠═863f90aa-f329-4f20-8855-3b3f096cd330
+# ╠═6ffb578f-f996-4f31-944d-8fa702cc228f
+# ╠═ec8b2a51-cf3f-441c-b4cb-1545f0dac29a
+# ╠═7ea7ccbf-6e2c-4e7d-bd23-0a56b465b901
+# ╠═b6a9ffcd-8479-4839-b5a8-f16f69d65a29
+# ╠═2b553e7e-9149-474d-b942-9928c5a755d1
+# ╠═57e9561b-db04-49a2-b231-d0ba1aeb5ac7
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

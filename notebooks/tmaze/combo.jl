@@ -103,99 +103,29 @@ function boxviolinplot!(plt, x, data; color, kwargs...)
 			 linecolor=:black)
 end
 
-# ╔═╡ 47df1a1e-727a-4d20-bd82-3965ca769df9
-let
-	plt = plot(
-		legend=false, 
-		grid=false, 
-		tickfontsize=11, 
-		tickdir=:out, 
-		ylims=(0.45, 1.0))
-	plot_data_sym = :successes_avg_end
-	
-	for cell ∈ ["GRU", "AAGRU", "MAGRU"]
-		cd = @from i in df_final_tmaze begin
-			@where i.cell == cell
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
-		end
-		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
-	end
-
-	cd = @from i in best_over_eta_deep_action begin
-			@where i.cell == "AAGRU" && 
-			i.internal_a_layers == 1 && 
-			i.internal_a == 4
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
-	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, "DeepAAGRU", d; color = cell_colors["DAAGRU"])
-
-	cd = @from i in best_over_eta_fac_tmaze begin
-		@where i.cell == "FacMAGRU" &&
-			   i.init_style == "tensor" &&
-			   i.replay_size == 1000 && 
-			   i.numhidden == 6
-		@select {d=getindex(i, plot_data_sym)}
-		@collect DataFrame
-	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, "FacMAGRU", d; color = cell_colors["FacMAGRU"])
-		
-	
-	plt = vline!([7], linestyle=:dot, color=:white, lw=2)
-	
-	for cell ∈ ["RNN", "AARNN", "MARNN"]
-		cd = @from i in df_final_tmaze begin
-			@where i.cell == cell
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
-		end
-		d = cd[1, :d]
-		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
-	end
-
-	cd = @from i in best_over_eta_deep_action begin
-			@where i.cell == "AARNN" && 
-			i.internal_a_layers == 1 && 
-			i.internal_a == 4
-			@select {d=getindex(i, plot_data_sym)}
-			@collect DataFrame
-	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, "DeepAARNN", d; color = cell_colors["DAARNN"])
-
-	cd = @from i in best_over_eta_fac_tmaze begin
-		@where i.cell == "FacMARNN" &&
-			   i.init_style == "tensor" &&
-			   i.replay_size == 1000  && 
-			   i.numhidden == 20
-		@select {d=getindex(i, plot_data_sym)}
-		@collect DataFrame
-	end
-	d = cd[1, :d]
-	boxviolinplot!(plt, "FacMARNN", d; color = cell_colors["FacMARNN"])
-	
-	
-	savefig("../../plots/tmaze_er.pdf")
-	plt
-end
-
 # ╔═╡ f4ea8ec5-a899-493c-bcee-17d10141b4bb
 md"""
 # Combo Cells
 """
 
 # ╔═╡ 7e47a5fc-ce5d-4f1b-85aa-1b013ec8b477
-df_deep_sm = FileIO.load(at("tmaze_er_combo_sm/2022-07-07-procdata.jld2"))["params_and_results"]
+df_deep_sm = let
+	df = FileIO.load(at("tmaze_er_combo_sm/2022-07-07-procdata.jld2"))["params_and_results"]
+	df = df[df[!, :deepaction] .== false, :]
+	DataFrameUtils.best_from_sweep_param(
+		order(:successes_avg_end, by=mean, rev=true), 
+		df, 
+		["eta"])
+end
 
-# ╔═╡ b4335a43-aec4-4eac-9cd4-c12e527ab79f
-best_over_eta_sm = DataFrameUtils.best_from_sweep_param(
-	order(:successes_avg_end, by=mean, rev=true), 
-	df_deep_sm, 
-	["eta"])
+# ╔═╡ 0b0c0b1a-a325-4396-b77b-bcdec2920ba3
+df_deep_cat = let
+	df = FileIO.load(at("tmaze_er_combo_cat/2022-07-12-procdata.jld2"))["params_and_results"]
+	DataFrameUtils.best_from_sweep_param(
+		order(:successes_avg_end, by=mean, rev=true), 
+		df,
+		["eta"])
+end
 
 # ╔═╡ e453af9e-b6d5-4300-9215-dbdc1eb56d2b
 let
@@ -207,7 +137,7 @@ let
 		ylims=(0.45, 1.0))
 	plot_data_sym = :successes_avg_end
 	
-	for cell ∈ ["GRU", "AAGRU", "MAGRU"]
+	for cell ∈ ["AAGRU", "MAGRU"]
 		cd = @from i in df_final_tmaze begin
 			@where i.cell == cell
 			@select {d=getindex(i, plot_data_sym)}
@@ -218,15 +148,28 @@ let
 	end
 
 	cell = "CsoftmaxElGRU"
-	cd = @from i in best_over_eta_sm begin
-		@where i.cell == cell && i.deepaction==false
+	cd = @from i in df_deep_sm begin
+		@where i.cell == cell
 		@select {d=getindex(i, plot_data_sym)}
 		@collect DataFrame
 	end
 	d = cd[1, :d]
+	@info d
 	boxviolinplot!(plt, cell, d; color = cell_colors[cell])
 
-	for cell ∈ ["RNN", "AARNN", "MARNN"]
+	cell = "CcatGRU"
+	cd = @from i in df_deep_cat begin
+		@where i.cell == cell
+		@select {d=getindex(i, plot_data_sym)}
+		@collect DataFrame
+	end
+	d = cd[1, :d]
+	boxviolinplot!(plt, cell, d; color = cell_colors["CsoftmaxElGRU"])
+
+
+	plt = vline!([6], linestyle=:dot, color=:white, lw=5)
+
+	for cell ∈ ["AARNN", "MARNN"]
 		cd = @from i in df_final_tmaze begin
 			@where i.cell == cell
 			@select {d=getindex(i, plot_data_sym)}
@@ -237,14 +180,25 @@ let
 	end
 
 	cell = "CsoftmaxElRNN"
-	cd = @from i in best_over_eta_sm begin
-		@where i.cell == cell && i.deepaction==false
+	cd = @from i in df_deep_sm begin
+		@where i.cell == cell
 		@select {d=getindex(i, plot_data_sym)}
 		@collect DataFrame
 	end
 	d = cd[1, :d]
 	boxviolinplot!(plt, cell, d; color = cell_colors[cell])
 
+	cell = "CcatRNN"
+	cd = @from i in df_deep_cat begin
+		@where i.cell == cell
+		@select {d=getindex(i, plot_data_sym)}
+		@collect DataFrame
+	end
+	d = cd[1, :d]
+	boxviolinplot!(plt, cell, d; color = cell_colors["CsoftmaxElRNN"])
+
+	# savefig(plt, "../../plots/tmaze_combo_cell_box.pdf")
+	plt
 end
 
 # ╔═╡ 97955014-12da-4fed-bc20-1523587a2a57
@@ -253,7 +207,7 @@ DataFrameUtils.get_diff_dict(df_deep_sm)
 # ╔═╡ 4893730a-f490-4bc1-bf8a-e65fc5bd2e36
 let
 
-	df = filter(best_over_eta_sm) do i 
+	df = filter(df_deep_sm) do i 
 		i.deepaction == false
 	end
 
@@ -266,6 +220,24 @@ let
 	args = [get_relavent_params(rw) for rw in eachrow(df)]
 
 	FileIO.save("../../final_runs/tmaze_combo_sm.jld2", "args", args)
+end
+
+# ╔═╡ b0e6a510-5676-4535-af53-d1dc81fb727e
+let
+
+	df = filter(df_deep_cat) do i 
+		i.deepaction == false
+	end
+
+	get_relavent_params(rw) = Dict(
+		"numhidden"=>rw.numhidden,
+		"eta" => rw.eta,
+		"cell" => rw.cell
+	)
+	
+	args = [get_relavent_params(rw) for rw in eachrow(df)]
+
+	FileIO.save("../../final_runs/tmaze_combo_cat.jld2", "args", args)
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1543,12 +1515,12 @@ version = "0.9.1+5"
 # ╠═6b0e3ce9-cf5c-4666-b1f9-7953ed5a3596
 # ╠═d4f5e400-a46c-47d1-a18d-9d068ce10da1
 # ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
-# ╠═47df1a1e-727a-4d20-bd82-3965ca769df9
 # ╠═f4ea8ec5-a899-493c-bcee-17d10141b4bb
 # ╠═7e47a5fc-ce5d-4f1b-85aa-1b013ec8b477
-# ╠═b4335a43-aec4-4eac-9cd4-c12e527ab79f
+# ╠═0b0c0b1a-a325-4396-b77b-bcdec2920ba3
 # ╠═e453af9e-b6d5-4300-9215-dbdc1eb56d2b
 # ╠═97955014-12da-4fed-bc20-1523587a2a57
 # ╠═4893730a-f490-4bc1-bf8a-e65fc5bd2e36
+# ╠═b0e6a510-5676-4535-af53-d1dc81fb727e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

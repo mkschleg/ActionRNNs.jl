@@ -9,10 +9,10 @@ import DataFrames
 import StatsBase: StatsBase, percentile
 
 
-function analyze_dir_tmaze(db, savepath;
-                           vector_tables = ["stps"=>"results_total_steps",
-                                            "rews"=>"results_total_rews",
-                                            "successes"=>"results_successes"])
+function analyze_dir_tmaze(db, savepath)
+    vector_tables = ["stps"=>"results_total_steps",
+                     "rews"=>"results_total_rews",
+                     "successes"=>"results_successes"]
 
     SQLDataProc.proc_control_data(db;
                       save=savepath,
@@ -166,6 +166,109 @@ function analyze_dir_tmaze_intervention(db, savepath=nothing)
             ("mean", mean(bool_mat; dims=1))
         ]
     end]
+
+    DBInterface.close!(conn)
+    params_and_results = DataFrames.innerjoin(params, results..., on=:_HASH)
+
+    params_and_results = SQLDataProc.simplify_dataframe((d)->begin
+                                                        c = collect(d)
+                                                        # @info typeof(c)
+                                                        typeof(c)[collect(d)]
+                                                        end, params_and_results)
+    if !isnothing(savepath)
+        FileIO.save(savepath, "params_and_results", params_and_results)
+    end
+    params_and_results
+end
+
+function analyze_dir_tmaze_intervention(db, savepath=nothing)
+
+    conn = SQLDataProc.connect(db)
+    params = SQLDataProc.get_param_table(conn)
+    
+    results = [SQLDataProc.proc_matrix_data(conn, "results_inter_total_steps", _pre_name="total_steps_") do mat
+        int_mat = Int.(mat)
+        [
+            ("identity", int_mat),
+            ("mean", mean(int_mat; dims=1)),
+            ("var", var(int_mat; dims=1)),
+            ("median", mean(int_mat; dims=1)),
+            ("25_perc", [percentile(col, 25) for col in eachcol(int_mat)]),
+            ("75_perc", [percentile(col, 75) for col in eachcol(int_mat)])
+        ]
+    end,
+    SQLDataProc.proc_matrix_data(conn, "results_inter_successes", _pre_name="successes_") do mat
+        bool_mat = Bool.(mat)
+        [
+            ("mean", mean(bool_mat; dims=1)),
+            ("identity", bool_mat)
+        ]
+    end]
+
+    DBInterface.close!(conn)
+    params_and_results = DataFrames.innerjoin(params, results..., on=:_HASH)
+
+    params_and_results = SQLDataProc.simplify_dataframe((d)->begin
+                                                        c = collect(d)
+                                                        # @info typeof(c)
+                                                        typeof(c)[collect(d)]
+                                                        end, params_and_results)
+    if !isnothing(savepath)
+        FileIO.save(savepath, "params_and_results", params_and_results)
+    end
+    params_and_results
+end
+
+function analyze_dir_tmaze_intervention_steps(db, savepath=nothing)
+
+    conn = SQLDataProc.connect(db)
+    params = SQLDataProc.get_param_table(conn)
+    
+    results = [SQLDataProc.proc_nested_vec_data(conn, "results_inter_total_steps", _pre_name="total_steps_") do vecs
+        int_mat = [Int.(vec) for vec in vecs]
+        [
+            ("identity", int_mat),
+        ]
+    end,
+    SQLDataProc.proc_nested_vec_data(conn, "results_inter_successes", _pre_name="successes_") do vecs
+        bool_mat = [Bool.(vec) for vec in vecs]
+        [
+            ("identity", bool_mat)
+        ]
+    end]
+
+    DBInterface.close!(conn)
+    params_and_results = DataFrames.innerjoin(params, results..., on=:_HASH)
+
+    params_and_results = SQLDataProc.simplify_dataframe((d)->begin
+                                                        c = collect(d)
+                                                        # @info typeof(c)
+                                                        typeof(c)[collect(d)]
+                                                        end, params_and_results)
+    if !isnothing(savepath)
+        FileIO.save(savepath, "params_and_results", params_and_results)
+    end
+    params_and_results
+end
+
+
+function analyze_dir_tmaze_combo_sm(db, savepath=nothing)
+
+    conn = SQLDataProc.connect(db)
+    params = SQLDataProc.get_param_table(conn)
+    
+    results = [SQLDataProc.proc_matrix_data(conn, "results_AgentModel_rnn_sm_w_a", _pre_name="sm_w_a_") do mat
+               int_mat = Float32.(mat)
+               [
+                   ("identity", identity(int_mat))
+               ]
+               end,
+               SQLDataProc.proc_matrix_data(conn, "results_AgentModel_rnn_sm_w_m", _pre_name="sm_w_m") do mat
+               int_mat = Float32.(mat)
+               [
+                   ("identity", int_mat)
+               ]
+               end]
 
     DBInterface.close!(conn)
     params_and_results = DataFrames.innerjoin(params, results..., on=:_HASH)

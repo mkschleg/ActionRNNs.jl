@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -233,12 +233,12 @@ let
 
 	df = @from i in best_over_eta_multil begin
 		@where i.replay_size == replay_size
-		@select {i.eta, i.cell, i.internal_a_layers, i.internal_a}
+		@select {i.eta, i.cell, i.numhidden, i.internal_a_layers, i.internal_a}
 		@collect DataFrame
 	end
 
 	args = Dict("args"=>[Dict(names(row) .=> values(row)) for row in eachrow(df)])
-	# FileIO.save("../../final_runs/tmaze_deep_action.jld2", args)
+	FileIO.save("../../final_runs/tmaze_deep_action.jld2", args)
 
 end
 

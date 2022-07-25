@@ -96,6 +96,47 @@ function proc_matrix_data(proc, conn, table, hashes=UInt[]; _pre_name="")
     DataFrame(;_HASH=hashes, (Symbol(_pre_name*string(k))=>v for (k, v) in ret_strg)...)
 end
 
+function proc_nested_vec_data(proc, conn, table, hashes=UInt[]; _pre_name="")
+
+    if length(hashes) == 0
+        hashes = DataFrame(DBInterface.execute(conn, "select _HASH from params;"))[!, :_HASH]
+    end
+    μ = zeros(Float32, length(hashes))
+    sql_stmt = """select data, step_1, step_2
+                  from $(table)
+                  WHERE _HASH=?
+                  ORDER BY step_1, step_2;
+               """
+    stmt = DBInterface.prepare(conn, sql_stmt)
+    dat = DataFrame(DBInterface.execute(stmt, [hashes[1]]))
+    cols = Int(maximum(dat[!, :step_1]))
+    proc_dat = proc([dat[dat.step_1 .== i, :data] for i in 1:cols])
+
+    get_initial = (x)->if x isa Number
+        zeros(typeof(x), length(hashes))
+    elseif x isa AbstractArray
+        Vector{typeof(x)}(undef, length(hashes))
+    end
+
+    ret_strg = Dict(
+        r[1]=>get_initial(r[2]) for r in proc_dat
+    )
+
+    @progress for (i, hsh) in enumerate(hashes)
+        curs = DBInterface.execute(stmt, [hsh])
+        dat = DataFrame(DBInterface.execute(stmt, hsh))
+        cols = Int(maximum(dat[!, :step_1]))
+        proc_dat = proc([dat[dat.step_1 .== i, :data] for i in 1:cols])
+        # proc_dat = proc(reshape(dat[!, :data], :, cols))
+        curs = nothing
+        for (k, d) ∈ proc_dat
+            ret_strg[k][i] = d
+        end
+    end
+    DBInterface.close!(stmt)
+    DataFrame(;_HASH=hashes, (Symbol(_pre_name*string(k))=>v for (k, v) in ret_strg)...)
+end
+
 
 function proc_vec_data(conn, table, hashes=UInt[]; _pre_name="", kwargs...)
 

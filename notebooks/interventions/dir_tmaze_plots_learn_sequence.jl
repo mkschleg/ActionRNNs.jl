@@ -21,6 +21,9 @@ begin
 	using FileIO, JLD2, PlutoUI
 end
 
+# ╔═╡ 94de967b-0e05-4d93-bca0-b736bd339c03
+using RollingFunctions
+
 # ╔═╡ c5d81212-8033-4a30-b9c8-610c82e54308
 using StatsPlots
 
@@ -93,13 +96,22 @@ at(dir) = joinpath("../../local_data/intervention", dir)
 readdir(at(s_dir))
 
 # ╔═╡ 8a7989fb-063b-46dc-af95-b0ef5d293496
-df_no_train = FileIO.load(at("inter_dir_tmaze_er_10_v2/2022-06-27-procdata.jld2"))["params_and_results"]
+df_learn_seq = FileIO.load(at("inter_learn_seq_dir_tmaze/2022-07-22-procdata_steps.jld2"))["params_and_results"]
+
+# ╔═╡ e6709daf-34c6-4411-ba84-033ce91c8eee
+names(df_learn_seq)
 
 # ╔═╡ 6f98fc99-dc38-4216-b2c0-41df8deaccbb
-df_train = FileIO.load(at("inter_dir_tmaze_er_10_v2_ftoff/2022-06-27-procdata.jld2"))["params_and_results"]
+df_learn_str_1 = FileIO.load(at("inter_learn_straight_1_dir_tmaze/2022-07-22-procdata_steps.jld2"))["params_and_results"]
 
-# ╔═╡ 60c57b0b-6807-44e5-9a40-1d295c554c7a
-names(df_no_train)
+# ╔═╡ 2eb599c4-40e2-4464-9d6f-ecd37cd856e9
+df_learn_str_1_v2 = FileIO.load(at("inter_learn_straight_1_dir_tmaze/2022-07-22-procdata_steps_v2.jld2"))["params_and_results"]
+
+# ╔═╡ 8bc43807-9be5-4720-8423-90ca26b57bba
+df_learn_str_2 = FileIO.load(at("inter_learn_straight_2_dir_tmaze/2022-07-22-procdata_steps.jld2"))["params_and_results"]
+
+# ╔═╡ 8f72c740-9105-4f3a-82b9-f9f98cdc6328
+df_learn_str_2_v2 = FileIO.load(at("inter_learn_straight_2_dir_tmaze/2022-07-22-procdata_steps_v2.jld2"))["params_and_results"]
 
 # ╔═╡ 622165c9-7861-4e81-a463-20a87a3bb06b
 function find_differences(::Val{:DTMazeV2}, mat::AbstractMatrix, agg=mean)
@@ -169,72 +181,36 @@ function boxviolinplot!(plt, x, data, color; kwargs...)
 			 linecolor=:black)
 end
 
-# ╔═╡ 10f497c5-9544-4832-980f-adcc0d38e3cc
-let
+# ╔═╡ f48c99a8-d633-4060-b930-67f6e82d966f
+function get_extended_line(data, steps, n=0)
+	ret = zeros(eltype(data), sum(steps))
+    cur_idx = 1
+    for i in 1:length(data)
+        ret[cur_idx:(cur_idx + steps[i] - 1)] .= data[i]
+        cur_idx += steps[i]
+    end
 
-	gr()
-	plts = []
-	df = df_no_train
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :successes_mean)}
-			@collect DataFrame
-		end
-	end
-
-	mean(get_cell_data("MAGRU").μ[1])
-	
-	# for ne ∈ sort(diff_dict["num_experts"])
-
-	plts = [plot(title=i) for i in 1:8]
-	@progress for cell ∈ diff_dict["cell"]
-		cd = get_cell_data(cell)
-		for i in 1:8
-			boxviolinplot!(plts[i], cell, getindex.(cd.μ[1], i), cell_colors[cell])
-		end
-	end
-	plts[1]
-		# push!(plts, plt)
-	# end
-	# plot(plts...)
+    if n == 0
+        ret
+    else
+		rollmean(ret, n)[1:n:end]
+		# return_arr = zeros(eltype(ddict["results"][key1]), Int(floor(length(ret)/n)))
+		# for i in 1:Int(floor(length(ret)/n))
+		# 	return_arr[i] = mean(ret[i*n - n + 1: i*n])
+		# end
+		# return_arr
+    end
 end
 
-# ╔═╡ 64675b1b-b4dc-48b3-861a-afcfa3398ac8
-let
-
-	gr()
-	plts = []
-	df = df_train
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :successes_mean)}
-			@collect DataFrame
-		end
+# ╔═╡ 8e3ef356-67fd-4308-b72a-ec2477eb3e02
+function get_last_episodes_steps(data, steps)
+	s = 0
+	cur_i = 0
+	while s < 20000
+		s+=steps[end-cur_i]
+		cur_i += 1
 	end
-
-	mean(get_cell_data("MAGRU").μ[1])
-	
-	# for ne ∈ sort(diff_dict["num_experts"])
-
-	plts = [plot(title=i) for i in 1:8]
-	@progress for cell ∈ diff_dict["cell"]
-		cd = get_cell_data(cell)
-		for i in 1:8
-			boxviolinplot!(plts[i], cell, getindex.(cd.μ[1], i), cell_colors[cell])
-		end
-	end
-	plts[1]
-		# push!(plts, plt)
-	# end
-	# plot(plts...)
+	data[(end-cur_i):end]
 end
 
 # ╔═╡ 32230048-e61d-47b3-aa36-11ad50022e55
@@ -242,30 +218,386 @@ let
 
 	gr()
 	plts = []
-	df = df_no_train
+	df = df_learn_seq
 	diff_dict = DataFrameUtils.get_diff_dict(df)
 
 
 	get_cell_data = (cell) -> begin
 		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :successes_mean)}
+			@where i.cell == cell && i.inter_list == "DTMazeStep"
+			@select {μ = getindex(i, :successes_identity), steps = getindex(i, :total_steps_identity)}
 			@collect DataFrame
 		end
 	end
 
-	mean(get_cell_data("MAGRU").μ[1])
+	# mean(get_cell_data("MAGRU").μ[1])
 	
 	# for ne ∈ sort(diff_dict["num_experts"])
 
 	plts = [plot(title=cell) for cell ∈ diff_dict["cell"]]
 	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
 		cd = get_cell_data(cell)
-		for i in 1:8
-			boxviolinplot!(plt, i, getindex.(cd.μ[1], i), cell_colors[cell])
+		for i in 1:7
+			boxviolinplot!(plt, i, mean.(getindex.(cd.μ[1], i)), cell_colors[cell])
 		end
 	end
 	plts
+	
+	# ret = mean(vcat([get_extended_line(
+	# 	get_cell_data("MARNN").μ[1][r][i],
+	# 	get_cell_data("MARNN").steps[1][r][i]) for i in 1:7]...)[1:140000] for r in 1:50)
+
+	# plot(rollmean(ret, 10000))
+
+		# push!(plts, plt)
+	# get_cell_data("MARNN").μ[1][1][1]
+	# end
+	# plot(plts...)
+end
+
+# ╔═╡ a788763c-76fb-49fe-be09-457ab8013635
+let
+
+	gr()
+	plts = []
+	df = df_learn_seq
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStep"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	cell = "MARNN"
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.4,1.0))
+	for (i, cell) ∈ enumerate(["MARNN", "MAGRU"])
+		suc = [mean(get_cell_data(cell).μ[1][r][4]) for r in 1:50]
+		boxviolinplot!(plt, cell*"_step", suc, cell_colors[cell])
+	end
+
+	
+	df = df_learn_str_1
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStraight1"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	for (i, cell) ∈ enumerate(["MARNN", "MAGRU"])
+		suc = [mean(get_last_episodes_steps(
+			get_cell_data(cell).μ[1][r], 
+			get_cell_data(cell).steps[1][r])) for r in 1:50]
+		boxviolinplot!(plt, cell*"_straight", suc, cell_colors[cell])
+	end
+	plt
+
+end
+
+# ╔═╡ 01afa117-b92e-443c-b865-802ca871e56a
+let
+
+	gr()
+	plts = []
+	df = df_learn_seq
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStep"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	cell = "MARNN"
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.4,1.0))
+	for (i, cell) ∈ enumerate(["MARNN", "MAGRU"])
+		suc = [mean(get_cell_data(cell).μ[1][r][end]) for r in 1:50]
+		boxviolinplot!(plt, cell*"_step", suc, cell_colors[cell])
+	end
+
+	
+	df = df_learn_str_2
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStraight2"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	for (i, cell) ∈ enumerate(["MARNN", "MAGRU"])
+		suc = [mean(get_last_episodes_steps(
+			get_cell_data(cell).μ[1][r], 
+			get_cell_data(cell).steps[1][r])) for r in 1:50]
+		boxviolinplot!(plt, cell*"_straight", suc, cell_colors[cell])
+	end
+	plt
+
+end
+
+# ╔═╡ c38ba788-c32c-4aae-8ed6-6142299dd1a0
+let
+
+	gr()
+	plts = []
+	df = df_learn_seq
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStep"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	cell = "MARNN"
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out)
+	for (i, cell) ∈ enumerate(["MARNN", "MAGRU"])
+		suc = [mean(get_cell_data(cell).μ[1][r][end]) for r in 1:50]
+		boxviolinplot!(plt, cell*"_step", suc, cell_colors[cell])
+	end
+
+	
+	df = df_learn_str_2_v2
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStraight2_v2"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	for (i, cell) ∈ enumerate(["MARNN", "MAGRU"])
+		suc = [mean(get_cell_data(cell).μ[1][r][end]) for r in 1:50]
+		boxviolinplot!(plt, cell*"_straight", suc, cell_colors[cell])
+	end
+	plt
+	# get_cell_data("MARNN")
+
+end
+
+# ╔═╡ 46d9a9fc-1537-46ec-aa47-263ede42bce2
+let
+
+	gr()
+
+	get_cell_data_seq = (cell) -> begin
+		@from i in df_learn_seq begin
+			@where i.cell == cell && i.inter_list == "DTMazeStep"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	get_cell_data_straight = (cell) -> begin
+		@from i in df_learn_str_1_v2 begin
+			@where i.cell == cell && i.inter_list == "DTMazeStraight1_v2"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.45, 1.0))
+
+	cell = "MAGRU"
+
+	suc = [mean(get_cell_data_straight(cell).μ[1][r][end]) for r in 1:50]
+	boxviolinplot!(plt, cell*"_straight", suc, cell_colors[cell])
+	
+	suc = [mean(get_cell_data_seq(cell).μ[1][r][4]) for r in 1:50]
+	boxviolinplot!(plt, cell*"_step", suc, cell_colors[cell])
+
+
+	vline!(plt, [3], linestyle=:dot, color=:white, lw=2)
+
+	cell = "MARNN"
+
+	suc = [mean(get_cell_data_straight(cell).μ[1][r][end]) for r in 1:50]
+	boxviolinplot!(plt, cell*"_straight", suc, cell_colors[cell])
+	
+	suc = [mean(get_cell_data_seq(cell).μ[1][r][4]) for r in 1:50]
+	boxviolinplot!(plt, cell*"_step", suc, cell_colors[cell])
+
+	
+	savefig(plt, "../../plots/learn_interventions.pdf")	
+	plt
+	# get_cell_data("MARNN")
+
+end
+
+# ╔═╡ b6763dc5-2d86-45e4-a0e6-d84e4b38dd55
+let
+
+	gr()
+	plts = []
+	df = df_learn_seq
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStep"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	# cell = "MARNN"
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.0,1.0))
+	for (i, cell) ∈ enumerate(["MARNN", "MAGRU"])
+		suc = [mean(get_cell_data(cell).μ[1][r][end]) for r in 1:50]
+		boxviolinplot!(plt, cell, suc, cell_colors[cell])
+	end
+	plt
+end
+
+# ╔═╡ 8f0a9919-ea2d-4a50-9806-ad23f068faf8
+let
+
+	gr()
+	plts = []
+	df = df_learn_str_1
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStraight1"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	cell = "MARNN"
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.0,1.0))
+	for (i, cell) ∈ enumerate(["MARNN", "MAGRU"])
+		suc = [mean(get_last_episodes_steps(
+			get_cell_data(cell).μ[1][r], 
+			get_cell_data(cell).steps[1][r])) for r in 1:50]
+		boxviolinplot!(plt, cell, suc, cell_colors[cell])
+	end
+	plt
+end
+
+# ╔═╡ 08067e88-6cce-4b1d-a5bf-4eb8853d85e3
+let
+
+	gr()
+	plts = []
+	df = df_learn_str_2
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStraight2"
+			@select {μ = getindex(i, :successes_identity), 
+					 steps = getindex(i, :total_steps_identity)}
+			@collect DataFrame
+		end
+	end
+
+	cell = "MARNN"
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.0,1.0))
+	for (i, cell) ∈ enumerate(["MARNN", "MAGRU"])
+		suc = [mean(get_last_episodes_steps(
+			get_cell_data(cell).μ[1][r], 
+			get_cell_data(cell).steps[1][r])) for r in 1:50]
+		boxviolinplot!(plt, cell, suc, cell_colors[cell])
+	end
+	plt
+end
+
+# ╔═╡ 0d32dc1d-68b3-43ef-9030-6884fc9e4a36
+let
+
+	gr()
+	plts = []
+	df = df_learn_str_2
+	diff_dict = DataFrameUtils.get_diff_dict(df)
+
+
+	get_cell_data = (cell) -> begin
+		@from i in df begin
+			@where i.cell == cell && i.inter_list == "DTMazeStraight2"
+			@select {μ = getindex(i, :successes_identity)}
+			@collect DataFrame
+		end
+	end
+
+	# mean(get_cell_data("MAGRU").μ[1])
+	
+	# for ne ∈ sort(diff_dict["num_experts"])
+
+	# plts = [plot(title=cell) for cell ∈ diff_dict["cell"]]
+	# @progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
+	# 	cd = get_cell_data(cell)
+	# 	for i in 1:7
+	# 		boxviolinplot!(plt, i, getindex.(cd.μ[1], i), cell_colors[cell])
+	# 	end
+	# end
+	# plts
+
+	μ = mean(get_cell_data("MAGRU").μ[1])
+	plot(rollmean(μ[:,1], 100))
+	# plot(vcat([rollmean(μ[:, i], 100) for i in 1:7]...))
 		# push!(plts, plt)
 	# end
 	# plot(plts...)
@@ -410,345 +742,6 @@ let
 	# plot(plts...)
 end
 
-# ╔═╡ 0b24f971-4618-49e4-97a8-11388783b9c0
-md"""# Long"""
-
-# ╔═╡ b98f910f-5ddf-4bfb-b365-bd50438f842d
-df_no_train_long = FileIO.load(at("inter_dir_tmaze_er_10_long/2022-06-28-procdata.jld2"))["params_and_results"]
-
-# ╔═╡ 2b33d0df-4ba2-47b1-b9ca-095e238520c9
-df_train_long = FileIO.load(at("inter_dir_tmaze_er_10_v2_ftoff_long/2022-06-29-procdata.jld2"))["params_and_results"]
-
-# ╔═╡ 59d22a67-6d97-472e-8f9d-9f1506d7daa9
-let
-
-	gr()
-	plts = []
-	df = df_no_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :successes_mean)}
-			@collect DataFrame
-		end
-	end
-
-	mean(get_cell_data("MAGRU").μ[1])
-	
-	# for ne ∈ sort(diff_dict["num_experts"])
-
-	plts = [plot(title=cell) for cell ∈ diff_dict["cell"]]
-	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
-		cd = get_cell_data(cell)
-		for i in 1:8
-			boxviolinplot!(plt, i, getindex.(cd.μ[1], i), cell_colors[cell])
-		end
-	end
-	plts
-		# push!(plts, plt)
-	# end
-	# plot(plts...)
-end
-
-# ╔═╡ 7c6b2c7e-ea68-430a-8608-ffc233c2a163
-let
-
-	gr()
-	plts = []
-	df = df_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :successes_mean)}
-			@collect DataFrame
-		end
-	end
-
-	mean(get_cell_data("MAGRU").μ[1])
-	
-	# for ne ∈ sort(diff_dict["num_experts"])
-
-	plts = [plot(title=cell) for cell ∈ diff_dict["cell"]]
-	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
-		cd = get_cell_data(cell)
-		for i in 1:8
-			boxviolinplot!(plt, i, getindex.(cd.μ[1], i), cell_colors[cell])
-		end
-	end
-	plts
-		# push!(plts, plt)
-	# end
-	# plot(plts...)
-end
-
-# ╔═╡ 84aa9553-c25d-4b38-a72d-48e719a44226
-let
-
-	gr()
-	plts = []
-	df = df_no_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :total_steps_identity)}
-			@collect DataFrame
-		end
-	end
-
-	mean(get_cell_data("MAGRU").μ[1])
-	
-	# for ne ∈ sort(diff_dict["num_experts"])
-
-	plts = [plot(title=cell, ylims=(-100, 100)) for cell ∈ diff_dict["cell"]]
-	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
-		cd = get_cell_data(cell)
-		for i in 1:6
-			boxviolinplot!(plt, i, getindex.(find_differences.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
-		end
-	end
-	plts
-		# push!(plts, plt)
-	# end
-	# plot(plts...)
-end
-
-# ╔═╡ 8e20b0e7-e56e-41ec-b508-5484d42ba9fb
-let
-
-	gr()
-	plts = []
-	df = df_no_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :total_steps_identity)}
-			@collect DataFrame
-		end
-	end
-
-	mean(get_cell_data("MAGRU").μ[1])
-	
-	# for ne ∈ sort(diff_dict["num_experts"])
-
-	plts = [plot(title=cell, ylims=(-1,1)) for cell ∈ diff_dict["cell"]]
-	@progress for (plt, cell) ∈ zip(plts, diff_dict["cell"])
-		cd = get_cell_data(cell)
-		for i in 1:6
-			boxviolinplot!(plt, i, getindex.(find_ratios.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
-		end
-	end
-	plts
-		# push!(plts, plt)
-	# end
-	# plot(plts...)
-end
-
-# ╔═╡ aff04b6a-3b5b-49b1-8b9d-8835eebd1dc4
-let
-
-	gr()
-	plts = []
-	df = df_no_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :total_steps_identity)}
-			@collect DataFrame
-		end
-	end
-
-	# mean(get_cell_data("MAGRU").μ[1])
-	
-	plts = [plot(title="Intervention: $(i)", ylims=(0, 300)) for i in 1:8]
-	@progress for (plt, i) in zip(plts, 1:8)
-		for cell ∈ diff_dict["cell"]
-			cd = get_cell_data(cell)
-			boxviolinplot!(plt, cell, getindex.(mean.(cd.μ[1], dims=1), i), cell_colors[cell])
-		end
-	end
-	[savefig(plt, "../../plots/interventions/long_ft/inter_steps_$(i).pdf") for (i, plt) in enumerate(plts)]
-	plts
-
-end
-
-# ╔═╡ d857a8b8-fa75-4fd5-93d9-afdd98d85237
-let
-
-	gr()
-	plts = []
-	df = df_no_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :successes_mean)}
-			@collect DataFrame
-		end
-	end
-
-	# mean(get_cell_data("MAGRU").μ[1])
-	
-	plts = [plot(title="Intervention: $(i)") for i in 1:8]
-	@progress for (plt, i) in zip(plts, 1:8)
-		for cell ∈ diff_dict["cell"]
-			cd = get_cell_data(cell)
-			boxviolinplot!(plt, cell, getindex.(cd.μ[1], i), cell_colors[cell])
-		end
-	end
-	[savefig(plt, "../../plots/interventions/long_ft/inter_$(i).pdf") for (i, plt) in enumerate(plts)]
-	plts
-
-end
-
-# ╔═╡ b9bdf6b0-4449-4580-b4c8-13a8a0037f25
-let
-
-	gr()
-	plts = []
-	df = df_no_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :successes_mean)}
-			@collect DataFrame
-		end
-	end
-
-	# mean(get_cell_data("MAGRU").μ[1])
-	
-	# for ne ∈ sort(diff_dict["num_experts"])
-
-	plts = [plot(title="Intervention: $(i)") for i in 1:6]
-	@progress for (plt, i) in zip(plts, 1:6)
-		for cell ∈ diff_dict["cell"]
-			cd = get_cell_data(cell)
-			boxviolinplot!(plt, cell, getindex.(find_differences.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
-		end
-	end
-	[savefig(plt, "../../plots/interventions/long_ft/inter_diffs_$(i).pdf") for (i, plt) in enumerate(plts)]
-	plts
-
-end
-
-# ╔═╡ cfa736b0-a850-4b4d-b6b1-2717f58cea44
-let
-
-	gr()
-	plts = []
-	df = df_no_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :total_steps_identity)}
-			@collect DataFrame
-		end
-	end
-
-	mean(get_cell_data("MAGRU").μ[1])
-	
-	# for ne ∈ sort(diff_dict["num_experts"])
-
-	plts = [plot(title="Intervention: $(i)", ylims=(-100,100)) for i in 1:6]
-	@progress for (plt, i) in zip(plts, 1:6)
-		for cell ∈ diff_dict["cell"]
-			cd = get_cell_data(cell)
-			boxviolinplot!(plt, cell, getindex.(find_differences.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
-		end
-	end
-	[savefig(plt, "../../plots/interventions/long_ft/inter_steps_diffs_$(i).pdf") for (i, plt) in enumerate(plts)]
-	plts
-
-end
-
-# ╔═╡ 7aaaef83-e6c5-4bb6-84ef-571fc3630400
-let
-
-	gr()
-	plts = []
-	df = df_no_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :total_steps_identity)}
-			@collect DataFrame
-		end
-	end
-
-	mean(get_cell_data("MAGRU").μ[1])
-	
-	# for ne ∈ sort(diff_dict["num_experts"])
-
-	plts = [plot(title="Intervention: $(i)", ylims=(-1,1)) for i in 1:6]
-	@progress for (plt, i) in zip(plts, 1:6)
-		for cell ∈ ["MARNN", "RNN", "AARNN", "MAGRU", "GRU", "AAGRU"]#diff_dict["cell"]
-			cd = get_cell_data(cell)
-			[savefig(plt, "../../plots/interventions/long_ft/inter_steps_ratios_$(i).pdf") for (i, plt) in enumerate(plts)]
-			boxviolinplot!(plt, cell, getindex.(find_ratios.(Val{:DTMazeV2}(), cd.μ[1]), i), cell_colors[cell])
-		end
-	end
-	plts
-		# push!(plts, plt)
-	# end
-	# plot(plts...)
-end
-
-# ╔═╡ 5eb174d7-d3c3-4666-81c9-8dc3731469e5
-let
-
-	gr()
-	plts = []
-	df = df_train_long
-	diff_dict = DataFrameUtils.get_diff_dict(df)
-
-
-	get_cell_data = (cell) -> begin
-		@from i in df begin
-			@where i.cell == cell
-			@select {μ = getindex(i, :successes_mean)}
-			@collect DataFrame
-		end
-	end
-
-	# mean(get_cell_data("MAGRU").μ[1])
-	
-	plts = [plot(title="Intervention: $(i)") for i in 1:8]
-	@progress for (plt, i) in zip(plts, 1:8)
-		for cell ∈ ["MARNN", "RNN", "AARNN", "MAGRU", "GRU", "AAGRU"]
-			cd = get_cell_data(cell)
-			boxviolinplot!(plt, cell, getindex.(cd.μ[1], i), cell_colors[cell])
-		end
-	end
-	[savefig(plt, "../../plots/interventions/long_ftoff/inter_$(i).pdf") for (i, plt) in enumerate(plts)]
-	plts
-
-end
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -758,6 +751,7 @@ JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
 ProgressLogging = "33c8b6b6-d38a-422a-b730-caa89a2f386c"
 Query = "1a8c2f83-1ff3-5112-b086-8aa67b057ba1"
+RollingFunctions = "b0e4dd01-7b14-53d8-9b45-175a3e362653"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 StatsPlots = "f3b207a7-027a-5e70-b257-86293d7955fd"
 
@@ -768,6 +762,7 @@ JLD2 = "~0.4.22"
 PlutoUI = "~0.7.38"
 ProgressLogging = "~0.1.4"
 Query = "~1.0.0"
+RollingFunctions = "~0.6.2"
 StatsPlots = "~0.14.33"
 """
 
@@ -1602,6 +1597,12 @@ git-tree-sha1 = "68db32dff12bb6127bac73c209881191bf0efbb7"
 uuid = "f50d1b31-88e8-58de-be2c-1cc44531875f"
 version = "0.3.0+0"
 
+[[deps.RollingFunctions]]
+deps = ["LinearAlgebra", "Statistics", "StatsBase", "Test"]
+git-tree-sha1 = "cdf9158377f81470b1b73c630d0853a3ec0c7445"
+uuid = "b0e4dd01-7b14-53d8-9b45-175a3e362653"
+version = "0.6.2"
+
 [[deps.SHA]]
 uuid = "ea8e919c-243c-51af-8825-aaa63cd721ce"
 
@@ -1998,6 +1999,7 @@ version = "0.9.1+5"
 
 # ╔═╡ Cell order:
 # ╠═4d899862-cbba-11ec-119c-6de710107190
+# ╠═94de967b-0e05-4d93-bca0-b736bd339c03
 # ╠═c5d81212-8033-4a30-b9c8-610c82e54308
 # ╠═a63dccc7-1993-40ba-a2a7-25f92cdfc12d
 # ╠═1c946d75-e7bd-4b40-8068-d287b5043d71
@@ -2007,32 +2009,30 @@ version = "0.9.1+5"
 # ╠═db3bdb5c-bb54-41eb-bf38-b1be067bd2ec
 # ╠═49e2d4ae-4e4b-4ea3-bb67-dfc5ef4fd5ff
 # ╠═8a7989fb-063b-46dc-af95-b0ef5d293496
+# ╠═e6709daf-34c6-4411-ba84-033ce91c8eee
 # ╠═6f98fc99-dc38-4216-b2c0-41df8deaccbb
-# ╠═60c57b0b-6807-44e5-9a40-1d295c554c7a
+# ╠═2eb599c4-40e2-4464-9d6f-ecd37cd856e9
+# ╠═8bc43807-9be5-4720-8423-90ca26b57bba
+# ╠═8f72c740-9105-4f3a-82b9-f9f98cdc6328
 # ╠═622165c9-7861-4e81-a463-20a87a3bb06b
 # ╠═527aa694-0f3b-47fc-ba4b-d054fac57d91
 # ╠═c9b9b4db-c8f7-4e50-ab80-dc3f4b91bc70
 # ╠═de664cc7-d71c-4687-b95c-893d32f4a53c
 # ╠═7f31d94d-68a4-45c8-8e59-16011ae142d3
-# ╠═10f497c5-9544-4832-980f-adcc0d38e3cc
-# ╠═64675b1b-b4dc-48b3-861a-afcfa3398ac8
+# ╠═f48c99a8-d633-4060-b930-67f6e82d966f
+# ╠═8e3ef356-67fd-4308-b72a-ec2477eb3e02
 # ╠═32230048-e61d-47b3-aa36-11ad50022e55
+# ╠═a788763c-76fb-49fe-be09-457ab8013635
+# ╠═01afa117-b92e-443c-b865-802ca871e56a
+# ╠═c38ba788-c32c-4aae-8ed6-6142299dd1a0
+# ╠═46d9a9fc-1537-46ec-aa47-263ede42bce2
+# ╠═b6763dc5-2d86-45e4-a0e6-d84e4b38dd55
+# ╠═8f0a9919-ea2d-4a50-9806-ad23f068faf8
+# ╠═08067e88-6cce-4b1d-a5bf-4eb8853d85e3
+# ╠═0d32dc1d-68b3-43ef-9030-6884fc9e4a36
 # ╠═35893a02-6ea2-47e6-8815-9b95ad275455
 # ╠═963b2a56-8101-49ec-87d0-0712ef296798
 # ╠═8143a5dd-6373-4008-b4d4-61d33b18b40c
 # ╠═8b6edbdd-8811-4d66-bdad-69f425b4835a
-# ╠═0b24f971-4618-49e4-97a8-11388783b9c0
-# ╠═b98f910f-5ddf-4bfb-b365-bd50438f842d
-# ╠═2b33d0df-4ba2-47b1-b9ca-095e238520c9
-# ╠═59d22a67-6d97-472e-8f9d-9f1506d7daa9
-# ╠═7c6b2c7e-ea68-430a-8608-ffc233c2a163
-# ╠═84aa9553-c25d-4b38-a72d-48e719a44226
-# ╠═8e20b0e7-e56e-41ec-b508-5484d42ba9fb
-# ╠═aff04b6a-3b5b-49b1-8b9d-8835eebd1dc4
-# ╠═d857a8b8-fa75-4fd5-93d9-afdd98d85237
-# ╠═b9bdf6b0-4449-4580-b4c8-13a8a0037f25
-# ╠═cfa736b0-a850-4b4d-b6b1-2717f58cea44
-# ╠═7aaaef83-e6c5-4bb6-84ef-571fc3630400
-# ╠═5eb174d7-d3c3-4666-81c9-8dc3731469e5
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

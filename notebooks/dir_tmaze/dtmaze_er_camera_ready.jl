@@ -70,6 +70,9 @@ at(dir) = joinpath("../../local_data/dir_tmaze_er", dir)
 # ╔═╡ e912da30-fed5-4eb0-b931-8ce0b04ab0a5
 readdir(at(s_dir))
 
+# ╔═╡ fb35edca-dcbe-4a30-9005-03ace146e392
+s_dir
+
 # ╔═╡ f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
 df_dtmaze_sc = FileIO.load(at("dir_tmaze_er_rnn_rmsprop_10/2022_05_20_proc_data.jld2"))["params_and_results"]
 
@@ -93,10 +96,11 @@ df_fac_tmaze = FileIO.load(at("final_fac_dir_tmaze_er_rnn_rmsprop_10_2_300k/2022
 df_deep_action_tmaze = FileIO.load(at("dir_tmaze_er_10_deep_action_multil_fixed/2022_05_20.jld2"))["params_and_results"]
 
 # ╔═╡ d4f5e400-a46c-47d1-a18d-9d068ce10da1
-best_over_eta_deep_action = DataFrameUtils.best_from_sweep_param(
-	order(:successes_avg_end, by=mean, rev=true), 
-	df_deep_action_tmaze, 
-	["eta"])
+# best_over_eta_deep_action = DataFrameUtils.best_from_sweep_param(
+# 	order(:successes_avg_end, by=mean, rev=true), 
+# 	df_deep_action_tmaze, 
+# 	["eta"])
+best_over_eta_deep_action = FileIO.load(at("final_dir_tmaze_er_10_deep_action/2022-07-11-procdata.jld2"))["params_and_results"]
 
 # ╔═╡ 4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
 function boxviolinplot!(plt, x, data; color, kwargs...)
@@ -191,6 +195,87 @@ let
 	plt
 end
 
+# ╔═╡ d14a8706-33da-4dfc-b4a8-0f8211d9cfa6
+let
+	truncation = 12
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out)
+		# ylims=(0.45, 1.0))
+	plot_data_sym = :successes_avg_end
+	
+	for cell ∈ ["GRU", "AAGRU", "MAGRU"]
+		cd = @from i in df_final_tmaze begin
+			@where i.cell == cell && i.truncation == 12
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	end
+
+	cd = @from i in best_over_eta_deep_action begin
+			@where i.cell == "AAGRU" && 
+			i.internal_a_layers == 1 && 
+			i.numhidden == 15 &&
+			i.replay_size == 10000
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+	end
+	d = cd[1, :d]
+	boxviolinplot!(plt, "DeepAAGRU", d; color = cell_colors["DAAGRU"])
+
+	# cd = @from i in df_fac_tmaze begin
+	# 	@where i.cell == "FacMAGRU" &&
+	# 		   i.factors == 15 &&
+	# 		   i.replay_size == 10000
+	# 	@select {d=getindex(i, plot_data_sym)}
+	# 	@collect DataFrame
+	# end
+	# d = cd[1, :d]
+	# boxviolinplot!(plt, "FacMAGRU", d; color = cell_colors["FacMAGRU"])
+		
+	
+	plt = vline!([6], linestyle=:dot, color=:white, lw=2)
+	
+	for cell ∈ ["RNN", "AARNN", "MARNN"]
+		cd = @from i in df_final_tmaze begin
+			@where i.cell == cell && i.truncation == 12
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	end
+
+	cd = @from i in best_over_eta_deep_action begin
+			@where i.cell == "AARNN" && 
+			i.internal_a_layers == 1 && 
+			i.numhidden == 25 && 
+			i.replay_size == 10000
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+	end
+	d = cd[1, :d]
+	boxviolinplot!(plt, "DeepAARNN", d; color = cell_colors["DAARNN"])
+
+	# cd = @from i in df_fac_tmaze begin
+	# 	@where i.cell == "FacMARNN" &&
+	# 		   i.factors == 17 &&
+	# 		   i.replay_size == 10000
+	# 	@select {d=getindex(i, plot_data_sym)}
+	# 	@collect DataFrame
+	# end
+	# d = cd[1, :d]
+	# boxviolinplot!(plt, "FacMARNN", d; color = cell_colors["FacMARNN"])
+	
+	
+	savefig("../../plots/dir_tmaze_er_deep_action_no_fac.pdf")
+	plt
+end
+
 # ╔═╡ 4356c69e-05b9-4bb7-bb3a-15e3eae2acd5
 md"# Combo Cells"
 
@@ -201,10 +286,20 @@ s_dir
 df_deep_sm = FileIO.load(at("dir_tmaze_er_10_combo_softmax/2022-06-21-procdata.jld2"))["params_and_results"]
 
 # ╔═╡ 4925ff8f-c816-4e7c-a637-7f313b5510fb
-best_over_eta_sm = DataFrameUtils.best_from_sweep_param(
-	order(:successes_avg_end, by=mean, rev=true), 
-	df_deep_sm, 
-	["eta"])
+# best_over_eta_sm = DataFrameUtils.best_from_sweep_param(
+# 	order(:successes_avg_end, by=mean, rev=true), 
+# 	df_deep_sm, 
+# 	["eta"])
+best_over_eta_sm = FileIO.load(at("final_dir_tmaze_er_10_combo_sm/2022-07-11-procdata.jld2"))["params_and_results"]
+
+# ╔═╡ 4b317132-25b7-4daf-aef8-2cbc6131541b
+df_deep_cat = let
+	df = FileIO.load(at("dir_tmaze_er_10_combo_cat/2022-07-15-procdata.jld2"))["params_and_results"]
+	DataFrameUtils.best_from_sweep_param(
+		order(:successes_avg_end, by=mean, rev=true), 
+		df,
+		["eta"])
+end
 
 # ╔═╡ 6fba2550-6908-4945-a435-bec5d08905cc
 let
@@ -217,7 +312,7 @@ let
 		# ylims=(0.45, 1.0))
 	plot_data_sym = :successes_avg_end
 
-	for cell ∈ ["GRU", "AAGRU", "MAGRU"]
+	for cell ∈ ["AAGRU", "MAGRU"]
 		cd = @from i in df_final_tmaze begin
 			@where i.cell == cell
 			@select {d=getindex(i, plot_data_sym)}
@@ -237,7 +332,19 @@ let
 		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
 	end
 
-	for cell ∈ ["RNN", "AARNN", "MARNN"]
+	for cell ∈ ["CcatGRU"]
+		cd = @from i in df_deep_cat begin
+			@where i.cell == cell && i.replay_size == replay_size
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors["CsoftmaxElGRU"])
+	end
+
+	plt = vline!([6], linestyle=:dot, color=:white, lw=5)
+
+	for cell ∈ ["AARNN", "MARNN"]
 		cd = @from i in df_final_tmaze begin
 			@where i.cell == cell
 			@select {d=getindex(i, plot_data_sym)}
@@ -256,7 +363,377 @@ let
 		d = cd[1, :d]
 		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
 	end
+
+	for cell ∈ ["CcatRNN"]
+		cd = @from i in df_deep_cat begin
+			@where i.cell == cell && i.replay_size == replay_size
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors["CsoftmaxElRNN"])
+	end
+
+	savefig(plt, "../../plots/dir_tmaze_combo_cell_box.pdf")
+	plt
+
+end
+
+# ╔═╡ e01c7a7f-b996-4a38-9265-d396c9f15335
+df_sm_weights = FileIO.load(at("final_dir_tmaze_er_10_combo_sm/softmax_weights.jld2"))["params_and_results"]
+
+# ╔═╡ d2bcfc8b-5053-448e-9200-f7576189b58a
+let
+	cell = "CsoftmaxElRNN"
+	cd = @from i in df_sm_weights begin
+		@where i.cell == cell && i.replay_size == 10000
+		@select {a=i.sm_w_a_identity, m=a=i.sm_w_midentity}
+		@collect DataFrame
+	end
+	# cd.d[1][1][1:2:end, :]
+	μ_a = [mean(v[1:2:end,:]';dims=2)[:, 1] for v in cd.a[1]]
+	μ_m = [mean(v[1:2:end,:]';dims=2)[:, 1] for v in cd.m[1]]
+	plt1 = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		xtickfontcolor=:white)
+	plot!(mean(μ_a), ribbon=sqrt.(var(μ_a)/length(μ_a)), color=cell_colors["AARNN"])
+	plot!(mean(μ_m), ribbon=sqrt.(var(μ_m)/length(μ_m)), color=cell_colors["MARNN"])
+
+	cell = "CsoftmaxElGRU"
+	cd = @from i in df_sm_weights begin
+		@where i.cell == cell && i.replay_size == 10000
+		@select {a=i.sm_w_a_identity, m=a=i.sm_w_midentity}
+		@collect DataFrame
+	end
+	# cd.d[1][1][1:2:end, :]
+	μ_a = [mean(v[1:2:end,:]';dims=2)[:, 1] for v in cd.a[1]]
+	μ_m = [mean(v[1:2:end,:]';dims=2)[:, 1] for v in cd.m[1]]
+	plt2 = plot(
+		legend=false,
+		grid=false,
+		tickfontsize=11,
+		tickdir=:out)
+	plot!(mean(μ_a), ribbon=sqrt.(var(μ_a)/length(μ_a)), color=cell_colors["AAGRU"])
+	plot!(mean(μ_m), ribbon=sqrt.(var(μ_m)/length(μ_m)), color=cell_colors["MAGRU"])
+
+	plt = plot(plt1, plt2, layout=(2,1))
+	savefig(plt, "../../plots/dirtmaze_combo_softmax_weights.pdf")
+	plt
+end
+
+# ╔═╡ d1346cc6-c35f-44e9-974c-85f39fbb6f97
+let
+	cell = "CsoftmaxElGRU"
+	cd = @from i in df_sm_weights begin
+		@where i.cell == cell && i.replay_size == 10000
+		@select {a=i.sm_w_a_identity, m=a=i.sm_w_midentity}
+		@collect DataFrame
+	end
+	# cd.d[1][1][1:2:end, :]
+	μ_a = [mean(v[1:2:end,:]';dims=2)[:, 1] for v in cd.a[1]]
+	μ_m = [mean(v[1:2:end,:]';dims=2)[:, 1] for v in cd.m[1]]
+	plt = plot(
+		legend=false,
+		grid=false,
+		tickfontsize=11,
+		tickdir=:out)
+	plot!(mean(μ_a), ribbon=sqrt.(var(μ_a)/length(μ_a)), color=cell_colors["AAGRU"])
+	plot!(mean(μ_m), ribbon=sqrt.(var(μ_m)/length(μ_m)), color=cell_colors["MAGRU"])
+end
+
+# ╔═╡ 1d697c6e-ef07-4155-af2e-215fb716a29f
+md"""# Factored"""
+
+# ╔═╡ caf1ebb7-7edf-4d5f-8ebf-1506584f2575
+df_factored_sweep = let
+	df = FileIO.load(at("dir_tmaze_er_factored/2022-07-23-procdata.jld2"))["params_and_results"]
+	DataFrameUtils.best_from_sweep_param(
+		order(:successes_avg_end, by=mean, rev=true), 
+		df, 
+		["eta"])
+end
+
+# ╔═╡ 712f9245-237b-4bfe-8885-4f28e498669f
+plt_fac_marnn = let
+	std_err_func(d) = sqrt(var(d)/length(d))
+	get_fac_cell(cell, numhidden, replay_size; exclude=[]) = begin
+		exc_func(numhidden, factored) = begin
+			for exc in exclude
+				if exc[1] == numhidden && exc[2] == factored
+					return false
+				end
+			end
+			return true
+		end
+		@from i in df_factored_sweep begin
+			@where i.cell == cell &&
+				   i.numhidden == numhidden &&
+				   i.replay_size == replay_size &&
+				   exc_func(i.numhidden, i.factors)
+			@orderby ascending(i.factors)
+			@select {
+				x = i.factors,
+				μ = mean(i.successes_avg_end),
+				σ = std_err_func(i.successes_avg_end)
+			}
+			@collect DataFrame
+		end
+	end
+
+	marnn = @from i in df_final_tmaze begin
+		@where i.cell == "MARNN"
+		@select {μ = mean(i.successes_avg_end),
+				 σ = std_err_func(i.successes_avg_end)}
+		@collect DataFrame
+	end
+
+	aarnn = @from i in df_final_tmaze begin
+		@where i.cell == "AARNN"
+		@select {μ = mean(i.successes_avg_end),
+				 σ = std_err_func(i.successes_avg_end)}
+		@collect DataFrame
+	end
+
+	fac_marnn = get_fac_cell("FacMARNN", 30, 10000, exclude=[(30, 14), (30, 17), (30, 27)])
+
+	plt = plot(
+		legend=false,
+		grid=false,
+		tickfontsize=11,
+		tickdir=:out)
+
+	plot!(fac_marnn.x, fill(marnn.μ[1], length(fac_marnn.x)), yerr=fill(marnn.σ[1], length(fac_marnn.x)), color=cell_colors["MARNN"], lw=2)
+	plot!(fac_marnn.x, fill(aarnn.μ[1], length(fac_marnn.x)), yerr=fill(aarnn.σ[1], length(fac_marnn.x)), color=cell_colors["AARNN"], lw=2)
+
 	
+	# fac_marnn = get_fac_cell("FacMARNN", 18, 10000)
+	# plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+	# 	color=cell_colors["FacMARNN"], lw=2, marker=:auto)
+
+	# fac_marnn = get_fac_cell("FacMARNN", 25, 10000)
+	# plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+	# 	color=cell_colors["FacMARNN"], lw=2, linestyle=:dash, marker=:auto)
+	
+	
+	plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+		color=cell_colors["FacMARNN"], lw=2, linestyle=:solid)
+	
+end
+
+# ╔═╡ adb66c74-62c3-47b2-ba16-8f18bfb96d49
+plt_fac_magru = let
+	std_err_func(d) = sqrt(var(d)/length(d))
+	get_fac_cell(cell, numhidden, replay_size; exclude=[]) = begin
+		exc_func(numhidden, factored) = begin
+			for exc in exclude
+				if exc[1] == numhidden && exc[2] == factored
+					return false
+				end
+			end
+			return true
+		end
+		@from i in df_factored_sweep begin
+			@where i.cell == cell &&
+				   i.numhidden == numhidden &&
+				   i.replay_size == replay_size &&
+				   exc_func(i.numhidden, i.factors)
+			@orderby ascending(i.factors)
+			@select {
+				x = i.factors,
+				μ = mean(i.successes_avg_end),
+				σ = std_err_func(i.successes_avg_end)
+			}
+			@collect DataFrame
+		end
+	end
+
+	marnn = @from i in df_final_tmaze begin
+		@where i.cell == "MAGRU"
+		@select {μ = mean(i.successes_avg_end),
+				 σ = std_err_func(i.successes_avg_end)}
+		@collect DataFrame
+	end
+
+	aarnn = @from i in df_final_tmaze begin
+		@where i.cell == "AAGRU"
+		@select {μ = mean(i.successes_avg_end),
+				 σ = std_err_func(i.successes_avg_end)}
+		@collect DataFrame
+	end
+
+	fac_marnn = get_fac_cell("FacMAGRU", 17, 10000, exclude=[(17, 17), (17, 27)])
+
+	plt = plot(
+		legend=false,
+		grid=false,
+		tickfontsize=11,
+		tickdir=:out)
+
+	plot!(fac_marnn.x, fill(marnn.μ[1], length(fac_marnn.x)), yerr=fill(marnn.σ[1], length(fac_marnn.x)), color=cell_colors["MAGRU"], lw=2)
+	plot!(fac_marnn.x, fill(aarnn.μ[1], length(fac_marnn.x)), yerr=fill(aarnn.σ[1], length(fac_marnn.x)), color=cell_colors["AAGRU"], lw=2)
+
+	
+	# fac_marnn = get_fac_cell("FacMAGRU", 10, 10000)
+	# plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+	# 	color=cell_colors["FacMAGRU"], lw=2, marker=:auto)
+
+	# fac_marnn = get_fac_cell("FacMAGRU", 14, 10000)
+	# plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+	# 	color=cell_colors["FacMAGRU"], lw=2, linestyle=:dash, marker=:auto)
+	
+	
+	plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+		color=cell_colors["FacMAGRU"], lw=2, linestyle=:solid)
+
+end
+
+# ╔═╡ 54bbe1f7-c2b1-45dc-bdf1-17401e5d9676
+let
+	plt_fac_marnn
+	plt = plot(plt_fac_marnn, plt_fac_magru, layout=(2, 1))
+	savefig(plt, "../../plots/dir_tmaze_er_fac_new_data.pdf")
+	plt
+end
+
+# ╔═╡ 914994d1-45af-4b57-b581-e778475a0c3d
+plt_fac_marnn_all = let
+	std_err_func(d) = sqrt(var(d)/length(d))
+	get_fac_cell(cell, numhidden, replay_size; exclude=[]) = begin
+		exc_func(numhidden, factored) = begin
+			for exc in exclude
+				if exc[1] == numhidden && exc[2] == factored
+					return false
+				end
+			end
+			return true
+		end
+		@from i in df_factored_sweep begin
+			@where i.cell == cell &&
+				   i.numhidden == numhidden &&
+				   i.replay_size == replay_size &&
+				   exc_func(i.numhidden, i.factors)
+			@orderby ascending(i.factors)
+			@select {
+				x = i.factors,
+				μ = mean(i.successes_avg_end),
+				σ = std_err_func(i.successes_avg_end)
+			}
+			@collect DataFrame
+		end
+	end
+
+	marnn = @from i in df_final_tmaze begin
+		@where i.cell == "MARNN"
+		@select {μ = mean(i.successes_avg_end),
+				 σ = std_err_func(i.successes_avg_end)}
+		@collect DataFrame
+	end
+
+	aarnn = @from i in df_final_tmaze begin
+		@where i.cell == "AARNN"
+		@select {μ = mean(i.successes_avg_end),
+				 σ = std_err_func(i.successes_avg_end)}
+		@collect DataFrame
+	end
+
+	
+	fac_marnn = get_fac_cell("FacMARNN", 30, 10000)
+	
+	plt = plot(
+		legend=false,
+		grid=false,
+		tickfontsize=11,
+		tickdir=:out, xaxis=:log)
+
+	plot!(fac_marnn.x, fill(marnn.μ[1], length(fac_marnn.x)), yerr=fill(marnn.σ[1], length(fac_marnn.x)), color=cell_colors["MARNN"], lw=2)
+	plot!(fac_marnn.x, fill(aarnn.μ[1], length(fac_marnn.x)), yerr=fill(aarnn.σ[1], length(fac_marnn.x)), color=cell_colors["AARNN"], lw=2)
+
+	
+	fac_marnn = get_fac_cell("FacMARNN", 18, 10000)
+	plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+		color=cell_colors["FacMARNN"], lw=2, linestyle=:dot, marker=:diamond, markersize=6)
+
+	fac_marnn = get_fac_cell("FacMARNN", 25, 10000)
+	plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+		color=cell_colors["FacMARNN"], lw=2, linestyle=:dash, marker=:circle, markersize=6)
+	
+	fac_marnn = get_fac_cell("FacMARNN", 30, 10000)
+	plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+		color=cell_colors["FacMARNN"], lw=2, linestyle=:solid, marker=:star, markersize=6)
+
+	savefig(plt, "../../plots/dirtmaze_facmarnn_new_data_all.pdf")
+	plt
+end
+
+# ╔═╡ 25e951c5-24b7-4612-b6f3-9d8c96800381
+plt_fac_magru_all = let
+	std_err_func(d) = sqrt(var(d)/length(d))
+	get_fac_cell(cell, numhidden, replay_size; exclude=[]) = begin
+		exc_func(numhidden, factored) = begin
+			for exc in exclude
+				if exc[1] == numhidden && exc[2] == factored
+					return false
+				end
+			end
+			return true
+		end
+		@from i in df_factored_sweep begin
+			@where i.cell == cell &&
+				   i.numhidden == numhidden &&
+				   i.replay_size == replay_size &&
+				   exc_func(i.numhidden, i.factors)
+			@orderby ascending(i.factors)
+			@select {
+				x = i.factors,
+				μ = mean(i.successes_avg_end),
+				σ = std_err_func(i.successes_avg_end)
+			}
+			@collect DataFrame
+		end
+	end
+
+	marnn = @from i in df_final_tmaze begin
+		@where i.cell == "MAGRU"
+		@select {μ = mean(i.successes_avg_end),
+				 σ = std_err_func(i.successes_avg_end)}
+		@collect DataFrame
+	end
+
+	aarnn = @from i in df_final_tmaze begin
+		@where i.cell == "AAGRU"
+		@select {μ = mean(i.successes_avg_end),
+				 σ = std_err_func(i.successes_avg_end)}
+		@collect DataFrame
+	end
+
+	fac_marnn = get_fac_cell("FacMAGRU", 17, 10000)
+
+	plt = plot(
+		legend=false,
+		grid=false,
+		tickfontsize=11,
+		tickdir=:out, xaxis=:log)
+
+	plot!(fac_marnn.x, fill(marnn.μ[1], length(fac_marnn.x)), yerr=fill(marnn.σ[1], length(fac_marnn.x)), color=cell_colors["MAGRU"], lw=2)
+	plot!(fac_marnn.x, fill(aarnn.μ[1], length(fac_marnn.x)), yerr=fill(aarnn.σ[1], length(fac_marnn.x)), color=cell_colors["AAGRU"], lw=2)
+
+	
+	fac_marnn = get_fac_cell("FacMAGRU", 10, 10000)
+	plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+		color=cell_colors["FacMAGRU"], lw=2, linestyle=:dot, marker=:diamond, markersize=6)
+
+	fac_marnn = get_fac_cell("FacMAGRU", 14, 10000)
+	plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+		color=cell_colors["FacMAGRU"], lw=2, linestyle=:dash, marker=:circle, markersize=6)
+	
+	fac_marnn = get_fac_cell("FacMAGRU", 17, 10000)
+	plot!(fac_marnn.x, fac_marnn.μ, yerr=fac_marnn.σ, 
+		color=cell_colors["FacMAGRU"], lw=2, linestyle=:solid, marker=:star, markersize=6)
+
+	savefig(plt, "../../plots/dirtmaze_facmagru_new_data_all.pdf")
 	plt
 end
 
@@ -1529,6 +2006,7 @@ version = "0.9.1+5"
 # ╠═acb3cbab-e7e5-4ce3-9d60-4700a443516f
 # ╠═74b5f02f-7c0b-4112-aea0-802497f4b264
 # ╠═e912da30-fed5-4eb0-b931-8ce0b04ab0a5
+# ╠═fb35edca-dcbe-4a30-9005-03ace146e392
 # ╠═f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
 # ╠═1b393e1a-7084-4c56-a6df-3e83bdd0ef26
 # ╠═6244b0ef-6734-4007-9067-e218191b3b79
@@ -1536,11 +2014,23 @@ version = "0.9.1+5"
 # ╠═6b0e3ce9-cf5c-4666-b1f9-7953ed5a3596
 # ╠═d4f5e400-a46c-47d1-a18d-9d068ce10da1
 # ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
-# ╠═47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╟─47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╠═d14a8706-33da-4dfc-b4a8-0f8211d9cfa6
 # ╠═4356c69e-05b9-4bb7-bb3a-15e3eae2acd5
 # ╠═4c3cba15-9f3d-47a8-b2fc-b7175e70e035
 # ╠═e5e22810-ab0e-4921-9528-f2d06e541b75
 # ╠═4925ff8f-c816-4e7c-a637-7f313b5510fb
+# ╠═4b317132-25b7-4daf-aef8-2cbc6131541b
 # ╠═6fba2550-6908-4945-a435-bec5d08905cc
+# ╠═e01c7a7f-b996-4a38-9265-d396c9f15335
+# ╠═d2bcfc8b-5053-448e-9200-f7576189b58a
+# ╠═d1346cc6-c35f-44e9-974c-85f39fbb6f97
+# ╠═1d697c6e-ef07-4155-af2e-215fb716a29f
+# ╠═caf1ebb7-7edf-4d5f-8ebf-1506584f2575
+# ╠═712f9245-237b-4bfe-8885-4f28e498669f
+# ╠═adb66c74-62c3-47b2-ba16-8f18bfb96d49
+# ╠═54bbe1f7-c2b1-45dc-bdf1-17401e5d9676
+# ╠═914994d1-45af-4b57-b581-e778475a0c3d
+# ╠═25e951c5-24b7-4612-b6f3-9d8c96800381
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
