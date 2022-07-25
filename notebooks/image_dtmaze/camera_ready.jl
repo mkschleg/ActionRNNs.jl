@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -179,53 +179,118 @@ let
 	savefig("../../plots/final_image_tmaze.pdf")
 	plt
 	
-	# cd = @from i in df_fac_tmaze begin
-	# 	@where i.cell == "FacMAGRU" &&
-	# 		   i.factors == 15 &&
-	# 		   i.replay_size == 10000
-	# 	@select {d=getindex(i, plot_data_sym)}
-	# 	@collect DataFrame
-	# end
-	# d = cd[1, :d]
-	# boxviolinplot!(plt, "FacMAGRU", d; color = cell_colors["FacMAGRU"])
-		
+
+end
+
+# ╔═╡ 5707aad5-c932-4a18-9171-0c98830fecc2
+let
+
+	τ = 20
 	
-	# plt = vline!([7], linestyle=:dot, color=:white, lw=2)
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.4, 1.0))
+	plot_data_sym = :successes_avg_end
+
+	plot_cell!(f, plt, df, cell, color=cell_colors[cell]) = begin
+		cd = @from i in df begin
+			@where f(i) && i.truncation == τ
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = color)
+	end
+
 	
-	# for cell ∈ ["RNN", "AARNN", "MARNN"]
-	# 	cd = @from i in df_final_tmaze begin
-	# 		@where i.cell == cell
-	# 		@select {d=getindex(i, plot_data_sym)}
-	# 		@collect DataFrame
-	# 	end
-	# 	d = cd[1, :d]
-	# 	boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	plot_cell!(plt, df_final_tmaze, "AAGRU") do i
+		i.cell == "AAGRU" && i.numhidden == 70
+	end
+
+	plot_cell!(plt, df_final_tmaze, "MAGRU") do i
+		i.cell == "MAGRU" && i.numhidden == 32 
+	end
+
+	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_65_16", cell_colors["DAAGRU"]) do i 
+	# 	i.cell=="AAGRU" && i.numhidden == 65
 	# end
 
-	# cd = @from i in best_over_eta_deep_action begin
-	# 		@where i.cell == "AARNN" && 
-	# 		i.internal_a_layers == 1 && 
-	# 		i.numhidden == 25 && 
-	# 		i.replay_size == 10000
-	# 		@select {d=getindex(i, plot_data_sym)}
-	# 		@collect DataFrame
+	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_60", cell_colors["DAAGRU"]) do i 
+	# 	i.cell=="AAGRU" && i.numhidden == 60
 	# end
-	# d = cd[1, :d]
-	# boxviolinplot!(plt, "DeepAARNN", d; color = cell_colors["DAARNN"])
 
-	# cd = @from i in df_fac_tmaze begin
-	# 	@where i.cell == "FacMARNN" &&
-	# 		   i.factors == 17 &&
-	# 		   i.replay_size == 10000
-	# 	@select {d=getindex(i, plot_data_sym)}
-	# 	@collect DataFrame
+	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_55", cell_colors["DAAGRU"]) do i 
+	# 	i.cell=="AAGRU" && i.numhidden == 55
 	# end
-	# d = cd[1, :d]
-	# boxviolinplot!(plt, "FacMARNN", d; color = cell_colors["FacMARNN"])
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_45_128", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 45
+	end
+
 	
+	plt
+
+	savefig("../../plots/final_image_tmaze_sans_fac.pdf")
+	plt
 	
-	# savefig("../../plots/image_tmaze_camera_ready.pdf")
-	# plt
+
+end
+
+# ╔═╡ 0b12b5ce-13f5-440d-be37-cd45baa78624
+let
+	τ = 20
+	
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.3, 1.0))
+	plot_data_sym = :successes_avg_end
+
+	plot_cell!(f, plt, df, cell, color=cell_colors[cell]) = begin
+		cd = @from i in df begin
+			@where f(i) && i.truncation == τ
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = color)
+	end
+
+	
+	plot_cell!(plt, df_final_tmaze, "AAGRU") do i
+		i.cell == "AAGRU" && i.numhidden == 70
+	end
+
+	plot_cell!(plt, df_final_tmaze, "MAGRU") do i
+		i.cell == "MAGRU" && i.numhidden == 32 
+	end
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_65_16", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 65
+	end
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_60", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 60
+	end
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_55", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 55
+	end
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_45_128", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 45
+	end
+
+	
+
+	savefig("../../plots/final_image_tmaze_deep_action_all.pdf")
+	plt
+
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1506,6 +1571,8 @@ version = "0.9.1+5"
 # ╠═a0a855b0-bf18-4aca-9601-caf840c5db7e
 # ╠═99417a92-66ea-4e9d-be42-24340c44e931
 # ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
-# ╠═47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╟─47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╟─5707aad5-c932-4a18-9171-0c98830fecc2
+# ╟─0b12b5ce-13f5-440d-be37-cd45baa78624
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

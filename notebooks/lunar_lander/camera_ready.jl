@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -163,24 +163,61 @@ let
 
 	plt
 	
-	# cell = "AAGRU"
-	# for cell ∈ ["AAGRU"]
-	# 	cd = @from i in df_deep_action begin
-	# 		@where i.cell == cell
-	# 		@select {d=getindex(i, :rews_avg)}
-	# 		@collect DataFrame
-	# 	end
-	# 	d = cd[1, :d]
-	# 	boxviolinplot!(plt, "D"*cell, d; color = cell_colors[cell])
+end
+
+# ╔═╡ e98e401c-9eb5-4c8d-bc97-0cc6f3375398
+let
+	# plt = plot()
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out)
+
+	plot_data_sym = :rews_avg
+
+	plot_cell!(f, plt, df, cell, color=cell_colors[cell]) = begin
+		cd = @from i in df begin
+			@where f(i) 
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = color)
+	end
+
+	plot_cell!(plt, df_GRU, "GRU") do i
+		i.cell == "GRU"
+	end
+	
+	plot_cell!(plt, df_AAGRU, "AAGRU") do i
+		i.cell == "AAGRU"
+	end
+
+	plot_cell!(plt, df_MAGRU, "MAGRU") do i
+		i.cell == "MAGRU"
+	end
+
+	plot_cell!(plt, df_deep_action, "DAAGRU") do i
+		i.cell == "AAGRU"
+	end
+
+	# plot_cell!(plt, df_FACGRU, "FacMAGRU64", cell_colors["FacMAGRU"]) do i
+	# 	i.numhidden == 64
 	# end
 
-	# cd = @from i in df_MAGRU begin
-	# 	@where i.cell == "MAGRU"
-	# 	@select {d=getindex(i, :rews_avg)}
-	# 	@collect DataFrame
+	# plot_cell!(plt, df_FACGRU, "FacMAGRU100", cell_colors["FacMAGRU"]) do i
+	# 	i.numhidden == 100
 	# end
-	# d = cd[1, :d]
-	# boxviolinplot!(plt, "MAGRU", d; color = cell_colors["MAGRU"])
+
+	# plot_cell!(plt, df_FACGRU, "FacMAGRU152", cell_colors["FacMAGRU"]) do i
+	# 	i.numhidden == 152
+	# end
+
+	savefig(plt, "../../plots/lunar_lander_boxplot_sans_fac.pdf")
+
+	plt
+	
 end
 
 # ╔═╡ f49a0c93-06df-4fc3-a6e7-322d83bb75f5
@@ -210,22 +247,102 @@ function std_uneven(d::Vector{Array{F, 1}}; z=1.0) where {F}
     z * sqrt.(ret ./ n ./ n)
 end
 
-# ╔═╡ 9efb12eb-98f4-48ee-b56a-4bd5cc49d0d0
+# ╔═╡ ae5c83d2-0427-47e2-af3a-f3b48f92beb6
 let
-	cd = @from i in df_MAGRU begin
-		@where i.cell == "MAGRU"
-		@select {d=getindex(i, :rews_identity)}
-		@collect DataFrame
+	plt = plot(grid=false, tickdir=:out, legend=false)
+
+	plot_cell_data!(comp::Function, plt, df; kwargs...) = begin
+		cd = @from i in df begin
+			@where comp(i)
+			@select {
+				rews = getindex(i, :rews_identity),
+				steps = getindex(i, :steps_identity)
+			}
+			@collect DataFrame
+		end
+		
+		# rmd = [get_extended_line(rews[1:end-1], steps[1:end-1], n=100000) 
+		# 	for (rews, steps) in zip(cd[1, :rews], cd[1, :steps])]
+		rmd = [rollmean(steps[1:end-1], 1000) for steps in cd[1, :steps]]
+		d = mean_uneven(rmd)
+		e = std_uneven(rmd)
+
+		plot!(plt, d, ribbon=e; kwargs...)
 	end
 
-	# cd[1, :d]
-	rmd = [rollmean(l, 1000) for l in cd[1, :d]]
+	plot_cell_data!(plt, df, cell::String) = 
+		plot_cell_data!(plt, df, color=cell_colors[cell]) do i
+			i.cell == cell
+		end
 	
-	d = mean_uneven(rmd)
-	e = std_uneven(rmd)
+	plot_cell_data!(plt, df_MAGRU, "MAGRU")
+	# plot_cell_data!(plt, df_AAGRU, "AAGRU")
+	# plot_cell_data!(plt, df_GRU, "GRU")
+
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dash) do i
+		i.numhidden==64
+	end
 	
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dot) do i
+		i.numhidden==100
+	end
+
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"]) do i
+		i.numhidden==152
+	end
+
+	# plot_cell_data!(plt, df_deep_action; color=cell_colors["DAAGRU"]) do i
+	# 	i.cell=="AAGRU"
+	# end
+
+	savefig(plt, "../../plots/lunar_lander_steps_curve_fac.pdf")
 	
-	plot(d, ribbon=e)
+	plt
+end
+
+# ╔═╡ 508290f0-649e-4f57-bb09-a069183775ee
+let
+	plt = plot(grid=false, tickdir=:out, legend=false)
+
+	plot_cell_data!(comp::Function, plt, df; kwargs...) = begin
+		cd = @from i in df begin
+			@where comp(i)
+			@select {
+				rews = getindex(i, :rews_identity),
+				steps = getindex(i, :steps_identity)
+			}
+			@collect DataFrame
+		end
+		
+		# rmd = [get_extended_line(rews[1:end-1], steps[1:end-1], n=100000) 
+		# 	for (rews, steps) in zip(cd[1, :rews], cd[1, :steps])]
+		rmd = [rollmean(steps[1:end-1], 1000) for steps in cd[1, :steps]]
+		d = mean_uneven(rmd)
+		e = std_uneven(rmd)
+
+		plot!(plt, d, ribbon=e; kwargs...)
+	end
+
+	plot_cell_data!(plt, df, cell::String) = 
+		plot_cell_data!(plt, df, color=cell_colors[cell]) do i
+			i.cell == cell
+		end
+	
+	plot_cell_data!(plt, df_MAGRU, "MAGRU")
+	plot_cell_data!(plt, df_AAGRU, "AAGRU")
+	plot_cell_data!(plt, df_GRU, "GRU")
+
+	# plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"]) do i
+	# 	i.numhidden==152
+	# end
+
+	plot_cell_data!(plt, df_deep_action; color=cell_colors["DAAGRU"]) do i
+		i.cell=="AAGRU"
+	end
+
+	savefig(plt, "../../plots/lunar_lander_steps_curve_sans_fac.pdf")
+	
+	plt
 end
 
 # ╔═╡ 346e2271-deae-41de-a6e8-71f66e706719
@@ -300,15 +417,68 @@ let
 	plot_cell_data!(plt, df_AAGRU, "AAGRU")
 	plot_cell_data!(plt, df_GRU, "GRU")
 
-	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"]) do i
-		i.numhidden==152
-	end
+	# plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"]) do i
+	# 	i.numhidden==152
+	# end
 
 	plot_cell_data!(plt, df_deep_action; color=cell_colors["DAAGRU"]) do i
 		i.cell=="AAGRU"
 	end
 
-	# savefig(plt, "../../plots/lunar_lander_lc.pdf")
+	savefig(plt, "../../plots/lunar_lander_lc_sans_fac.pdf")
+	
+	plt
+end
+
+# ╔═╡ a978e34d-9535-4bc2-ba2a-27d6baff12ca
+let
+	plt = plot(grid=false, tickdir=:out, legend=false)
+
+	plot_cell_data!(comp::Function, plt, df; kwargs...) = begin
+		cd = @from i in df begin
+			@where comp(i)
+			@select {
+				rews = getindex(i, :rews_identity),
+				steps = getindex(i, :steps_identity)
+			}
+			@collect DataFrame
+		end
+		
+		rmd = [get_extended_line(rews[1:end-1], steps[1:end-1], n=100000) 
+			for (rews, steps) in zip(cd[1, :rews], cd[1, :steps])]
+		
+		d = mean(rmd)
+		e = std(rmd) / sqrt(length(rmd))
+
+		plot!(plt, d, ribbon=e, lw=2; kwargs...)
+	end
+
+	plot_cell_data!(plt, df, cell::String) = 
+		plot_cell_data!(plt, df, color=cell_colors[cell]) do i
+			i.cell == cell
+		end
+	
+	plot_cell_data!(plt, df_MAGRU, "MAGRU")
+	# plot_cell_data!(plt, df_AAGRU, "AAGRU")
+	# plot_cell_data!(plt, df_GRU, "GRU")
+
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dash) do i
+		i.numhidden==64
+	end
+	
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dot) do i
+		i.numhidden==100
+	end
+
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"]) do i
+		i.numhidden==152
+	end
+
+	# plot_cell_data!(plt, df_deep_action; color=cell_colors["DAAGRU"]) do i
+	# 	i.cell=="AAGRU"
+	# end
+
+	# savefig(plt, "../../plots/lunar_lander_lc_fac_only.pdf")
 	
 	plt
 end
@@ -1593,9 +1763,12 @@ version = "0.9.1+5"
 # ╠═e912da30-fed5-4eb0-b931-8ce0b04ab0a5
 # ╠═f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
 # ╠═c23df854-9189-4af6-9553-027c56b4643e
-# ╠═490e7b48-d0b3-4d94-b04e-1a1a7e276201
-# ╠═9efb12eb-98f4-48ee-b56a-4bd5cc49d0d0
-# ╠═d7cf121d-6d2a-483a-80f6-f2f28c7e9e2e
+# ╟─490e7b48-d0b3-4d94-b04e-1a1a7e276201
+# ╟─e98e401c-9eb5-4c8d-bc97-0cc6f3375398
+# ╟─d7cf121d-6d2a-483a-80f6-f2f28c7e9e2e
+# ╟─a978e34d-9535-4bc2-ba2a-27d6baff12ca
+# ╟─ae5c83d2-0427-47e2-af3a-f3b48f92beb6
+# ╟─508290f0-649e-4f57-bb09-a069183775ee
 # ╠═038ceea8-5a35-4b9c-89bf-de96a98d3ec6
 # ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
 # ╠═f49a0c93-06df-4fc3-a6e7-322d83bb75f5

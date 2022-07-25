@@ -71,7 +71,7 @@ function ringworld_tsne(args; progress=false)
     err = test_ret[1][:EXP][:out_err]
 
     Random.seed!(3)
-    data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, progress=false)
+    tsne_data = tsne(collect(reduce(hcat, hs)'), 2, 0, 1000, progress=false)
 
     # base_colors = distinguishable_colors(12, colorant"blue")
     base_colors = [
@@ -94,7 +94,7 @@ function ringworld_tsne(args; progress=false)
     mkstroke = fill(colorant"black", length(hs))
     mkstroke[a_tm1 .== 2] .= RGB{Colors.N0f8}(1.0,1.0,0.455)
 
-    data, colors, mkstroke, err
+    tsne_data, colors, mkstroke, err, test_ret
 end
 
 function dirtmaze_tsne(args; progress=false)
@@ -168,6 +168,10 @@ function plot_ringworld_tsnes(save_loc, args, config)
         mkdir(joinpath(save_loc, "learning_curves"))
     end
 
+    if !isdir(joinpath(save_loc, "data"))
+        mkdir(joinpath(save_loc, "data"))
+    end
+
     lk = ReentrantLock()
 
     my_task = (sarg, seed) -> begin
@@ -177,17 +181,23 @@ function plot_ringworld_tsnes(save_loc, args, config)
         end
         parg["seed"] = seed
 
-        save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",seed=$(seed).pdf"
-        data, colors, mkstroke, err = ringworld_tsne(parg)
+        save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",seed=$(seed)"
+        data, colors, mkstroke, err, results = ringworld_tsne(parg)
 
         lock(lk)
         try
-            plt = scatter(data[:, 1], data[:, 2], color=colors, markerstrokecolor=mkstroke, markerstrokewidth=2, grid=false, xtick=false, ytick=false, axis=false, legend=false)
-            savefig(plt, joinpath(save_loc, "tsne", save_str))
+            plt = scatter(data[:, 1], data[:, 2], color=colors, grid=false, xtick=false, ytick=false, axis=false, legend=false)
+            savefig(plt, joinpath(save_loc, "tsne", save_str*".pdf"))
+
+            plt = scatter(data[:, 1], data[:, 2], color=mkstroke, grid=false, xtick=false, ytick=false, axis=false, legend=false)
+            savefig(plt, joinpath(save_loc, "tsne", save_str*"_action.pdf"))
 
             plt_lc = plot(rollmean(sqrt.(mean(err.^2; dims=1))[1, :], 100)[1:100:end],
                         grid=false, tickdir=:out, ylims=(0.0, 0.6))
-            savefig(plt_lc, joinpath(save_loc, "learning_curves", save_str))
+            savefig(plt_lc, joinpath(save_loc, "learning_curves", save_str*".pdf"))
+
+            FileIO.save(joinpath(save_loc, "data", save_str*".jld2"),
+                        "results", results, "tsne_data", data, "colors", colors, "mkstroke", mkstroke, "err", err)
         finally
             unlock(lk)
         end
@@ -229,13 +239,13 @@ function plot_dirtmaze_tsnes(save_loc)
         end
         parg["seed"] = seed
 
-        save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",seed=$(seed).pdf"
+        save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",seed=$(seed)"
         data, colors, mkstroke, err = dirtmaze_tsne(parg)
 
         lock(lk)
         try
             plt = scatter(data[:, 1], data[:, 2], color=colors, markerstrokecolor=mkstroke, markerstrokewidth=2, grid=false, xtick=false, ytick=false, axis=false, legend=false)
-            savefig(plt, joinpath(save_loc, "tsne", save_str))
+            savefig(plt, joinpath(save_loc, "tsne", save_str*".pdf"))
             
         finally
             unlock(lk)
