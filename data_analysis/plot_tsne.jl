@@ -139,20 +139,20 @@ function dirtmaze_tsne(args; progress=false)
 end
 
 
-function plot_final_ringworld_tsnes(save_loc)
+function plot_final_ringworld_tsnes(save_loc, seeds=[21, 25, 33])
     args = FileIO.load("../final_runs/ringworld_er_10.jld2")["args"]
     config = TOML.parsefile("../final_runs/ringworld_er_10.toml")
-    plot_ringworld_tsnes(save_loc, args, config)
+    plot_ringworld_tsnes(save_loc, args, config, seeds)
 end
 
-function plot_specific_final_rw_tsnes(filt, save_loc)
+function plot_specific_final_rw_tsnes(filt, save_loc, seeds=[21, 25, 33]) 
     args = FileIO.load("../final_runs/ringworld_er_10.jld2")["args"]
     filter!(filt, args)
     config = TOML.parsefile("../final_runs/ringworld_er_10.toml")
-    plot_ringworld_tsnes(save_loc, args, config)
+    plot_ringworld_tsnes(save_loc, args, config, seeds)
 end
 
-function plot_ringworld_tsnes(save_loc, args, config)
+function plot_ringworld_tsnes(save_loc, args, config, seeds)
 
     pargs = config["static_args"]
 
@@ -209,7 +209,7 @@ function plot_ringworld_tsnes(save_loc, args, config)
     
     @withprogress name="Args" begin
         Threads.@threads for i in 1:n
-            for s in [21, 25, 33]
+            for s in seeds
                 sargs = args[i]
                 my_task(sargs, s)
             end

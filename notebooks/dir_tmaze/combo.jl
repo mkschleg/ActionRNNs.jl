@@ -101,7 +101,8 @@ let
 	get_relavent_params(rw) = Dict(
 		"numhidden"=>rw.numhidden,
 		"eta" => rw.eta,
-		"cell" => rw.cell
+		"cell" => rw.cell,
+		"replay_size"=>rw.replay_size
 	)
 	
 	args = [get_relavent_params(rw) for rw in eachrow(df)]
@@ -119,7 +120,8 @@ let
 	get_relavent_params(rw) = Dict(
 		"numhidden"=>rw.numhidden,
 		"eta" => rw.eta,
-		"cell" => rw.cell
+		"cell" => rw.cell,
+		"replay_size"=>rw.replay_size
 	)
 	
 	args = [get_relavent_params(rw) for rw in eachrow(df)]
