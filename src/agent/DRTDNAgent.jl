@@ -34,9 +34,13 @@ mutable struct DRTDNAgent{H, O, C, CT, F, LU, ER, DEV, Φ,  Π, HS<:AbstractMatr
 
     hs_tr_init::Dict{Symbol, HS}
     device::DEV
+
+    training_mode::Bool
 end
 
 get_hs_replay_strategy(agent::DRTDNAgent) = agent.hs_learnable
+training_mode(agent::DRTDNAgent) = agent.training_mode
+set_training_mode!(agent::DRTDNAgent, mode) = agent.training_mode = mode
 
 function DRTDNAgent(horde,
                     model,
@@ -107,7 +111,7 @@ function DRTDNAgent(horde,
                init_state,
                acting_policy,
                1, 1, 0.0, hs_learnable, true, 0,
-               typeof(hidden_state_init)(), dev)
+               typeof(hidden_state_init)(), dev, true)
 end
 
 
