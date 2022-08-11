@@ -267,7 +267,7 @@ function main_experiment(config;
             env = construct_env(config)
             agent = construct_agent(env, config, rng)
 
-            experiment_loop(env, agent, num_steps, data, rng; progress=progress)
+            experiment_loop(env, agent, num_steps, config, data, save_setup_ret, rng; progress=progress)
 
             @data EXPExtra env
             @data EXPExtra agent
@@ -331,7 +331,7 @@ function ll_experiment_wrapper(exp_func::Function, config;
 end
 
 
-function experiment_loop(env, agent, num_steps, data, rng; progress=false)
+function experiment_loop(env, agent, num_steps, config, data, save_setup_ret, rng; progress=false)
 
     prg_bar = ProgressMeter.Progress(num_steps, "Step: ")
 
