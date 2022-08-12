@@ -1,6 +1,6 @@
 [config]
 save_backend="jld2" # mysql only database backend supported
-save_dir="final_ringworld_er_10_all_data_fix_rng"
+save_dir="final_ringworld_er_10_all_data_fix_rng_env_data"
 exp_file="experiment/RingWorldERExperiment_FixRNG.jl"
 exp_module_name = "RingWorldERExperiment_FixRNG"
 exp_func_name = "main_experiment"
@@ -26,3 +26,5 @@ synopsis = false
 
 outhorde = "gammas_term"
 hs_learnable = true
+
+save_extras = [["Env", "state"], ["Agent", "action"]]
