@@ -79,6 +79,15 @@ at(dir) = joinpath("../../local_data/dir_tmaze_er", dir)
 # ╔═╡ 5bc66e9c-3468-4415-b918-a8d42b73c04b
 load_dataframe(dir) = FileIO.load(at(dir))["params_and_results"]
 
+# ╔═╡ 14d248f6-6f5f-4c36-8ae5-e0d7a5af6c90
+df_dtmaze_sc = let
+	FileIO.load(at("final_dir_tmaze_er_rnn_rmsprop_10_2/2022_05_20_proc_data.jld2"))["params_and_results"]
+	# DataFrameUtils.best_from_sweep_param(
+	# 	order(:successes_avg_end, by=mean, rev=true), 
+	# 	df, 
+	# 	["eta"])
+end
+
 # ╔═╡ 8a7989fb-063b-46dc-af95-b0ef5d293496
 df = FileIO.load(at("dir_tmaze_er_gating_network_sweep/2022_05_04_processed_data.jld2"))["params_and_results"]
 
@@ -97,7 +106,7 @@ diff_dict_best_over_eta = DataFrameUtils.get_diff_dict(best_over_eta)
 # ╔═╡ 10f497c5-9544-4832-980f-adcc0d38e3cc
 let
 	τ = 15
-	replay_size = 20000
+	replay_size = 10000
 	plot_data_sym = :successes_avg_end
 	
 	gr()
@@ -156,7 +165,7 @@ diff_dict_best_over_eta_aa = DataFrameUtils.get_diff_dict(best_over_eta_aa)
 # ╔═╡ 382ca0bc-8d58-4ba6-8c3a-58cd1bb4ff48
 let
 	τ = 12
-	replay_size = 20000
+	replay_size = 10000
 	plot_data_sym = :successes_avg_end
 	
 	gr()
@@ -178,21 +187,97 @@ let
 			@collect DataFrame
 		end
 	end
-	
+	plot_trad_cells!(plt, cell, x) = begin
+		d = @from i in df_dtmaze_sc begin
+			@where i.cell == cell && i.replay_size == replay_size
+			@select{
+				μ = mean(getindex(i, plot_data_sym)), 
+				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))
+			}
+			@collect DataFrame
+		end
+		plot!(plt, x, fill(d[1, :μ], length(x)), yerr=fill(d[1, :σ], length(x)), color=cell_colors[cell], lw=2)
+	end
 	
 	for ne ∈ sort(diff_dict["num_experts"])
 		x_cells = [get_cell_data(cell, ne) for cell ∈ diff_dict["cell"]]
 		plt = plot(
 			title="Experts=$(ne)", 
 			xlabel="Gating Network Size", 
-			ylabel="Average Successes")
-		for cell ∈ diff_dict["cell"]
-			cd = get_cell_data(cell, ne)
-			plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label=cell)
-		end
+			ylabel="Average Successes", legend=false)
+
+		cell = "AGMoERNN"
+		cd = get_cell_data(cell, ne)
+		plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], lw=2, color=:purple)
+
+		plot_trad_cells!(plt, "MARNN", cd[!, :x])
+		plot_trad_cells!(plt, "AARNN", cd[!, :x])
+		
+		
 		push!(plts, plt)
 	end
-	plot(plts...)
+	plt = plot(plts...)
+	# savefig(plt, "../../plots/dtmaze_mixture_of_experts_rnn.pdf")
+	plt
+end
+
+# ╔═╡ 4466f07e-6d22-420d-afeb-ef16f5a17318
+let
+	τ = 12
+	replay_size = 10000
+	plot_data_sym = :successes_avg_end
+	
+	gr()
+	plts = []
+	diff_dict = DataFrameUtils.get_diff_dict(best_over_eta_aa)
+
+
+	get_cell_data = (cell, ne) -> begin
+		@from i in best_over_eta_aa begin
+			@where i.cell == cell &&
+				   i.truncation == τ &&
+				   i.num_experts == ne &&
+				   i.replay_size == replay_size
+			@orderby ascending(i.gating_network_layers_1_1)
+			@select {
+				x = i.gating_network_layers_1_1, 
+				μ = mean(getindex(i, plot_data_sym)), 
+				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))}
+			@collect DataFrame
+		end
+	end
+	plot_trad_cells!(plt, cell, x) = begin
+		d = @from i in df_dtmaze_sc begin
+			@where i.cell == cell && i.replay_size == replay_size
+			@select{
+				μ = mean(getindex(i, plot_data_sym)), 
+				σ = sqrt(var(getindex(i, plot_data_sym)) / length(getindex(i, plot_data_sym)))
+			}
+			@collect DataFrame
+		end
+		plot!(plt, x, fill(d[1, :μ], length(x)), yerr=fill(d[1, :σ], length(x)), color=cell_colors[cell], lw=2)
+	end
+	
+	for ne ∈ sort(diff_dict["num_experts"])
+		x_cells = [get_cell_data(cell, ne) for cell ∈ diff_dict["cell"]]
+		plt = plot(
+			title="Experts=$(ne)", 
+			xlabel="Gating Network Size", 
+			ylabel="Average Successes", legend=false)
+
+		cell = "AGMoEGRU"
+		cd = get_cell_data(cell, ne)
+		plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], lw=2, color=:purple)
+
+		plot_trad_cells!(plt, "MAGRU", cd[!, :x])
+		plot_trad_cells!(plt, "AAGRU", cd[!, :x])
+		
+		
+		push!(plts, plt)
+	end
+	plt = plot(plts...)
+	# savefig(plt, "../../plots/dtmaze_mixture_of_experts_gru.pdf")
+	plt
 end
 
 # ╔═╡ 536ac943-5208-4d02-bfee-d06d32c750f1
@@ -351,12 +436,12 @@ end
 DataFrameUtils.get_diff_dict(best_over_eta_combo_sm)
 
 # ╔═╡ 29c2e7ce-2d9e-4a8f-be6c-495e5c6f32b5
-let
-	# dd = DataFrameUtils.get_diff_dict(best_over_eta_combo_sm)
-	args = [Dict("numhidden"=>rw.numhidden, "cell"=>rw.cell, "replay_size"=>rw.replay_size, "eta"=>rw.eta) for rw in eachrow(best_over_eta_combo_sm)]
+# let
+# 	# dd = DataFrameUtils.get_diff_dict(best_over_eta_combo_sm)
+# 	args = [Dict("numhidden"=>rw.numhidden, "cell"=>rw.cell, "replay_size"=>rw.replay_size, "eta"=>rw.eta) for rw in eachrow(best_over_eta_combo_sm)]
 
-	FileIO.save("../../final_runs/dir_tmaze_10_combo_sm.jld2", "args", args)
-end
+# 	FileIO.save("../../final_runs/dir_tmaze_10_combo_sm.jld2", "args", args)
+# end
 
 # ╔═╡ 457496ce-abda-4ce1-b8ef-c567b3429bac
 
@@ -1581,6 +1666,7 @@ version = "0.9.1+5"
 # ╠═3947f507-8b89-47e3-8d02-ed3c069b4a91
 # ╠═069d67d8-e5e2-43f6-aa49-f13c3c9466ee
 # ╠═5bc66e9c-3468-4415-b918-a8d42b73c04b
+# ╠═14d248f6-6f5f-4c36-8ae5-e0d7a5af6c90
 # ╠═8a7989fb-063b-46dc-af95-b0ef5d293496
 # ╠═04c76c31-0b37-4ed1-a6f5-9ea3ca261b9a
 # ╠═91359d83-97ec-4724-9260-a6887a0079d4
@@ -1590,7 +1676,8 @@ version = "0.9.1+5"
 # ╠═e195053f-5c4d-4b99-9c43-9e0bcd41a28e
 # ╠═b42d6baa-5a31-4a61-919c-f7b4ccade1ca
 # ╠═6b36ecb9-e25d-4409-9c15-cd5a6bd84901
-# ╠═382ca0bc-8d58-4ba6-8c3a-58cd1bb4ff48
+# ╟─382ca0bc-8d58-4ba6-8c3a-58cd1bb4ff48
+# ╟─4466f07e-6d22-420d-afeb-ef16f5a17318
 # ╠═536ac943-5208-4d02-bfee-d06d32c750f1
 # ╠═03ce92e0-6f3f-4f20-ab56-25ab266971a0
 # ╠═6fae1c30-d0ac-40a5-8b85-e742acd87a4a

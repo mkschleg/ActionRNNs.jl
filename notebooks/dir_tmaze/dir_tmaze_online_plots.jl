@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -1581,6 +1581,75 @@ let
 	#savefig("../data/paper_plots/dir_tmaze_online_violin_and_box_plots_300k_steps_MUE_tau_16.pdf")
 end
 
+# ╔═╡ 7ac3944f-af90-4b1a-9350-6baf7e59561c
+let
+	args_list = [
+		Dict("cell"=>"GRU"),
+		Dict("cell"=>"AAGRU"),
+		Dict("cell"=>"MAGRU"),
+		Dict("cell"=>"FacMAGRU"),
+		Dict("cell"=>"RNN"),
+		Dict("cell"=>"AARNN"),
+		Dict("cell"=>"MARNN"),
+		Dict("cell"=>"FacMARNN"),
+	]
+	names = ["GRU", "AAGRU", "MAGRU", "FacGRU", "RNN", "AARNN", "MARNN", "FacRNN"]
+	# boxplot(data_dist_final_mean, args_list;
+	# 	label_idx="cell",
+	# 	color=reshape(getindex.([cell_colors], getindex.(args_list, "cell")), 1, :),
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, title="Dir TMaze Online MEAN, Steps: 500k")
+	# dotplot!(data_dist_final_mean, args_list;
+	# 	label_idx="cell",
+	# 	color=reshape(getindex.([cell_colors], getindex.(args_list, "cell")), 1, :))
+	plt = plot()
+	for i in 1:length(names)
+		plt = violin!(data_dist_final_mean, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
+		
+		plt = boxplot!(data_dist_final_mean, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16, 500k", ylim=(0.3, 1))
+		if i == 4	
+			plt = vline!([6], linestyle=:dot, color=:white, lw=2)
+		end
+
+	end
+
+	# savefig(plt, "../../plots/online_dtmaze_500k.pdf")
+	plt
+end
+
+# ╔═╡ cd130c10-d5f7-46fc-8e3b-a67992eb5354
+let
+	args_list = [
+		Dict("cell"=>"GRU"),
+		Dict("cell"=>"AAGRU"),
+		Dict("cell"=>"MAGRU"),
+		Dict("cell"=>"FacMAGRU"),
+		Dict("cell"=>"RNN"),
+		Dict("cell"=>"AARNN"),
+		Dict("cell"=>"MARNN"),
+		Dict("cell"=>"FacMARNN"),
+	]
+	names = ["GRU", "AAGRU", "MAGRU", "FacGRU", "RNN", "AARNN", "MARNN", "FacRNN"]
+	# boxplot(data_dist_final_mean, args_list;
+	# 	label_idx="cell",
+	# 	color=reshape(getindex.([cell_colors], getindex.(args_list, "cell")), 1, :),
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, title="Dir TMaze Online MEAN, Steps: 500k")
+	# dotplot!(data_dist_final_mean, args_list;
+	# 	label_idx="cell",
+	# 	color=reshape(getindex.([cell_colors], getindex.(args_list, "cell")), 1, :))
+	plt = plot()
+	for i in 1:length(names)
+		plt = violin!(data_dist_final, args_list[i], label=names[i], legend=false, color=cell_colors[args_list[i]["cell"]], lw=2, linecolor=cell_colors[args_list[i]["cell"]])
+		
+		plt = boxplot!(data_dist_final, args_list[i], label=names[i], color=color=cell_colors[args_list[i]["cell"]], fillalpha=0.75, outliers=true, lw=2, linecolor=:black, tickfontsize=10, grid=false, tickdir=:out, xguidefontsize=14, yguidefontsize=14, legendfontsize=10, titlefontsize=15, ylabel="Success Rate", title="Online Directional TMaze, τ: 16, 500k", ylim=(0.3, 1))
+		if i == 4	
+			plt = vline!([6], linestyle=:dot, color=:white, lw=2)
+		end
+
+	end
+	# savefig(plt, "../../plots/online_dtmaze_500k_mue.pdf")
+	plt
+end
+
 # ╔═╡ 76e66b40-5e08-48ef-ab84-780b238a15f1
 let
 	args_list = [
@@ -1623,6 +1692,9 @@ let
 	
 	savefig("../data/paper_plots/dir_tmaze_online_facrnn_box_plot.pdf")
 end
+
+# ╔═╡ ad56d3ec-de90-4f25-8065-d2595ce8fed5
+
 
 # ╔═╡ Cell order:
 # ╠═08118162-6995-45a0-91ed-f94eec767cd0
@@ -1717,8 +1789,8 @@ end
 # ╟─0718582b-811f-4227-9f8c-2368881ac8dc
 # ╠═6a8ea54b-86e6-4c38-8bda-7e39c6ef1605
 # ╟─398e5230-e8d0-4261-85a9-5b049702a8ce
-# ╟─8af2e436-a097-4fbb-81f5-17018f02b2fd
-# ╠═090d428e-f2c1-4032-878d-df6de3063266
+# ╠═8af2e436-a097-4fbb-81f5-17018f02b2fd
+# ╟─090d428e-f2c1-4032-878d-df6de3063266
 # ╠═99439b9e-49bb-48b8-bf38-3f1f229bcaa1
 # ╠═9c649632-95df-4c0b-9501-bd660f92a1f6
 # ╠═f5f0c142-8ef1-4abc-a0c9-40c927436942
@@ -1753,5 +1825,8 @@ end
 # ╠═e265c8f2-b147-4509-81a6-8c34a7de5457
 # ╠═c08d99c0-680c-495a-b7ae-46c907e8288e
 # ╠═99d4fbfa-61f6-444d-a525-eafc7e1bf55f
+# ╠═7ac3944f-af90-4b1a-9350-6baf7e59561c
+# ╠═cd130c10-d5f7-46fc-8e3b-a67992eb5354
 # ╠═76e66b40-5e08-48ef-ab84-780b238a15f1
 # ╠═bac07523-9f76-430b-b0e3-ec6d7e799640
+# ╠═ad56d3ec-de90-4f25-8065-d2595ce8fed5

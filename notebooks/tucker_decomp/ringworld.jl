@@ -1,8 +1,14 @@
 ### A Pluto.jl notebook ###
-# v0.14.8
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
+
+# ╔═╡ cb8ee5cf-eff9-46dd-b83c-fe27293ad3bb
+let
+	using Pkg
+	Pkg.activate("")
+end
 
 # ╔═╡ e3d13806-e4e9-11eb-1851-4b51c9ec551c
 using Revise, Reproduce, ReproducePlotUtils, Plots, RollingFunctions, Statistics, FileIO, PlutoUI, Pluto, JLD2
@@ -136,7 +142,7 @@ let
 	
 	plt
 	
-	savefig("../../data/paper_plots/tucker_decomp/ringworld_online_rnn_lc_tuc.pdf")
+	# savefig("../../data/paper_plots/tucker_decomp/ringworld_online_rnn_lc_tuc.pdf")
 	
 end
 
@@ -188,7 +194,7 @@ let
 	
 	plt
 	
-	savefig("../../data/paper_plots/tucker_decomp/ringworld_online_gru_lc_tuc.pdf")
+	# savefig("../../data/paper_plots/tucker_decomp/ringworld_online_gru_lc_tuc.pdf")
 	
 end
 
@@ -229,7 +235,7 @@ let
 	
 	plt
 	
-	savefig("../../data/paper_plots/tucker_decomp/ringworld_er_rnn_lc_tuc.pdf")
+	# savefig("../../data/paper_plots/tucker_decomp/ringworld_er_rnn_lc_tuc.pdf")
 	
 end
 
@@ -258,11 +264,12 @@ let
 	
 	plt
 	
-	savefig("../../data/paper_plots/tucker_decomp/ringworld_er_gru_lc_tuc.pdf")
+	# savefig("../../data/paper_plots/tucker_decomp/ringworld_er_gru_lc_tuc.pdf")
 	
 end
 
 # ╔═╡ Cell order:
+# ╠═cb8ee5cf-eff9-46dd-b83c-fe27293ad3bb
 # ╠═e3d13806-e4e9-11eb-1851-4b51c9ec551c
 # ╠═b70f28c6-9b9c-4abd-9dec-f50dc0b51b90
 # ╟─288917c9-24ca-41f9-854f-6ad3e805a7ad

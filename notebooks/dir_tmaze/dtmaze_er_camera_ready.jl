@@ -74,7 +74,13 @@ readdir(at(s_dir))
 s_dir
 
 # ╔═╡ f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
-df_dtmaze_sc = FileIO.load(at("dir_tmaze_er_rnn_rmsprop_10/2022_05_20_proc_data.jld2"))["params_and_results"]
+df_dtmaze_sc = FileIO.load(at("dir_tmaze_er_rnn_rmsprop_10_20k/2022_05_20_proc_data.jld2"))["params_and_results"]
+
+# ╔═╡ 055c841b-0ff4-45c5-968f-d6c68c6cc413
+df_dtmaze_sc_best = DataFrameUtils.best_from_sweep_param(
+	order(:successes_avg_end, by=mean, rev=true), 
+	df_dtmaze_sc, 
+	["eta"])
 
 # ╔═╡ 1b393e1a-7084-4c56-a6df-3e83bdd0ef26
 df_final_tmaze = FileIO.load(at("final_dir_tmaze_er_rnn_rmsprop_10_2/2022_05_20_proc_data.jld2"))["params_and_results"]
@@ -85,6 +91,24 @@ df_final_tmaze = FileIO.load(at("final_dir_tmaze_er_rnn_rmsprop_10_2/2022_05_20_
 
 # ╔═╡ 6244b0ef-6734-4007-9067-e218191b3b79
 df_fac_tmaze = FileIO.load(at("final_fac_dir_tmaze_er_rnn_rmsprop_10_2_300k/2022_05_20_proc_data.jld2"))["params_and_results"]
+
+# ╔═╡ 9ad2aefa-522c-45a5-9cf5-ac4a7d52025e
+@from i in df_fac_tmaze begin
+		@where i.cell == "FacMARNN" &&
+			   i.factors == 17 &&
+			   i.replay_size == 20000
+		@select {i.eta, i.numhidden}
+		@collect DataFrame
+	end
+
+# ╔═╡ e89b787c-20ce-4492-84e9-cdba276656c7
+@from i in df_fac_tmaze begin
+		@where i.cell == "FacMAGRU" &&
+			   i.factors == 15 &&
+			   i.replay_size == 10000
+		@select {i.eta, i.numhidden}
+		@collect DataFrame
+	end
 
 # ╔═╡ 3e59c36a-545d-4a52-961f-ee5ba4c7c3d6
 # best_over_eta_fac_tmaze = DataFrameUtils.best_from_sweep_param(
@@ -101,6 +125,17 @@ df_deep_action_tmaze = FileIO.load(at("dir_tmaze_er_10_deep_action_multil_fixed/
 # 	df_deep_action_tmaze, 
 # 	["eta"])
 best_over_eta_deep_action = FileIO.load(at("final_dir_tmaze_er_10_deep_action/2022-07-11-procdata.jld2"))["params_and_results"]
+
+# ╔═╡ f49f1733-a44c-46f3-9bf4-9184409b9228
+@from i in best_over_eta_deep_action begin
+			@where i.cell == "AARNN" && 
+			i.internal_a_layers == 1 && 
+			i.numhidden == 25 && 
+			i.replay_size == 10000
+			@select {eta = i.eta, i.internal_a
+			}
+			@collect DataFrame
+	end
 
 # ╔═╡ 4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
 function boxviolinplot!(plt, x, data; color, kwargs...)
@@ -192,6 +227,87 @@ let
 	
 	
 	savefig("../../plots/dir_tmaze_er_deep_action.pdf")
+	plt
+end
+
+# ╔═╡ bea444dd-7f9a-4808-91f5-362affd3b812
+let
+	truncation = 12
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out)
+		# ylims=(0.45, 1.0))
+	plot_data_sym = :successes_avg_end
+	
+	for cell ∈ ["GRU", "AAGRU", "MAGRU"]
+		cd = @from i in df_dtmaze_sc_best begin
+			@where i.cell == cell && i.truncation == 12 && i.replay_size==20000
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	end
+
+	cd = @from i in best_over_eta_deep_action begin
+			@where i.cell == "AAGRU" && 
+			i.internal_a_layers == 1 && 
+			i.numhidden == 15 &&
+			i.replay_size == 20000
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+	end
+	d = cd[1, :d]
+	boxviolinplot!(plt, "DeepAAGRU", d; color = cell_colors["DAAGRU"])
+
+	cd = @from i in df_fac_tmaze begin
+		@where i.cell == "FacMAGRU" &&
+			   i.factors == 15 &&
+			   i.replay_size == 20000
+		@select {d=getindex(i, plot_data_sym)}
+		@collect DataFrame
+	end
+	d = cd[1, :d]
+	boxviolinplot!(plt, "FacMAGRU", d; color = cell_colors["FacMAGRU"])
+		
+	
+	plt = vline!([7], linestyle=:dot, color=:white, lw=2)
+	
+	for cell ∈ ["RNN", "AARNN", "MARNN"]
+		cd = @from i in df_dtmaze_sc_best begin
+			@where i.cell == cell && i.truncation == 12 && i.replay_size==20000
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = cell_colors[cell])
+	end
+
+	cd = @from i in best_over_eta_deep_action begin
+			@where i.cell == "AARNN" && 
+			i.internal_a_layers == 1 && 
+			i.numhidden == 25 && 
+			i.replay_size == 20000
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+	end
+	d = cd[1, :d]
+	boxviolinplot!(plt, "DeepAARNN", d; color = cell_colors["DAARNN"])
+
+	cd = @from i in df_fac_tmaze begin
+		@where i.cell == "FacMARNN" &&
+			   i.factors == 17 &&
+			   i.replay_size == 20000
+		@select {d=getindex(i, plot_data_sym)}
+		@collect DataFrame
+	end
+	d = cd[1, :d]
+	boxviolinplot!(plt, "FacMARNN", d; color = cell_colors["FacMARNN"])
+	
+	
+	# savefig("../../plots/dir_tmaze_er_deep_action_replay_20k.pdf")
 	plt
 end
 
@@ -294,11 +410,12 @@ best_over_eta_sm = FileIO.load(at("final_dir_tmaze_er_10_combo_sm/2022-07-11-pro
 
 # ╔═╡ 4b317132-25b7-4daf-aef8-2cbc6131541b
 df_deep_cat = let
-	df = FileIO.load(at("dir_tmaze_er_10_combo_cat/2022-07-15-procdata.jld2"))["params_and_results"]
-	DataFrameUtils.best_from_sweep_param(
-		order(:successes_avg_end, by=mean, rev=true), 
-		df,
-		["eta"])
+	# df = FileIO.load(at("dir_tmaze_er_10_combo_cat/2022-07-15-procdata.jld2"))["params_and_results"]
+	# DataFrameUtils.best_from_sweep_param(
+	# 	order(:successes_avg_end, by=mean, rev=true), 
+	# 	df,
+	# 	["eta"])
+	FileIO.load(at("final_dir_tmaze_er_10_combo_cat/2022-07-27-procdata.jld2"))["params_and_results"]
 end
 
 # ╔═╡ 6fba2550-6908-4945-a435-bec5d08905cc
@@ -2008,13 +2125,18 @@ version = "0.9.1+5"
 # ╠═e912da30-fed5-4eb0-b931-8ce0b04ab0a5
 # ╠═fb35edca-dcbe-4a30-9005-03ace146e392
 # ╠═f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
+# ╠═055c841b-0ff4-45c5-968f-d6c68c6cc413
 # ╠═1b393e1a-7084-4c56-a6df-3e83bdd0ef26
 # ╠═6244b0ef-6734-4007-9067-e218191b3b79
+# ╠═9ad2aefa-522c-45a5-9cf5-ac4a7d52025e
+# ╠═e89b787c-20ce-4492-84e9-cdba276656c7
 # ╠═3e59c36a-545d-4a52-961f-ee5ba4c7c3d6
 # ╠═6b0e3ce9-cf5c-4666-b1f9-7953ed5a3596
 # ╠═d4f5e400-a46c-47d1-a18d-9d068ce10da1
+# ╠═f49f1733-a44c-46f3-9bf4-9184409b9228
 # ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
-# ╟─47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╠═47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╠═bea444dd-7f9a-4808-91f5-362affd3b812
 # ╠═d14a8706-33da-4dfc-b4a8-0f8211d9cfa6
 # ╠═4356c69e-05b9-4bb7-bb3a-15e3eae2acd5
 # ╠═4c3cba15-9f3d-47a8-b2fc-b7175e70e035

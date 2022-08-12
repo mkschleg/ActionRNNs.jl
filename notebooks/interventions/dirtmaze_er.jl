@@ -73,6 +73,31 @@ function run_experiment(
 	results, agent, env
 end
 
+# ╔═╡ 8132f595-ce46-4a78-816e-3a6b279b3a06
+function intervention_experiment(agent, env, intervention, start_dir, rng)
+
+	s_str = Bool[]
+	max_episode_steps = 5_000
+	@progress for eps in 1:1_000
+		success = false
+		intervention_episode!(
+			env,
+			agent,
+			intervention,
+			start_dir isa Int ? start_dir : start_dir(rng),
+			max_episode_steps,
+			rng) do (s, a, s′, r)
+			
+			success = success || (r == 4.0)
+		end
+		# @data "EXP" total_rews=rews
+		# @data "EXP" total_steps=steps
+		j = 1
+		push!(s_str, success)
+	end
+	@data "EXP" successes=sum(s_str)
+end
+
 # ╔═╡ 9154942d-8523-45ac-8c5b-fb8dac8c5ece
 begin
 	struct NoIntervention end
@@ -83,6 +108,32 @@ begin
 		else
 			agent_ret.action
 		end
+end
+
+# ╔═╡ f99084ba-21ec-4677-9e18-0963bebf6cf0
+function run_intervention_experiment(
+		exp::Function;
+		freeze_training::Bool=true,
+		rng=Random.GLOBAL_RNG,
+		inter_start_dir_list=[(NoIntervention(),rand(rng, 1:4))]
+)
+	
+	results, agent, env = exp()
+	if freeze_training
+		ActionRNNs.turn_off_training!(agent)
+	end
+	
+	ret = []
+	for (inter, start_dir) in inter_start_dir_list
+		cp_agent, cp_env = deepcopy(agent), deepcopy(env)
+		data, data_logger = DirectionalTMazeERExperiment.construct_logger()
+		with_logger(data_logger) do
+			intervention_experiment(agent, env, inter, start_dir, rng)
+		end
+		push!(ret, (inter, start_dir) => data)
+	end
+
+	ret
 end
 
 # ╔═╡ e78776da-715c-458f-8db2-4212a82418d5
@@ -142,57 +193,6 @@ function intervention_episode!(
 		step+=1 
 		# @info step
 	end
-end
-
-# ╔═╡ 8132f595-ce46-4a78-816e-3a6b279b3a06
-function intervention_experiment(agent, env, intervention, start_dir, rng)
-
-	s_str = Bool[]
-	max_episode_steps = 5_000
-	@progress for eps in 1:1_000
-		success = false
-		intervention_episode!(
-			env,
-			agent,
-			intervention,
-			start_dir isa Int ? start_dir : start_dir(rng),
-			max_episode_steps,
-			rng) do (s, a, s′, r)
-			
-			success = success || (r == 4.0)
-		end
-		# @data "EXP" total_rews=rews
-		# @data "EXP" total_steps=steps
-		j = 1
-		push!(s_str, success)
-	end
-	@data "EXP" successes=sum(s_str)
-end
-
-# ╔═╡ f99084ba-21ec-4677-9e18-0963bebf6cf0
-function run_intervention_experiment(
-		exp::Function;
-		freeze_training::Bool=true,
-		rng=Random.GLOBAL_RNG,
-		inter_start_dir_list=[(NoIntervention(),rand(rng, 1:4))]
-)
-	
-	results, agent, env = exp()
-	if freeze_training
-		ActionRNNs.turn_off_training!(agent)
-	end
-	
-	ret = []
-	for (inter, start_dir) in inter_start_dir_list
-		cp_agent, cp_env = deepcopy(agent), deepcopy(env)
-		data, data_logger = DirectionalTMazeERExperiment.construct_logger()
-		with_logger(data_logger) do
-			intervention_experiment(agent, env, inter, start_dir, rng)
-		end
-		push!(ret, (inter, start_dir) => data)
-	end
-
-	ret
 end
 
 # ╔═╡ 14657dfb-a87b-416a-b15a-fc0bdb798293

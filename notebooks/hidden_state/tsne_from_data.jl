@@ -28,8 +28,11 @@ color_scheme = [
 	colorant"#1E90FF",
 ]
 
+# ╔═╡ 78242f67-5350-42d2-99ef-482b0d2b0db1
+base_dir = "../../local_data/ringworld/er/ringworld_tsne_data/data"
+
 # ╔═╡ 679d867b-159e-4d60-8bcf-043ba44338c5
-yellow_action_color = FileIO.load("../../plots/ringworld_tsne_with_data/data/numhidden=12,truncation=6,cell=MARNN,seed=33.jld2", "mkstroke")[1]
+yellow_action_color = FileIO.load(joinpath(base_dir, "numhidden=12,truncation=6,cell=MARNN,seed=62.jld2"), "mkstroke")[1]
 
 # ╔═╡ 1ecc35fa-a083-41cd-a874-247bda3d1736
 replace_yellow_color = colorant"#44AA99"
@@ -50,9 +53,13 @@ cell_colors = Dict(
 	"CsoftmaxElRNN"=>colorant"#8677ad")
 
 # ╔═╡ 0deea48c-0ba1-42a8-95d7-3f5387efb092
-function load_tsne_data(numhidden, truncation, cell, seed=33)
-	base_str = "../../plots/ringworld_tsne_with_data/data"
-	file_str = "numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed).jld2"
+function load_tsne_data(numhidden, truncation, cell, seed=33, steps=nothing; base_str = base_dir)
+	
+	file_str = if isnothing(steps)
+		"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed).jld2"
+	else
+		"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),steps=$(steps),seed=$(seed).jld2"
+	end
 	load_str = joinpath(base_str, file_str)
 	action_colors = FileIO.load(load_str, "mkstroke")
 	action_colors[findall((c)->c==yellow_action_color, action_colors)] .= replace_yellow_color
@@ -65,9 +72,12 @@ function load_tsne_data(numhidden, truncation, cell, seed=33)
 end
 
 # ╔═╡ e479322a-d935-4e61-adbe-78b353cad8f5
-function load_lc_data(numhidden, truncation, cell, seed=33)
-	base_str = "../../plots/ringworld_tsne_with_data/data"
-	file_str = "numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed).jld2"
+function load_lc_data(numhidden, truncation, cell, seed=33, steps=nothing; base_str = base_dir)
+	file_str = if isnothing(steps)
+		"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed).jld2"
+	else
+		"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),steps=$(steps),seed=$(seed).jld2"
+	end
 	load_str = joinpath(base_str, file_str)
 	# (
 		FileIO.load(load_str, "err")
@@ -78,8 +88,8 @@ function load_lc_data(numhidden, truncation, cell, seed=33)
 end
 
 # ╔═╡ e2f9b9d5-6724-4cbd-b455-5e1691d3ff18
-function plot_tsne_scatter_states(numhidden, truncation, cell, seed=33; base_save_path=nothing)
-	data, colors, action_colors = load_tsne_data(numhidden, truncation, cell, seed)
+function plot_tsne_scatter_states(numhidden, truncation, cell, seed=33, steps=nothing; base_save_path=nothing, base_dir = base_dir)
+	data, colors, action_colors = load_tsne_data(numhidden, truncation, cell, seed, steps; base_str=base_dir)
 	plt = scatter(data[:, 1], data[:, 2], 
 				  color=colors, 
 				  grid=false, 
@@ -90,15 +100,19 @@ function plot_tsne_scatter_states(numhidden, truncation, cell, seed=33; base_sav
 				  markerstrokewidth=0.1, 
 				  markersize=5)
 	if !isnothing(base_save_path)
-		file_str = "numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed)_states.pdf"
+		file_str = if isnothing(steps)
+			"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed)_states.pdf"
+		else
+			"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),steps=$(steps),seed=$(seed)_states.pdf"
+		end
 		savefig(plt, joinpath(base_save_path, file_str))
 	end
 	plt
 end
 
 # ╔═╡ 0faeced4-e546-4c97-950e-d26065c1572e
-function plot_tsne_scatter_actions(numhidden, truncation, cell, seed=33; base_save_path=nothing)
-	data, colors, action_colors = load_tsne_data(numhidden, truncation, cell, seed)
+function plot_tsne_scatter_actions(numhidden, truncation, cell, seed=33, steps=nothing; base_save_path=nothing, base_dir = base_dir)
+	data, colors, action_colors = load_tsne_data(numhidden, truncation, cell, seed, steps; base_str = base_dir)
 	plt = scatter(data[:, 1], data[:, 2], 
 				  color=action_colors, 
 				  grid=false, 
@@ -109,39 +123,83 @@ function plot_tsne_scatter_actions(numhidden, truncation, cell, seed=33; base_sa
 				  markerstrokewidth=0.1, 
 				  markersize=5)
 	if !isnothing(base_save_path)
-		file_str = "numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed)_actions.pdf"
+		file_str = if isnothing(steps)
+			"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed)_actions.pdf"
+		else
+			"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),steps=$(steps),seed=$(seed)_actions.pdf"
+		end
 		savefig(plt, joinpath(base_save_path, file_str))
 	end
 	plt
 end
 
 # ╔═╡ 3e9dfd14-a620-4df0-80b0-142f88a7252b
-function plot_lc(numhidden, truncation, cell, seed=33; base_save_path=nothing)
-	err = load_lc_data(numhidden, truncation, cell, seed)
+function plot_lc(numhidden, truncation, cell, seed=33, steps=nothing; base_dir = base_dir, base_save_path=nothing)
+	err = load_lc_data(numhidden, truncation, cell, seed, steps; base_str = base_dir)
 	
-	plt = plot(rollmean(sqrt.(mean(err.^2; dims=1))[1, :], 100)[1:100:end],
+	plt = plot(rollmean(sqrt.(mean(err.^2; dims=1))[1, :], 1000)[1:100:end],
          grid=false, tickdir=:out, ylims=(0.0, 0.5), legend=nothing,
-		 color=cell_colors[cell])
+		 color=cell_colors[cell], lw=2)
 
 	if !isnothing(base_save_path)
-		file_str = "numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed)_learning_curve.pdf"
+		file_str = if isnothing(steps)
+			"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),seed=$(seed)_lc.pdf"
+		else
+			"numhidden=$(numhidden),truncation=$(truncation),cell=$(cell),steps=$(steps),seed=$(seed)_lc.pdf"
+		end
 		savefig(plt, joinpath(base_save_path, file_str))
 	end
 	plt
 end
 
 # ╔═╡ 97421cb4-e470-450e-b3c9-0e01d2ddce41
-for τ in [1, 6, 8, 12]
-	plot_tsne_scatter_states(12, τ, "MARNN", 33; base_save_path="../../plots/ringworld_tsne_from_data_nb")
-	plot_tsne_scatter_actions(12, τ, "MARNN", 33; base_save_path="../../plots/ringworld_tsne_from_data_nb")
-	plot_lc(12, τ, "MARNN", 33; base_save_path="../../plots/ringworld_tsne_from_data_nb")
+for τ in [1, 6]
+	plot_tsne_scatter_states(12, τ, "MARNN", 62; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+	plot_tsne_scatter_actions(12, τ, "MARNN", 62; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+	plot_lc(12, τ, "MARNN", 62; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+end
+
+# ╔═╡ ace3db86-5805-4a4b-989e-d56aa391d3cb
+for τ in [1, 6]
+	plot_tsne_scatter_states(12, τ, "MARNN", 67; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+	plot_tsne_scatter_actions(12, τ, "MARNN", 67; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+	plot_lc(12, τ, "MARNN", 67; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
 end
 
 # ╔═╡ caa1c65f-fef3-4b8b-a679-c8c0a9a7a207
-for τ in [1, 6, 8, 12]
-	plot_tsne_scatter_states(20, τ, "AARNN", 33; base_save_path="../../plots/ringworld_tsne_from_data_nb")
-	plot_tsne_scatter_actions(20, τ, "AARNN", 33; base_save_path="../../plots/ringworld_tsne_from_data_nb")
-	plot_lc(20, τ, "AARNN", 33; base_save_path="../../plots/ringworld_tsne_from_data_nb")
+for τ in [1, 6]
+	plot_tsne_scatter_states(15, τ, "AARNN", 62; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+	plot_tsne_scatter_actions(15, τ, "AARNN", 62; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+	plot_lc(15, τ, "AARNN", 62; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+end
+
+# ╔═╡ f45d1acf-3de1-4ef9-a1e2-9295bfc6c5ec
+for τ in [1, 6]
+	plot_tsne_scatter_states(15, τ, "AARNN", 55; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+	plot_tsne_scatter_actions(15, τ, "AARNN", 55; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+	plot_lc(15, τ, "AARNN", 55; base_save_path="../../plots/ringworld_tsne_from_data_nb_fix_rng")
+end
+
+# ╔═╡ 4a4b41b6-13fe-4fb4-8316-3344e2e10ef4
+let
+	τ = 6
+	steps = [25000, 50000, 75000, 100000, 150000, 200000, 300000, 450000, 500000]
+	save_dir = "../../plots/ringworld_tsne_from_data_steps"
+	load_dir = "../../local_data/ringworld/er/ringworld_tsne_data_stps/data"
+	for stps in steps
+		
+		plot_tsne_scatter_states(15, τ, "AARNN", 55, stps; base_save_path=save_dir, base_dir = load_dir)
+		plot_tsne_scatter_actions(15, τ, "AARNN", 55, stps; base_save_path=save_dir, base_dir = load_dir)
+
+		plot_tsne_scatter_states(15, τ, "AARNN", 62, stps; base_save_path=save_dir, base_dir = load_dir)
+		plot_tsne_scatter_actions(15, τ, "AARNN", 62, stps; base_save_path=save_dir, base_dir = load_dir)
+
+		plot_tsne_scatter_states(12, τ, "MARNN", 67, stps; base_save_path=save_dir, base_dir = load_dir)
+		plot_tsne_scatter_actions(12, τ, "MARNN", 67, stps; base_save_path=save_dir, base_dir = load_dir)
+
+		plot_tsne_scatter_states(12, τ, "MARNN", 62, stps; base_save_path=save_dir, base_dir = load_dir)
+		plot_tsne_scatter_actions(12, τ, "MARNN", 62, stps; base_save_path=save_dir, base_dir = load_dir)
+	end
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1434,6 +1492,7 @@ version = "0.9.1+5"
 # ╠═6e2b3953-c21c-4ef2-9213-f67730cd795e
 # ╠═340b6f4f-bc0f-4041-83e8-368a35534585
 # ╠═8675456a-01f0-11ed-28bb-0bc9113aca69
+# ╠═78242f67-5350-42d2-99ef-482b0d2b0db1
 # ╠═679d867b-159e-4d60-8bcf-043ba44338c5
 # ╠═1ecc35fa-a083-41cd-a874-247bda3d1736
 # ╠═f7a777f2-195f-4f7f-a62d-022438a4092d
@@ -1443,6 +1502,9 @@ version = "0.9.1+5"
 # ╠═0faeced4-e546-4c97-950e-d26065c1572e
 # ╠═3e9dfd14-a620-4df0-80b0-142f88a7252b
 # ╠═97421cb4-e470-450e-b3c9-0e01d2ddce41
+# ╠═ace3db86-5805-4a4b-989e-d56aa391d3cb
 # ╠═caa1c65f-fef3-4b8b-a679-c8c0a9a7a207
+# ╠═f45d1acf-3de1-4ef9-a1e2-9295bfc6c5ec
+# ╠═4a4b41b6-13fe-4fb4-8316-3344e2e10ef4
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

@@ -92,6 +92,24 @@ df_deep_action_tmaze = FileIO.load(at("tmaze_er_deep_action/2022_05_19_proc_data
 # 	["eta"])
 best_over_eta_deep_action = FileIO.load(at("final_tmaze_er_deep_action/2022-07-25-procdata.jld2"))["params_and_results"]
 
+# ╔═╡ 81ecd306-dd6d-40f8-afed-21434a64fbb2
+ @from i in best_over_eta_deep_action begin
+			@where i.cell == "AAGRU" && 
+			i.internal_a_layers == 1 && 
+			i.internal_a == 4
+			@select {i.eta, i.numhidden}
+			@collect DataFrame
+	end
+
+# ╔═╡ 45f63b95-5eac-4885-946a-04b2a32fb3c9
+@from i in best_over_eta_deep_action begin
+			@where i.cell == "AARNN" && 
+			i.internal_a_layers == 1 && 
+			i.internal_a == 4
+			@select {i.eta, i.numhidden}
+			@collect DataFrame
+	end
+
 # ╔═╡ 877b7f35-b522-497e-ab38-96c32baf7675
 minimum(df_fac_tmaze[1, :seed])
 
@@ -1702,6 +1720,8 @@ version = "0.9.1+5"
 # ╠═3e59c36a-545d-4a52-961f-ee5ba4c7c3d6
 # ╠═6b0e3ce9-cf5c-4666-b1f9-7953ed5a3596
 # ╠═d4f5e400-a46c-47d1-a18d-9d068ce10da1
+# ╠═81ecd306-dd6d-40f8-afed-21434a64fbb2
+# ╠═45f63b95-5eac-4885-946a-04b2a32fb3c9
 # ╠═877b7f35-b522-497e-ab38-96c32baf7675
 # ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
 # ╠═47df1a1e-727a-4d20-bd82-3965ca769df9
