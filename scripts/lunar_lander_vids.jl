@@ -1,4 +1,6 @@
 
+import Pkg
+Pkg.activate(@__DIR__)
 
 using Distributed
 using Reproduce, ArgParse
