@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -185,7 +185,7 @@ DataFrameUtils.get_diff_dict(best_over_eta_multil)
 # ╔═╡ f91fe4fb-537a-41a8-9ea9-b17d8f15ac3c
 let
 	# τ = 15
-	replay_size = 20000
+	replay_size = 10000
 	plot_data_sym = :successes_avg_end
 	
 	gr()
@@ -215,12 +215,16 @@ let
 			ylabel="Average Successes")
 		for cell ∈ diff_dict["cell"]
 			cd = get_cell_data(cell, ial)
-			plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label=cell)
+			lcell = "D" * cell[2:end]
+			
+			plot!(plt, cd[!, :x], cd[!, :μ], yerr=cd[!, :σ], label=lcell)
 		end
 		push!(plts, plt)
 	end
 	# end
-	plot(plts...)
+	plt = plot(plts...)
+	# savefig(plt, "../../plots/dirtmaze_deep_a_layers.pdf")
+	plt
 end
 
 # ╔═╡ 187a028b-bb28-4668-9c97-d46a7ca3a236

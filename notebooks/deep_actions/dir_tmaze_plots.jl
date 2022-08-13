@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.3
+# v0.19.9
 
 using Markdown
 using InteractiveUtils
@@ -52,10 +52,14 @@ cell_colors = Dict(
 	"AARNN" => color_scheme[end],
 	"MARNN" => color_scheme[5],
 	"FacMARNN" => color_scheme[1],
+	"DAARNN" => color_scheme[7],
 	"GRU" => color_scheme[4],
 	"AAGRU" => color_scheme[2],
 	"MAGRU" => color_scheme[6],
-	"FacMAGRU" => color_scheme[end-2])
+	"FacMAGRU" => color_scheme[end-2], 
+	"DAAGRU" => color_scheme[9],
+	"CsoftmaxElGRU"=>colorant"#883a94",
+	"CsoftmaxElRNN"=>colorant"#8677ad")
 
 # ╔═╡ 842b3fbc-34aa-452d-81fb-2ade57dedecb
 at(dir) = joinpath("../../local_data/dir_tmaze_er/", dir)
@@ -201,60 +205,82 @@ data_dist_final = RPU.get_line_data_for(
 
 # ╔═╡ f2c005aa-e4d6-449c-a345-ef2fea5ee03e
 let
-	boxplot(data_dist_deep_final, Dict("cell"=>"MAGRU"); 
-		#label_idx="cell", 
-		label = "DMAGRU",
-		color=cell_colors["MAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_deep_final, Dict("cell"=>"MAGRU"); 
-		#label_idx="cell", 
-		label = "DMAGRU",
-		color=cell_colors["MAGRU"])
+
+
+	plt = plot()
+	# boxplot!(data_dist_deep_final, Dict("cell"=>"AAGRU"); 
+	# 	#label_idx="cell", 
+	# 	label = "DAAGRU",
+	# 	color=cell_colors["AAGRU"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_deep_final, Dict("cell"=>"AAGRU"); 
+	# 	#label_idx="cell", 
+	# 	label = "DAAGRU",
+	# 	color=cell_colors["AAGRU"])
+
+
 	
-	boxplot!(data_dist_deep_final, Dict("cell"=>"AAGRU"); 
-		#label_idx="cell", 
-		label = "DAAGRU",
-		color=cell_colors["AAGRU"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_deep_final, Dict("cell"=>"AAGRU"); 
-		#label_idx="cell", 
-		label = "DAAGRU",
-		color=cell_colors["AAGRU"])
-	
-	boxplot!(data_dist_deep_final, Dict("cell"=>"MARNN"); 
-		#label_idx="cell", 
-		label = "DMARNN",
-		color=cell_colors["MARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_deep_final, Dict("cell"=>"MARNN"); 
-		#label_idx="cell", 
-		label = "DMARNN",
-		color=cell_colors["MARNN"])
-	
-	boxplot!(data_dist_deep_final, Dict("cell"=>"AARNN"); 
-		#label_idx="cell", 
-		label = "DAARNN",
-		color=cell_colors["AARNN"],
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_deep_final, Dict("cell"=>"AARNN"); 
-		#label_idx="cell", 
-		label = "DAARNN",
-		color=cell_colors["AARNN"])
+	# boxplot!(data_dist_deep_final, Dict("cell"=>"AARNN"); 
+	# 	#label_idx="cell", 
+	# 	label = "DAARNN",
+	# 	color=cell_colors["AARNN"],
+	# 	legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+	# dotplot!(data_dist_deep_final, Dict("cell"=>"AARNN"); 
+	# 	#label_idx="cell", 
+	# 	label = "DAARNN",
+	# 	color=cell_colors["AARNN"])
 	
 	args_list_l = [
-		Dict("numhidden"=>10, "cell"=>"MAGRU"),
 		Dict("numhidden"=>17, "cell"=>"AAGRU"),
-		Dict("numhidden"=>18, "cell"=>"MARNN"),
-		Dict("numhidden"=>30, "cell"=>"AARNN"),
+		Dict("numhidden"=>10, "cell"=>"MAGRU")
 	]
+
+	
+	violin!(data_dist_final, args_list_l; 
+		label_idx="cell", 
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :), linecolor=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
 	boxplot!(data_dist_final, args_list_l; 
 		label_idx="cell", 
 		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
-		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
-	dotplot!(data_dist_final, args_list_l; 
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false,  fillalpha=0.75, linecolor=:black)
+
+	violin!(data_dist_deep_final, Dict("cell"=>"MAGRU"); 
+		#label_idx="cell", 
+		label = "DMAGRU",
+		color=cell_colors["DAAGRU"], linecolor=cell_colors["DAAGRU"])
+	boxplot!(data_dist_deep_final, Dict("cell"=>"MAGRU"); 
+		#label_idx="cell", 
+		label = "DMAGRU",
+		color=cell_colors["DAAGRU"], 
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, fillalpha=0.75, linecolor=:black)
+
+	vline!([4], lw=1, color=:white)
+
+	args_list_l = [
+		Dict("numhidden"=>30, "cell"=>"AARNN"),
+		Dict("numhidden"=>18, "cell"=>"MARNN")
+	]
+
+	violin!(data_dist_final, args_list_l; 
 		label_idx="cell", 
-		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
-		# legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false)
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
+		linecolor=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :))
+	boxplot!(data_dist_final, args_list_l; 
+		label_idx="cell", 
+		color=reshape(getindex.([cell_colors], getindex.(args_list_l, "cell")), 1, :),
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, fillalpha=0.75, linecolor=:black)
+
+	violin!(data_dist_deep_final, Dict("cell"=>"MARNN"); 
+		#label_idx="cell", 
+		label = "DMARNN",
+		color=cell_colors["DAARNN"], linecolor=cell_colors["DAARNN"])
+	boxplot!(data_dist_deep_final, Dict("cell"=>"MARNN"); 
+		#label_idx="cell", 
+		label = "DMARNN",
+		color=cell_colors["DAARNN"],
+		legend=false, lw=1.5, ylims=(0.4, 1.0), tickdir=:out, grid=false, fillalpha=0.75, linecolor=:black)
+	savefig(plt, "../../plots/dirtmaze_deep_multiplicative.pdf")
+	plt
 end
 
 # ╔═╡ b1beea3f-28c4-4d6e-9738-601ac71e51df

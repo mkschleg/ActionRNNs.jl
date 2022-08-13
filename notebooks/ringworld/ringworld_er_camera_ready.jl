@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.9
+# v0.19.11
 
 using Markdown
 using InteractiveUtils
@@ -215,6 +215,7 @@ let
 			}
 			@collect DataFrame
 		end
+	@show cd
 
 	plot!(cd[:, :x], cd[:, :μ], yerr=cd[:, :σ]; 
 			lw=3, palette=color_scheme, 
@@ -440,7 +441,7 @@ end
 md"""# All Data """
 
 # ╔═╡ 30247efc-417a-45be-98cf-d3e234133490
-all_data_ic = ItemCollection(at("final_ringworld_er_10_all_data_fix_rng"))
+all_data_ic = ItemCollection(at("final_ringworld_er_10_all_data_fix_rng_env_data"))
 
 # ╔═╡ e1b95eee-0d66-4bb8-9629-d6b61804770e
 
@@ -500,18 +501,18 @@ function plot_rmse_lc(cell, seed; kwargs...)
 end
 
 # ╔═╡ 9218c9b2-ef34-4872-aaf5-dc8f24851357
-let
-	savepath = "../../plots/ringworld_indv_plots_fix_rng"
-	if !isdir(savepath)
-		mkdir(savepath)
-	end
-	for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
-		plts = [plot_rmse_lc(cell, i, ticks=:none, titlefontsize=5, ylims=(0.0, 0.5)) for i in 21:70]
-		srt_idx = sortperm(getindex.(plts, 2))
-		plt = plot(getindex.(plts, 1)[srt_idx]..., layout=(5, 10), size=(800, 500))
-		savefig(plt, joinpath(savepath, "$(cell).pdf"))
-	end
-end
+# let
+# 	savepath = "../../plots/ringworld_indv_plots_fix_rng"
+# 	if !isdir(savepath)
+# 		mkdir(savepath)
+# 	end
+# 	for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
+# 		plts = [plot_rmse_lc(cell, i, ticks=:none, titlefontsize=5, ylims=(0.0, 0.5)) for i in 21:70]
+# 		srt_idx = sortperm(getindex.(plts, 2))
+# 		plt = plot(getindex.(plts, 1)[srt_idx]..., layout=(5, 10), size=(800, 500))
+# 		savefig(plt, joinpath(savepath, "$(cell).pdf"))
+# 	end
+# end
 
 # ╔═╡ 863f90aa-f329-4f20-8855-3b3f096cd330
 function plot_ind_gvf_pred_truth(cell, seed, x_rng = 250000:250100; kwargs...)
@@ -543,84 +544,122 @@ function plot_ind_gvf_pred_truth(cell, seed, x_rng = 250000:250100; kwargs...)
 end
 
 # ╔═╡ 6ffb578f-f996-4f31-944d-8fa702cc228f
-function plot_ind_gvf_pred_truth(cells, gvf, seed, x_rng; kwargs...)
+function plot_ind_gvf_pred_truth(cells, gvfs, seed, x_rng; kwargs...)
 
-	plt = plot(
-		legend=nothing,
-		grid=false,
-		tickdir=:out)
+	
 	actual = nothing
-	for cell in cells
-		sub_ic = Reproduce.search(all_data_ic) do i
-			i.parsed_args["cell"] == cell && i.parsed_args["seed"] == seed
+	actions = nothing
+	plts = []
+	for gvf in gvfs
+		plt = plot(
+			legend=nothing,
+			grid=false,
+			tickdir=:out)
+		for cell in cells
+			sub_ic = Reproduce.search(all_data_ic) do i
+				i.parsed_args["cell"] == cell && i.parsed_args["seed"] == seed
+			end
+			
+			
+			
+			err = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_err"]
+			pred = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_pred"]
+			actions = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["Env_state"]
+			actual = (pred .- err)
+			
+			plot!(x_rng, pred[gvf, x_rng], color = cell_colors[cell], lw=2.5; kwargs...)
+			
 		end
-		
-		
-		
-		err = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_err"]
-		pred = FileIO.load(joinpath(sub_ic[1].folder_str, "results.jld2"))["out_pred"]
-		actual = (pred .- err)
-		
-		plot!(x_rng, pred[gvf, x_rng], color = cell_colors[cell], lw=2.5; kwargs...)
-		
+		plot!(x_rng, actual[gvf, x_rng], color = :black, linealpha=1.0, lw=1; kwargs...)
+		push!(plts, plt)
 	end
 
-	plot!(x_rng, actual[gvf, x_rng], color = :black, linealpha=1.0, lw=1; kwargs...)
-	
-	plt
+	plt_a = plot(x_rng, actions[2:end][x_rng], marker=:circle, markersize=3, lw=0, legend=false, ylabel="State", ylims=(1, 10.5))
+	for idx in x_rng
+		bar!([idx], [actions[2:end][idx]-0.2], bar_width=0.2, color=:black, legend=false)
+	end
+	# plot(x_rng, actions[2:end][x_rng], marker=:circle, lw=0)
+	plot(plts..., plt_a, layout=(length(plts)+1, 1))
 end
 
 # ╔═╡ ec8b2a51-cf3f-441c-b4cb-1545f0dac29a
 let
-	plt = plot_ind_gvf_pred_truth(["AARNN", "MARNN"], 10, 62, 250475:250605)
-	savefig(plt, "../../plots/ringworld_aarnn_marnn_gvf_10_seed_62_pred_truth.pdf")
+	# plt = plot_ind_gvf_pred_truth(["AARNN", "MARNN"], 10, 62, 250475:250605)
+	# savefig(plt, "../../plots/ringworld_aarnn_marnn_gvf_10_seed_62_pred_truth.pdf")
 	plt = plot_ind_gvf_pred_truth(["AARNN", "MARNN"], 1, 62, 250475:250605)
-	savefig(plt, "../../plots/ringworld_aarnn_marnn_gvf_1_seed_62_pred_truth.pdf")
+	# savefig(plt, "../../plots/ringworld_aarnn_marnn_gvf_1_seed_62_pred_truth.pdf")
+end
+
+# ╔═╡ 8cf8ca4b-6674-4d77-a0d1-842de8e9b185
+@bind strt_x Slider(1:299800)
+
+# ╔═╡ 5cfef1b6-2cc7-4e16-a136-ba4a0756b74a
+good_strt_xs=[
+	286951
+]
+
+# ╔═╡ 1d3a7c80-7321-44e8-92a6-c186af9a433b
+let
+	# plt = plot_ind_gvf_pred_truth(["AARNN", "MARNN"], 10, 62, 250475:250605)
+	# savefig(plt, "../../plots/ringworld_aarnn_marnn_gvf_10_seed_62_pred_truth.pdf")
+	plt = plot_ind_gvf_pred_truth(["AARNN", "MARNN", "MAGRU",], 1, 28, strt_x:strt_x+100, title=strt_x)
+	# savefig(plt, "../../plots/ringworld_aarnn_marnn_gvf_1_seed_62_pred_truth.pdf")
+end
+
+# ╔═╡ 4dd7abf9-7569-48ac-97a9-adc39d2a9929
+plot_ind_gvf_pred_truth(["AARNN", "MARNN", "MAGRU",], 10, 28, strt_x:strt_x+200, title=strt_x)
+
+# ╔═╡ 5837659e-bdc6-4f68-8713-cce0c490de19
+let
+	x = 286985
+	plt = plot_ind_gvf_pred_truth(["AARNN", "MARNN", "MAGRU",], [1, 10], 62, x:x+100, ylabel="Prediction")
+	savefig(plt, "../../plots/ringworld_truth_pred_62_magru.pdf")
+	plt
 end
 
 # ╔═╡ 7ea7ccbf-6e2c-4e7d-bd23-0a56b465b901
-let
-	savepath = "../../plots/ringworld_ind_gvf_lcs/"
-	if !isdir(savepath)
-		mkdir(savepath)
-	end
-	@progress for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
-		for r in 21:70
-			plt = plot(plot_ind_gvf_lcs(cell, r)..., ticks=:none, ylims = (0.0, 0.5))
-			savefig(plt, joinpath(savepath, "$(cell)_$(r).pdf"))
-		end
-	end
-end
+# let
+# 	savepath = "../../plots/ringworld_ind_gvf_lcs/"
+# 	if !isdir(savepath)
+# 		mkdir(savepath)
+# 	end
+# 	@progress for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
+# 		for r in 21:70
+# 			plt = plot(plot_ind_gvf_lcs(cell, r)..., ticks=:none, ylims = (0.0, 0.5))
+# 			# savefig(plt, joinpath(savepath, "$(cell)_$(r).pdf"))
+# 		end
+# 	end
+# end
 
 # ╔═╡ b6a9ffcd-8479-4839-b5a8-f16f69d65a29
-let
-	savepath = "../../plots/ringworld_ind_pred_truth_better_ylims/"
-	if !isdir(savepath)
-		mkdir(savepath)
-	end
-	for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
-		seed = 62
-		plt = plot_ind_gvf_pred_truth(cell, seed, 250450:250650, ylims=(-0.05, 1.1))
-		i = 1
-		savefig(plt[i], joinpath(savepath, "$(cell)_$(seed)_gvf_$(i).pdf"))
-		# end
-	end
-end
+# let
+# 	savepath = "../../plots/ringworld_ind_pred_truth_better_ylims/"
+# 	if !isdir(savepath)
+# 		mkdir(savepath)
+# 	end
+# 	for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
+# 		seed = 62
+# 		plt = plot_ind_gvf_pred_truth(cell, seed, 250450:250650, ylims=(-0.05, 1.1))
+# 		i = 1
+# 		# savefig(plt[i], joinpath(savepath, "$(cell)_$(seed)_gvf_$(i).pdf"))
+# 		# end
+# 	end
+# end
 
 # ╔═╡ 2b553e7e-9149-474d-b942-9928c5a755d1
-let
-	savepath = "../../plots/ringworld_ind_pred_truth_better_ylims/"
-	if !isdir(savepath)
-		mkdir(savepath)
-	end
-	for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
-		seed = 62
-		plt = plot_ind_gvf_pred_truth(cell, seed, 250450:250650, ylims=(0.25, 1.1))
-		i = 10
-		savefig(plt[i], joinpath(savepath, "$(cell)_$(seed)_gvf_$(i).pdf"))
-		# end
-	end
-end
+# let
+# 	savepath = "../../plots/ringworld_ind_pred_truth_better_ylims/"
+# 	if !isdir(savepath)
+# 		mkdir(savepath)
+# 	end
+# 	for cell ∈ ["RNN", "MARNN", "AARNN", "GRU", "MAGRU", "AAGRU"]
+# 		seed = 62
+# 		plt = plot_ind_gvf_pred_truth(cell, seed, 250450:250650, ylims=(0.25, 1.1))
+# 		i = 10
+# 		# savefig(plt[i], joinpath(savepath, "$(cell)_$(seed)_gvf_$(i).pdf"))
+# 		# end
+# 	end
+# end
 
 # ╔═╡ 57e9561b-db04-49a2-b231-d0ba1aeb5ac7
 plot_ind_gvf_pred_truth("AARNN", 62, 250450:250650, ylims=(0.25, 1.1))[10]
@@ -2027,8 +2066,8 @@ version = "0.9.1+5"
 # ╠═f1f0a35e-8c5e-4791-9d14-e1a793564728
 # ╠═7bde35d3-6e81-48c1-90fe-6226e811e885
 # ╠═21f71119-33d8-478a-8acd-15874b7bf4d6
-# ╟─b9085338-8f8a-4133-8124-64c772c9ea10
-# ╟─8171f992-f105-41fb-8d35-bae4d5fb14da
+# ╠═b9085338-8f8a-4133-8124-64c772c9ea10
+# ╠═8171f992-f105-41fb-8d35-bae4d5fb14da
 # ╠═0b26db67-084b-4ebd-a3e2-45e9cc03bd7e
 # ╠═28320c88-e37c-4fe7-b585-096da1a4c18e
 # ╠═a5939ecb-3756-40d0-bb11-69b2f235e180
@@ -2043,6 +2082,11 @@ version = "0.9.1+5"
 # ╠═863f90aa-f329-4f20-8855-3b3f096cd330
 # ╠═6ffb578f-f996-4f31-944d-8fa702cc228f
 # ╠═ec8b2a51-cf3f-441c-b4cb-1545f0dac29a
+# ╠═8cf8ca4b-6674-4d77-a0d1-842de8e9b185
+# ╠═5cfef1b6-2cc7-4e16-a136-ba4a0756b74a
+# ╠═1d3a7c80-7321-44e8-92a6-c186af9a433b
+# ╠═4dd7abf9-7569-48ac-97a9-adc39d2a9929
+# ╠═5837659e-bdc6-4f68-8713-cce0c490de19
 # ╠═7ea7ccbf-6e2c-4e7d-bd23-0a56b465b901
 # ╠═b6a9ffcd-8479-4839-b5a8-f16f69d65a29
 # ╠═2b553e7e-9149-474d-b942-9928c5a755d1

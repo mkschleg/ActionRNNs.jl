@@ -86,6 +86,12 @@ best_over_eta_deep_action = DataFrameUtils.best_from_sweep_param(
 	df_deep_action_tmaze, 
 	["eta"])
 
+# ╔═╡ faf8cb49-cd20-4c4d-8665-b79fad15e8c7
+@from i in best_over_eta_deep_action begin
+	@select {i.truncation, i.numhidden, i.eta}
+	@collect DataFrame
+end
+
 # ╔═╡ 4cf1dcff-12c1-4819-a842-f37f11082186
 DataFrameUtils.get_diff_dict(best_over_eta_deep_action)
 
@@ -120,6 +126,7 @@ end
 # ╔═╡ 47df1a1e-727a-4d20-bd82-3965ca769df9
 let
 
+
 	τ = 20
 	
 	plt = plot(
@@ -149,34 +156,92 @@ let
 		i.cell == "MAGRU" && i.numhidden == 32 
 	end
 
-	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_65_16", cell_colors["DAAGRU"]) do i 
-	# 	i.cell=="AAGRU" && i.numhidden == 65
-	# end
 
-	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_60", cell_colors["DAAGRU"]) do i 
-	# 	i.cell=="AAGRU" && i.numhidden == 60
-	# end
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_60_32", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 60
+	end
 
-	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_55", cell_colors["DAAGRU"]) do i 
-	# 	i.cell=="AAGRU" && i.numhidden == 55
-	# end
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_55_64", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 55
+	end
 
 	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_45_128", cell_colors["DAAGRU"]) do i 
 		i.cell=="AAGRU" && i.numhidden == 45
 	end
 	# plot_cell!(plt, df_final_tmaze, "AAGRU", 70)
 
-	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_64", cell_colors["FacMAGRU"]) do i
-		i.factors == 350
+	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_32", cell_colors["FacMAGRU"]) do i
+		i.numhidden == 32
 	end
 
-	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_132", cell_colors["FacMAGRU"]) do i
-		i.factors == 208
+	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_70", cell_colors["FacMAGRU"]) do i
+		i.numhidden == 70
 	end
 	
 	plt
 
-	savefig("../../plots/final_image_tmaze.pdf")
+	savefig("../../plots/small_image_tmaze_tau_20.pdf")
+	plt
+	
+end
+
+# ╔═╡ 40a5ce10-a6ba-4d42-9fe5-41b2e341c4f1
+let
+
+	τ = 12
+	
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.4, 1.0))
+	plot_data_sym = :successes_avg_end
+
+	plot_cell!(f, plt, df, cell, color=cell_colors[cell]) = begin
+		cd = @from i in df begin
+			@where f(i) && i.truncation == τ
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = color)
+	end
+
+	
+	plot_cell!(plt, df_final_tmaze, "AAGRU") do i
+		i.cell == "AAGRU" && i.numhidden == 70
+	end
+
+	plot_cell!(plt, df_final_tmaze, "MAGRU") do i
+		i.cell == "MAGRU" && i.numhidden == 32 
+	end
+
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_60_32", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 60
+	end
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_55_64", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 55
+	end
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_45_128", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 45
+	end
+	# plot_cell!(plt, df_final_tmaze, "AAGRU", 70)
+
+	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_32", cell_colors["FacMAGRU"]) do i
+		i.numhidden == 32
+	end
+
+	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_70", cell_colors["FacMAGRU"]) do i
+		i.numhidden == 70
+	end
+	
+	plt
+
+	savefig("../../plots/small_image_tmaze_tau_12.pdf")
 	plt
 	
 
@@ -291,6 +356,148 @@ let
 	savefig("../../plots/final_image_tmaze_deep_action_all.pdf")
 	plt
 
+end
+
+# ╔═╡ 65cf6319-df27-4dd7-8a7e-d40ec6375aee
+md"# Big"
+
+# ╔═╡ eee0e1b7-d2b2-45a7-89ea-9a589bfde899
+let
+
+	τ = 12
+	
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.4, 1.0))
+	plot_data_sym = :successes_avg_end
+
+	plot_cell!(f, plt, df, cell, color=cell_colors[cell]) = begin
+		cd = @from i in df begin
+			@where f(i) && i.truncation == τ
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = color)
+	end
+
+	
+	plot_cell!(plt, df_final_tmaze, "AAGRU") do i
+		i.cell == "AAGRU" && i.numhidden == 132
+	end
+
+	plot_cell!(plt, df_final_tmaze, "MAGRU") do i
+		i.cell == "MAGRU" && i.numhidden == 64
+	end
+
+	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_65_16", cell_colors["DAAGRU"]) do i 
+	# 	i.cell=="AAGRU" && i.numhidden == 65
+	# end
+
+	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_60", cell_colors["DAAGRU"]) do i 
+	# 	i.cell=="AAGRU" && i.numhidden == 60
+	# end
+
+	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_55", cell_colors["DAAGRU"]) do i 
+	# 	i.cell=="AAGRU" && i.numhidden == 55
+	# end
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_100_128", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 100
+	end
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_112_64", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 112
+	end
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_122_32", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 122
+	end
+	# plot_cell!(plt, df_final_tmaze, "AAGRU", 70)
+
+	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_64", cell_colors["FacMAGRU"]) do i
+		i.numhidden == 64
+	end
+
+	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_132", cell_colors["FacMAGRU"]) do i
+		i.numhidden == 132
+	end
+	
+	plt
+
+	savefig("../../plots/big_image_tmaze_tau_12.pdf")
+	plt
+	
+
+end
+
+# ╔═╡ e2e24dbc-aa0f-4146-bec0-4b107d1f5aeb
+let
+	τ = 20
+	
+	plt = plot(
+		legend=false, 
+		grid=false, 
+		tickfontsize=11, 
+		tickdir=:out,
+		ylims=(0.4, 1.0))
+	plot_data_sym = :successes_avg_end
+
+	plot_cell!(f, plt, df, cell, color=cell_colors[cell]) = begin
+		cd = @from i in df begin
+			@where f(i) && i.truncation == τ
+			@select {d=getindex(i, plot_data_sym)}
+			@collect DataFrame
+		end
+		d = cd[1, :d]
+		boxviolinplot!(plt, cell, d; color = color)
+	end
+
+	
+	plot_cell!(plt, df_final_tmaze, "AAGRU") do i
+		i.cell == "AAGRU" && i.numhidden == 132
+	end
+
+	plot_cell!(plt, df_final_tmaze, "MAGRU") do i
+		i.cell == "MAGRU" && i.numhidden == 64
+	end
+
+	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_65_16", cell_colors["DAAGRU"]) do i 
+	# 	i.cell=="AAGRU" && i.numhidden == 65
+	# end
+
+	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_60", cell_colors["DAAGRU"]) do i 
+	# 	i.cell=="AAGRU" && i.numhidden == 60
+	# end
+
+	# plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_55", cell_colors["DAAGRU"]) do i 
+	# 	i.cell=="AAGRU" && i.numhidden == 55
+	# end
+
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_100_128", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 100
+	end
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_112_64", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 112
+	end
+	plot_cell!(plt, best_over_eta_deep_action, "DAAGRU_122_32", cell_colors["DAAGRU"]) do i 
+		i.cell=="AAGRU" && i.numhidden == 122
+	end
+	# plot_cell!(plt, df_final_tmaze, "AAGRU", 70)
+
+	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_64", cell_colors["FacMAGRU"]) do i
+		i.numhidden == 64
+	end
+
+	plot_cell!(plt, df_fac_tmaze, "FacMAGRU_132", cell_colors["FacMAGRU"]) do i
+		i.numhidden == 132
+	end
+	
+	plt
+
+	savefig("../../plots/big_image_tmaze_tau_20.pdf")
+	plt
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1567,12 +1774,17 @@ version = "0.9.1+5"
 # ╠═6244b0ef-6734-4007-9067-e218191b3b79
 # ╠═6b0e3ce9-cf5c-4666-b1f9-7953ed5a3596
 # ╠═d4f5e400-a46c-47d1-a18d-9d068ce10da1
+# ╠═faf8cb49-cd20-4c4d-8665-b79fad15e8c7
 # ╠═4cf1dcff-12c1-4819-a842-f37f11082186
 # ╠═a0a855b0-bf18-4aca-9601-caf840c5db7e
 # ╠═99417a92-66ea-4e9d-be42-24340c44e931
 # ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
-# ╟─47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╠═47df1a1e-727a-4d20-bd82-3965ca769df9
+# ╠═40a5ce10-a6ba-4d42-9fe5-41b2e341c4f1
 # ╟─5707aad5-c932-4a18-9171-0c98830fecc2
-# ╟─0b12b5ce-13f5-440d-be37-cd45baa78624
+# ╠═0b12b5ce-13f5-440d-be37-cd45baa78624
+# ╠═65cf6319-df27-4dd7-8a7e-d40ec6375aee
+# ╠═eee0e1b7-d2b2-45a7-89ea-9a589bfde899
+# ╠═e2e24dbc-aa0f-4146-bec0-4b107d1f5aeb
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

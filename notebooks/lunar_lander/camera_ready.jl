@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.9
+# v0.19.11
 
 using Markdown
 using InteractiveUtils
@@ -88,6 +88,9 @@ begin
 	)
 		
 end
+
+# ╔═╡ 0bd62142-3aaa-45f5-81a4-76d8fa9a83a6
+df_deep_action
 
 # ╔═╡ c23df854-9189-4af6-9553-027c56b4643e
 # best_over_eta_deep_action = DataFrameUtils.best_from_sweep_param(
@@ -249,7 +252,7 @@ end
 
 # ╔═╡ ae5c83d2-0427-47e2-af3a-f3b48f92beb6
 let
-	plt = plot(grid=false, tickdir=:out, legend=false)
+	plt = plot(grid=false, tickdir=:out, legend=:bottomright, xlabel="Episode", ylabel="Episode Length")
 
 	plot_cell_data!(comp::Function, plt, df; kwargs...) = begin
 		cd = @from i in df begin
@@ -271,7 +274,7 @@ let
 	end
 
 	plot_cell_data!(plt, df, cell::String) = 
-		plot_cell_data!(plt, df, color=cell_colors[cell]) do i
+		plot_cell_data!(plt, df, color=cell_colors[cell], label=cell) do i
 			i.cell == cell
 		end
 	
@@ -279,15 +282,15 @@ let
 	# plot_cell_data!(plt, df_AAGRU, "AAGRU")
 	# plot_cell_data!(plt, df_GRU, "GRU")
 
-	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dash) do i
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dash, label="NumHidden=64, Factors=380") do i
 		i.numhidden==64
 	end
 	
-	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dot) do i
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dot, label="NumHidden=100, Factors=265") do i
 		i.numhidden==100
 	end
 
-	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"]) do i
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], label="NumHidden=152, Factors=170") do i
 		i.numhidden==152
 	end
 
@@ -302,7 +305,7 @@ end
 
 # ╔═╡ 508290f0-649e-4f57-bb09-a069183775ee
 let
-	plt = plot(grid=false, tickdir=:out, legend=false)
+	plt = plot(grid=false, tickdir=:out, legend=:bottomright, xlabel="Episode", ylabel="Episode Length")
 
 	plot_cell_data!(comp::Function, plt, df; kwargs...) = begin
 		cd = @from i in df begin
@@ -324,7 +327,7 @@ let
 	end
 
 	plot_cell_data!(plt, df, cell::String) = 
-		plot_cell_data!(plt, df, color=cell_colors[cell]) do i
+		plot_cell_data!(plt, df, color=cell_colors[cell], label=cell) do i
 			i.cell == cell
 		end
 	
@@ -336,7 +339,7 @@ let
 	# 	i.numhidden==152
 	# end
 
-	plot_cell_data!(plt, df_deep_action; color=cell_colors["DAAGRU"]) do i
+	plot_cell_data!(plt, df_deep_action; color=cell_colors["DAAGRU"], label="DAAGRU") do i
 		i.cell=="AAGRU"
 	end
 
@@ -387,7 +390,7 @@ end
 
 # ╔═╡ d7cf121d-6d2a-483a-80f6-f2f28c7e9e2e
 let
-	plt = plot(grid=false, tickdir=:out, legend=false)
+	plt = plot(grid=false, tickdir=:out, legend=:bottomright, xlabel="Steps(x100000)", ylabel="Return")
 
 	plot_cell_data!(comp::Function, plt, df; kwargs...) = begin
 		cd = @from i in df begin
@@ -409,7 +412,7 @@ let
 	end
 
 	plot_cell_data!(plt, df, cell::String) = 
-		plot_cell_data!(plt, df, color=cell_colors[cell]) do i
+		plot_cell_data!(plt, df, color=cell_colors[cell], label=cell) do i
 			i.cell == cell
 		end
 	
@@ -421,7 +424,7 @@ let
 	# 	i.numhidden==152
 	# end
 
-	plot_cell_data!(plt, df_deep_action; color=cell_colors["DAAGRU"]) do i
+	plot_cell_data!(plt, df_deep_action; color=cell_colors["DAAGRU"], label="DAAGRU") do i
 		i.cell=="AAGRU"
 	end
 
@@ -432,7 +435,7 @@ end
 
 # ╔═╡ a978e34d-9535-4bc2-ba2a-27d6baff12ca
 let
-	plt = plot(grid=false, tickdir=:out, legend=false)
+	plt = plot(grid=false, tickdir=:out, legend=:bottomright, xlabel="Steps(x100000)", ylabel="Return")
 
 	plot_cell_data!(comp::Function, plt, df; kwargs...) = begin
 		cd = @from i in df begin
@@ -454,7 +457,7 @@ let
 	end
 
 	plot_cell_data!(plt, df, cell::String) = 
-		plot_cell_data!(plt, df, color=cell_colors[cell]) do i
+		plot_cell_data!(plt, df, color=cell_colors[cell], label="MAGRU") do i
 			i.cell == cell
 		end
 	
@@ -462,15 +465,15 @@ let
 	# plot_cell_data!(plt, df_AAGRU, "AAGRU")
 	# plot_cell_data!(plt, df_GRU, "GRU")
 
-	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dash) do i
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dash, label="NumHidden=64, Factors=380") do i
 		i.numhidden==64
 	end
 	
-	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dot) do i
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], linestyle=:dot, label="NumHidden=100, Factors=265") do i
 		i.numhidden==100
 	end
 
-	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"]) do i
+	plot_cell_data!(plt, df_FACGRU; color=cell_colors["FacMAGRU"], label="NumHidden=152, Factors=170") do i
 		i.numhidden==152
 	end
 
@@ -478,7 +481,7 @@ let
 	# 	i.cell=="AAGRU"
 	# end
 
-	# savefig(plt, "../../plots/lunar_lander_lc_fac_only.pdf")
+	savefig(plt, "../../plots/lunar_lander_lc_fac_only.pdf")
 	
 	plt
 end
@@ -1762,13 +1765,14 @@ version = "0.9.1+5"
 # ╠═7152cb21-2d24-4531-ba64-fc98a6d2d304
 # ╠═e912da30-fed5-4eb0-b931-8ce0b04ab0a5
 # ╠═f6f0e7c1-a80f-43cd-bb4c-ea0438c473d7
+# ╠═0bd62142-3aaa-45f5-81a4-76d8fa9a83a6
 # ╠═c23df854-9189-4af6-9553-027c56b4643e
 # ╟─490e7b48-d0b3-4d94-b04e-1a1a7e276201
 # ╟─e98e401c-9eb5-4c8d-bc97-0cc6f3375398
-# ╟─d7cf121d-6d2a-483a-80f6-f2f28c7e9e2e
-# ╟─a978e34d-9535-4bc2-ba2a-27d6baff12ca
-# ╟─ae5c83d2-0427-47e2-af3a-f3b48f92beb6
-# ╟─508290f0-649e-4f57-bb09-a069183775ee
+# ╠═d7cf121d-6d2a-483a-80f6-f2f28c7e9e2e
+# ╠═a978e34d-9535-4bc2-ba2a-27d6baff12ca
+# ╠═ae5c83d2-0427-47e2-af3a-f3b48f92beb6
+# ╠═508290f0-649e-4f57-bb09-a069183775ee
 # ╠═038ceea8-5a35-4b9c-89bf-de96a98d3ec6
 # ╠═4ffe1cb4-313c-40d3-bdca-ebe0f3134e4f
 # ╠═f49a0c93-06df-4fc3-a6e7-322d83bb75f5

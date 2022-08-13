@@ -52,6 +52,7 @@ end
 
 function ringworld_tsne(args; progress=false)
     args["log_extras"] = [["EXPExtra", "agent"], ["EXPExtra", "env"]]
+    args["synopsis"] = false
     test_ret = get_hs_over_time(false) do
 	ret = RingWorldERExperiment_FixRNG.main_experiment(args, testing=true, progress=progress)
 	(ret.data, 
@@ -99,6 +100,7 @@ end
 
 function dirtmaze_tsne(args; progress=false)
     args["log_extras"] = [["EXPExtra", "agent"], ["EXPExtra", "env"]]
+
     test_ret = get_hs_over_time(false) do
 	ret = DirTMazeERExperiment.main_experiment(args, testing=true, progress=progress)
 	(ret.data, 
@@ -139,20 +141,20 @@ function dirtmaze_tsne(args; progress=false)
 end
 
 
-function plot_final_ringworld_tsnes(save_loc, seeds=[21, 25, 33])
+function plot_final_ringworld_tsnes(save_loc, seeds=[21, 25, 33]; kwargs...)
     args = FileIO.load("../final_runs/ringworld_er_10.jld2")["args"]
     config = TOML.parsefile("../final_runs/ringworld_er_10.toml")
-    plot_ringworld_tsnes(save_loc, args, config, seeds)
+    plot_ringworld_tsnes(save_loc, args, config, seeds; kwargs...)
 end
 
-function plot_specific_final_rw_tsnes(filt, save_loc, seeds=[21, 25, 33]) 
+function plot_specific_final_rw_tsnes(filt, save_loc, seeds=[21, 25, 33]; kwargs...) 
     args = FileIO.load("../final_runs/ringworld_er_10.jld2")["args"]
     filter!(filt, args)
     config = TOML.parsefile("../final_runs/ringworld_er_10.toml")
-    plot_ringworld_tsnes(save_loc, args, config, seeds)
+    plot_ringworld_tsnes(save_loc, args, config, seeds; kwargs...)
 end
 
-function plot_ringworld_tsnes(save_loc, args, config, seeds)
+function plot_ringworld_tsnes(save_loc, args, config, seeds; steps=nothing)
 
     pargs = config["static_args"]
 
@@ -174,14 +176,20 @@ function plot_ringworld_tsnes(save_loc, args, config, seeds)
 
     lk = ReentrantLock()
 
-    my_task = (sarg, seed) -> begin
+    my_task = (sarg, seed, steps) -> begin
         parg = deepcopy(pargs)
         for kv in sarg
             parg[kv.first] = kv.second
         end
         parg["seed"] = seed
+        if steps isa Int
+            parg["steps"] = steps
+        end
 
         save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",seed=$(seed)"
+        if steps isa Int
+            save_str = join([string(kv.first)*"="*string(kv.second) for kv in filter((kv)->kv.first != "eta", sarg)], ",")*",steps=$(steps),seed=$(seed)"
+        end
         data, colors, mkstroke, err, results = ringworld_tsne(parg)
 
         lock(lk)
@@ -204,15 +212,18 @@ function plot_ringworld_tsnes(save_loc, args, config, seeds)
     end
 
     plk  = ReentrantLock()
-    n = length(args)
+    iter_args = if isnothing(steps)
+        collect(Iterators.product(args, seeds, [nothing]))
+    else
+        collect(Iterators.product(args, seeds, steps))
+    end
+    n = length(iter_args)
     j = 0
     
     @withprogress name="Args" begin
         Threads.@threads for i in 1:n
-            for s in seeds
-                sargs = args[i]
-                my_task(sargs, s)
-            end
+            sargs, seed, stps = iter_args[i]
+            my_task(sargs, seed, stps)
             lock(plk)
             try
                 j += 1
