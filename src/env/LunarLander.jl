@@ -25,8 +25,10 @@ end
 
 Base.size(env::LunarLander) = env.size
 
-MinimalRLCore.reset!(env::LunarLander, rng::AbstractRNG=Random.GLOBAL_RNG) =
+MinimalRLCore.reset!(env::LunarLander, rng::AbstractRNG=Random.GLOBAL_RNG) = begin
     MinimalRLCore.reset!(env.gym)
+    @data Env start_state=[env.gym.state[i] for i in 1:length(env.gym.state)]
+end
 
 MinimalRLCore.get_actions(env::LunarLander) = begin
     if !env.cont
