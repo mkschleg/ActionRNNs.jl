@@ -45,6 +45,8 @@ ActionRNNs.CaddElRNN
 ActionRNNs.CaddElGRU
 ActionRNNs.CcatRNN
 ActionRNNs.CcatGRU
+ActionRNNs.CsoftmaxElRNN
+ActionRNNs.CsoftmaxElGRU
 ```
 
 ### Mixed Cells
@@ -54,6 +56,7 @@ ActionRNNs.MixRNN
 ActionRNNs.MixElRNN
 ActionRNNs.MixGRU
 ActionRNNs.MixElGRU
+ActionRNNs.ActionGatedRNN
 ```
 
 ### Old/DefunctCells
@@ -69,8 +72,8 @@ ActionRNNs.GAIALSTM
 ### Shared operations for cells
 
 ```@docs
-ActionRNNs.contract_WA
-ActionRNNs.get_waa
+HelpfulKernelFuncs.contract_WA
+HelpfulKernelFuncs.get_waa
 ```
 
 ## Other Layers
@@ -90,6 +93,7 @@ ActionRNNs.QLearning
 
 ```@docs
 ActionRNNs.build_rnn_layer
+ActionRNNs.build_gating_network
 ```
 
 ## Agents
@@ -116,6 +120,8 @@ ActionRNNs.get_model
 ActionRNNs.MinimalRLCore.start!(agent::ActionRNNs.AbstractERAgent, s, rng; kwargs...)
 ActionRNNs.MinimalRLCore.step!(agent::ActionRNNs.AbstractERAgent, env_s_tp1, r, terminal, rng; kwargs...)
 ActionRNNs.MinimalRLCore.step!
+ActionRNNs.training_mode
+ActionRNNs.set_training_mode!
 ActionRNNs.update!(agent::ActionRNNs.AbstractERAgent{<:ActionRNNs.ControlUpdate}, rng)
 ActionRNNs.update!(agent::ActionRNNs.AbstractERAgent{<:ActionRNNs.PredictionUpdate}, rng)
 ActionRNNs.update!
@@ -188,6 +194,18 @@ ActionRNNs.sample
 
 
 ## Environments
+
+### RingWorld
+
+```@docs
+ActionRNNs.RingWorld
+```
+
+### LinkedChains
+
+```@docs
+ActionRNNs.LinkedChainsV2
+```
 
 ### TMaze
 

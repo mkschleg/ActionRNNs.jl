@@ -7,9 +7,19 @@ DirectionalTMazeERExperiment
 DirectionalTMazeERExperiment.main_experiment
 DirectionalTMazeERExperiment.working_experiment
 DirectionalTMazeERExperiment.default_config
+DirectionalTMazeERExperiment.get_ann_size
 DirectionalTMazeERExperiment.construct_agent
 DirectionalTMazeERExperiment.construct_env
 ```
 
+## Intervention Experiment (Section 6)
 
-
+```@docs
+DirectionalTMazeInterventionExperiment
+DirectionalTMazeInterventionExperiment.main_experiment
+DirectionalTMazeInterventionExperiment.working_experiment
+DirectionalTMazeInterventionExperiment.default_config
+DirectionalTMazeInterventionExperiment.get_ann_size
+DirectionalTMazeInterventionExperiment.construct_agent
+DirectionalTMazeInterventionExperiment.construct_env
+```

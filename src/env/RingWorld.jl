@@ -4,6 +4,16 @@ import MinimalRLCore
 
 # import MinimalRLCore.reset!, MinimalRLCore.environment_step!, MinimalRLCore.get_reward
 
+
+
+module RingWorldConst
+
+const FORWARD = 1
+const BACKWARD = 2
+const ACTIONS = Set([FORWARD, BACKWARD])
+
+end
+
 """
  RingWorld
 States: 1     2     3     ...     n
@@ -14,16 +24,6 @@ chain_length: size (diameter) of ring
 actions: Forward of Backward
 
 """
-
-module RingWorldConst
-
-const FORWARD = 1
-const BACKWARD = 2
-const ACTIONS = Set([FORWARD, BACKWARD])
-
-end
-
-
 mutable struct RingWorld <: AbstractEnvironment
     ring_size::Int64
     agent_state::Int64

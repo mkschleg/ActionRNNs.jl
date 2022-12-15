@@ -6,7 +6,7 @@ using Distributed
 using Reproduce, ArgParse
 
 @everwhere include(joinpath(@__DIR__, "modules/LunarLanderVids.jl"))
-@everwhere using .LunarLanderVids
+# @everwhere using .LunarLanderVids
 
 function save_ll_video(item)
     imgs = LunarLanderVids.get_video_from_item(item, 200)

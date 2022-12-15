@@ -1,3 +1,8 @@
+"""
+    LunarLanderExperiment
+
+Experiment module for running experiments in Lunar Lander.
+"""
 module LunarLanderExperiment
 
 # include("../src/ActionRNNs.jl")
@@ -187,7 +192,11 @@ function build_ann(in, actions::Int, config, rng)
     
 end
 
+"""
+    construct_agent
 
+Construct the agent for lunar lander.
+"""
 function construct_agent(env, config, rng)
 
     fc = LMU.IdentityFeatureCreator()
@@ -236,6 +245,13 @@ end
 Macros.@generate_ann_size_helper
 Macros.@generate_working_function
 
+"""
+    main_experiment
+
+Run an experiment from config. See [`LunarLanderExperiment.working_experiment`](@ref) 
+for details on running on the command line and [`LunarLanderExperiment.default_config`](@ref) 
+for info about the default configuration.
+"""
 function main_experiment(config;
                          progress=false,
                          testing=false,

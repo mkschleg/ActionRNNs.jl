@@ -1,3 +1,8 @@
+"""
+    TMazeERExperiment
+
+The experimental module for the TMaze experiments.
+"""
 module TMazeERExperiment
 
 import Flux
@@ -160,6 +165,12 @@ function build_ann(config, in, actions::Int, rng)
     
 end
 
+
+"""
+    construct_agent
+
+Construct the agent for `TMazeERExperiment`. 
+"""
 function construct_agent(env, config, rng)
 
     #=
@@ -241,6 +252,13 @@ end
 Macros.@generate_ann_size_helper
 Macros.@generate_working_function
 
+"""
+    main_experiment
+
+This is the main experiment function for TMaze ER Agents. See [`TMazeERExperiment.working_experiment`](@ref) 
+for details on running on the command line and [`TMazeERExperiment.default_config`](@ref) 
+for info about the default configuration.
+"""
 function main_experiment(config;
                          progress=false,
                          testing=false,

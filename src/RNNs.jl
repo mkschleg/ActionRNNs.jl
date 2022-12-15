@@ -39,7 +39,7 @@ https://github.com/mkschleg/HelpfulKernelFuncs.jl
 to reduce precompilation we remove the kernels. HelpfulKernelFuncs are
 just what is in kernels.jl.
 =#
-import HelpfulKernelFuncs: contract_WA, get_waa, contract_Wga, contract_Wgax
+import HelpfulKernelFuncs: HelpfulKernelFuncs, contract_WA, get_waa, contract_Wga, contract_Wgax
 
 include("RNNUtil.jl")
 

@@ -1,3 +1,8 @@
+"""
+    RingWorldERExperiment
+
+The experimental module used to run experiments in RingWorld for the ER Agents. 
+"""
 module RingWorldERExperiment
 
 using MinimalRLCore
@@ -182,7 +187,11 @@ function build_ann(in, actions, out, config, rng)
     
 end
 
+"""
+    construct_agent
 
+Construct the agent for the ringworld experiments.
+"""
 function construct_agent(env, config, rng)
 
     fc = RWU.StandardFeatureCreator{false}()
@@ -214,6 +223,11 @@ function construct_agent(env, config, rng)
 
 end
 
+"""
+    construct_env
+
+Construct ringworld environment with `size::Int`.
+"""
 function construct_env(config, rng=Random.default_rng())
     RingWorld(config["size"])
 end
@@ -221,7 +235,13 @@ end
 Macros.@generate_ann_size_helper
 Macros.@generate_working_function
 
+"""
+    main_experiment
 
+Run an experiment from config. See [`RingWorldERExperiment.working_experiment`](@ref) 
+for details on running on the command line and [`RingWorldERExperiment.default_config`](@ref) 
+for info about the default configuration.
+"""
 function main_experiment(config; progress=false, testing=false, overwrite=false)
 
     if "numhidden_factors" ∈ keys(config)

@@ -1,21 +1,36 @@
 using Documenter
 
-import ActionRNNs: ActionRNNs, ExpUtils
-import DirectionalTMazeERExperiment
+# push!(LOAD_PATH,"../src/")
+# push!(LOAD_PATH,"../experiment/")
+
+import ActionRNNs: ActionRNNs, HelpfulKernelFuncs, ExpUtils
+import DirectionalTMazeERExperiment, DirectionalTMazeInterventionExperiment, DirectionalTMazeLearnInterExperiment
+import TMazeERExperiment
+import RingWorldERExperiment, RingWorldERExperiment_FixRNG
 import MaskedGridWorldERExperiment
+import ImageDirectionalTMazeERExperiment
+import LunarLanderExperiment
 
 makedocs(
     sitename = "ActionRNNs",
     format = Documenter.HTML(),
     modules = [ActionRNNs,
+               HelpfulKernelFuncs,
+               RingWorldERExperiment,
                DirectionalTMazeERExperiment,
-               MaskedGridWorldERExperiment],
+               MaskedGridWorldERExperiment,
+               DirectionalTMazeInterventionExperiment,
+               TMazeERExperiment,
+               ImageDirectionalTMazeERExperiment,
+               LunarLanderExperiment],
     pages = [
         "library.md",
         "Experiment" =>
         [
+            "experiments/ringworld.md",
             "experiments/directional_tmaze.md",
-            "experiments/masked_gw.md"
+            "experiments/tmaze.md",
+            "experiments/masked_gw.md",
         ]
     ]
 )
@@ -23,6 +38,6 @@ makedocs(
 # Documenter can also automatically deploy documentation to gh-pages.
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
-deploydocs(
-    repo = "github.com/mkschleg/ActionRNN.jl.git"
-)
+# deploydocs(
+#     repo = "github.com/mkschleg/ActionRNN.jl.git"
+# )
