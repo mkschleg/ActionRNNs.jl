@@ -24,12 +24,15 @@ makedocs(
                ImageDirectionalTMazeERExperiment,
                LunarLanderExperiment],
     pages = [
+        "index.md",
         "library.md",
         "Experiment" =>
         [
             "experiments/ringworld.md",
             "experiments/directional_tmaze.md",
             "experiments/tmaze.md",
+            "experiments/lunarlander.md",
+            "experiments/image_dir_tmaze.md",
             "experiments/masked_gw.md",
         ]
     ]

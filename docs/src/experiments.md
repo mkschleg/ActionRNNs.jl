@@ -11,8 +11,7 @@ julia --project parallel/toml_parallel.jl <<config>>
 - final_runs: This includes all the configs and hyperparameters for gathering the final runs after the hyperparameter sweep. 
 
 
-
-
+There are also various pluto notebooks for analyzing data, and plotting. We don't provide details on how to use these notebooks, but provide them. You can also find the experiments used to construct tsne plots and various other useful scripts in the `scripts` folder
 
 
 
