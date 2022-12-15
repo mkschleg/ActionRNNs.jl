@@ -1,6 +1,6 @@
 # ActionRNN.jl
 
-See [Documentation][https://mkschleg.github.io/ActionRNNs.jl/] for more details.
+See [Documentation](https://mkschleg.github.io/ActionRNNs.jl/) for more details.
 
 ## Setup
 
