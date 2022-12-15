@@ -1,5 +1,6 @@
 # ActionRNN.jl
 
+See [Documentation][https://mkschleg.github.io/ActionRNNs.jl/] for more details.
 
 ## Setup
 
@@ -73,18 +74,6 @@ retest("Ringworld") # Run all Ring World experiments
 retest("Fac") # run all factored tests (including FacMA* and FacTucMA*)
 ```
 
-## Documentation
-
-We are using [Documenter.jl](https://juliadocs.github.io/Documenter.jl/stable/). Please see the documentation for documenter to figure out how it works. These docs are very much WIP, but for now we are putting all the docs in library.md raw and the index.md will have a bit more details to walk ppl through the different ideas in the repo.
-
-To add docs all you need to do is add a documentation section above a function or struct and then add this to the appropriate docs section.
-
-To build the documentation go to the `ActionRNNs/docs` directory and run:
-```shell
-$ julia --project make.jl
-```
-
-I'm still figuring out how to best host the docs.
 
 
 
